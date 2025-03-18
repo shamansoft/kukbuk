@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>MyKukbuk Settings</title>
+        <link rel="stylesheet" href="options.css" />
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <img
+                    src="../icons/icon48.png"
+                    alt="MyKukbuk Logo"
+                    class="logo"
+                />
+                <h1>MyKukbuk Settings</h1>
+            </header>
+
+            <main>
+                <section class="card" id="account-section">
+                    <h2>Account</h2>
+                    <div class="account-info">
+                        <div id="logged-in-view">
+                            <p>
+                                Logged in as:
+                                <span id="user-email">user@example.com</span>
+                            </p>
+                            <button id="logout-button" class="btn danger">
+                                Log Out
+                            </button>
+                        </div>
+                        <div id="logged-out-view" style="display: none">
+                            <p>You are not logged in</p>
+                            <button id="login-button" class="btn primary">
+                                Login with Google
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="card" id="storage-section">
+                    <h2>Google Drive Storage</h2>
+                    <div class="storage-info">
+                        <p>
+                            Current folder:
+                            <span id="folder-name">Loading...</span>
+                        </p>
+                        <button id="change-folder-button" class="btn secondary">
+                            Change Folder
+                        </button>
+                    </div>
+                </section>
+
+                <section class="card" id="about-section">
+                    <h2>About</h2>
+                    <p>
+                        MyKukbuk is a browser extension that saves recipes to
+                        your Google Drive.
+                    </p>
+                    <p>Version: <span id="version">1.0.0</span></p>
+                </section>
+            </main>
+
+            <footer>
+                <div id="status-container">
+                    <p id="status-message"></p>
+                </div>
+            </footer>
+        </div>
+
+        <script src="options.js"></script>
+    </body>
+</html>

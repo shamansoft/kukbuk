@@ -1,0 +1,140 @@
+/* Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+    background-color: #f8f9fa;
+    color: #212529;
+    line-height: 1.5;
+}
+
+.container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.logo {
+    width: 48px;
+    height: 48px;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+/* Main Content */
+main {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+
+h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.account-info,
+.storage-info {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    max-width: 200px;
+}
+
+.primary {
+    background-color: #4285f4;
+    color: white;
+}
+
+.primary:hover {
+    background-color: #3367d6;
+}
+
+.secondary {
+    background-color: #e9ecef;
+    color: #212529;
+}
+
+.secondary:hover {
+    background-color: #dee2e6;
+}
+
+.danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.danger:hover {
+    background-color: #bb2d3b;
+}
+
+/* Footer */
+footer {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #dee2e6;
+}
+
+#status-container {
+    min-height: 20px;
+}
+
+#status-message {
+    font-size: 14px;
+    text-align: center;
+}
+
+.success {
+    color: #198754;
+}
+
+.error {
+    color: #dc3545;
+}
+
+.warning {
+    color: #ffc107;
+}
+
+.info {
+    color: #0dcaf0;
+}

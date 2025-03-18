@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>MyKukbuk</title>
+        <link rel="stylesheet" href="popup.css" />
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <img
+                    src="../icons/icon48.png"
+                    alt="MyKukbuk Logo"
+                    class="logo"
+                />
+                <h1>MyKukbuk</h1>
+            </header>
+
+            <!-- Login Section (Hidden by default when logged in) -->
+            <section id="login-section">
+                <p>Save recipes to your Google Drive</p>
+                <button id="login-button" class="btn primary">
+                    Login with Google
+                </button>
+            </section>
+
+            <!-- Logged In Section (Hidden by default when logged out) -->
+            <section id="main-section" style="display: none">
+                <div class="user-info">
+                    <img
+                        src="../icons/user-placeholder.png"
+                        alt="User"
+                        id="user-avatar"
+                        class="avatar"
+                    />
+                    <span id="user-email">user@example.com</span>
+                </div>
+
+                <button id="save-recipe-button" class="btn primary">
+                    Save This Recipe
+                </button>
+
+                <div class="action-buttons">
+                    <button id="settings-button" class="btn secondary">
+                        Settings
+                    </button>
+                    <button id="logout-button" class="btn secondary">
+                        Log Out
+                    </button>
+                </div>
+            </section>
+
+            <!-- Status Messages -->
+            <div id="status-container">
+                <p id="status-message"></p>
+            </div>
+        </div>
+
+        <script src="popup.js"></script>
+    </body>
+</html>

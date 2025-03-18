@@ -1,0 +1,13 @@
+export const STORAGE_KEYS = {
+  AUTH_TOKEN: "authToken",
+  USER_EMAIL: "userEmail",
+  DRIVE_FOLDER: "driveFolder",
+  DRIVE_FOLDER_NAME: "driveFolderName",
+};
+
+export const MESSAGE_TYPES = {
+  AUTH_REQUEST: "AUTH_REQUEST",
+  AUTH_RESPONSE: "AUTH_RESPONSE",
+  SAVE_RECIPE: "SAVE_RECIPE",
+  EXTRACT_RECIPE: "EXTRACT_RECIPE",
+};
