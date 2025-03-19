@@ -1,8 +1,9 @@
 // Import services
-import { setupAuth } from "./services/auth.js";
-import { setupStorage } from "./services/storage.js";
-import { setupApi } from "./services/api.js";
-import { logError } from "../common/error-handler.js";
+import { setupAuth } from './services/auth.js';
+import { setupStorage } from './services/storage.js';
+import { setupApi } from './services/api.js';
+import { logError } from '../common/error-handler.js';
+import { MESSAGE_TYPES } from '../common/constants.js';
 
 // Initialize background script
 function initBackground() {
@@ -41,10 +42,12 @@ function setupContextMenu() {
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "kukbuk-settings") {
       chrome.runtime.openOptionsPage();
-    } else if (info.menuItemId === "kukbuk-logout") {
-      // Will be implemented in US-1: Google Authentication
-      chrome.storage.local.remove(["authToken", "userEmail"], () => {
-        console.log("Logged out via context menu");
+    } else if (info.menuItemId === 'kukbuk-logout') {
+      // Send logout message to self (handled by auth service)
+      chrome.runtime.sendMessage({
+        type: MESSAGE_TYPES.AUTH_LOGOUT
+      }, (response) => {
+        console.log('Logout response:', response);
       });
     }
   });
@@ -53,26 +56,23 @@ function setupContextMenu() {
 // Set up message listeners
 function setupMessageListeners() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log("Background script received message:", message.type);
+    console.log('Background script received message:', message.type);
 
-    // Handle messages based on type
+    // Handle only messages not handled by specific services
     switch (message.type) {
-      case "AUTH_REQUEST":
-        // Will be implemented in US-1: Google Authentication
-        sendResponse({ success: false, error: "Not implemented yet" });
-        break;
-
-      case "SAVE_RECIPE":
+      case 'SAVE_RECIPE':
         // Will be implemented in US-3: Save Current Recipe
         sendResponse({ success: false, error: "Not implemented yet" });
         break;
 
       default:
-        sendResponse({ success: false, error: "Unknown message type" });
+        // Do nothing - the message should be handled by a specific service
+        // If no handler responds, Chrome will show a warning in the console
+        break;
     }
 
-    // Return true to indicate we will send a response asynchronously
-    return true;
+    // Do not return true here - only return true from handlers that will call
+    // sendResponse asynchronously
   });
 }
 

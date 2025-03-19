@@ -1,6 +1,6 @@
-// Import common utilities
-import { logError, showMessage } from "../common/error-handler.js";
-import { STORAGE_KEYS } from "../common/constants.js";
+// Import common utilities and constants
+import { logError, showMessage } from '../common/error-handler.js';
+import { STORAGE_KEYS, MESSAGE_TYPES } from '../common/constants.js';
 
 // DOM elements
 const userEmail = document.getElementById("user-email");
@@ -23,27 +23,34 @@ async function initOptions() {
     const manifest = chrome.runtime.getManifest();
     versionElement.textContent = manifest.version;
 
-    // Check authentication status
-    const authData = await chrome.storage.local.get([
-      STORAGE_KEYS.AUTH_TOKEN,
-      STORAGE_KEYS.USER_EMAIL,
-      STORAGE_KEYS.DRIVE_FOLDER,
-      STORAGE_KEYS.DRIVE_FOLDER_NAME,
-    ]);
+    // Show loading state
+    showMessage(statusMessage, 'Loading...', 'info');
 
-    if (
-      authData[STORAGE_KEYS.AUTH_TOKEN] &&
-      authData[STORAGE_KEYS.USER_EMAIL]
-    ) {
+    // Check authentication status
+    const authStatus = await sendMessageToBackground(MESSAGE_TYPES.AUTH_CHECK);
+
+    if (authStatus.success && authStatus.authenticated) {
+      // Get drive folder info
+      const folderData = await chrome.storage.local.get([
+        STORAGE_KEYS.DRIVE_FOLDER,
+        STORAGE_KEYS.DRIVE_FOLDER_NAME
+      ]);
+
       // User is authenticated
-      showLoggedInView(authData[STORAGE_KEYS.USER_EMAIL]);
-      folderName.textContent =
-        authData[STORAGE_KEYS.DRIVE_FOLDER_NAME] || "Not set";
+      showLoggedInView(authStatus.email);
+      folderName.textContent = folderData[STORAGE_KEYS.DRIVE_FOLDER_NAME] || 'Not set';
+      changeFolderButton.disabled = !folderData[STORAGE_KEYS.DRIVE_FOLDER];
+      statusMessage.textContent = '';
     } else {
       // User is not authenticated
       showLoggedOutView();
       folderName.textContent = "Login required";
       changeFolderButton.disabled = true;
+      if (authStatus.error) {
+        showMessage(statusMessage, authStatus.error, 'info');
+      } else {
+        statusMessage.textContent = '';
+      }
     }
 
     // Set up event listeners
@@ -51,27 +58,50 @@ async function initOptions() {
   } catch (error) {
     logError("Error initializing options page", error);
     showLoggedOutView();
+    showMessage(statusMessage, 'Error initializing settings', 'error');
   }
 }
 
 // Setup UI event listeners
 function setupEventListeners() {
   // Login button
-  loginButton.addEventListener("click", () => {
-    // Will be implemented in US-1: Google Authentication
-    showMessage(statusMessage, "Authentication not implemented yet", "info");
+  loginButton.addEventListener('click', async () => {
+    try {
+      showMessage(statusMessage, 'Authenticating...', 'info');
+
+      // Request authentication
+      const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_REQUEST);
+
+      if (authResponse.success) {
+        // Reload page to update UI
+        window.location.reload();
+      } else {
+        showMessage(statusMessage, authResponse.error || 'Authentication failed', 'error');
+      }
+    } catch (error) {
+      logError('Login error', error);
+      showMessage(statusMessage, 'Authentication failed', 'error');
+    }
   });
 
   // Logout button
-  logoutButton.addEventListener("click", () => {
-    // Will be implemented in US-1: Google Authentication
-    chrome.storage.local.remove(
-      [STORAGE_KEYS.AUTH_TOKEN, STORAGE_KEYS.USER_EMAIL],
-      () => {
-        showLoggedOutView();
-        showMessage(statusMessage, "Logged out successfully", "success");
-      },
-    );
+  logoutButton.addEventListener('click', async () => {
+    try {
+      showMessage(statusMessage, 'Logging out...', 'info');
+
+      // Request logout
+      const logoutResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_LOGOUT);
+
+      if (logoutResponse.success) {
+        // Reload page to update UI
+        window.location.reload();
+      } else {
+        showMessage(statusMessage, logoutResponse.error || 'Logout failed', 'error');
+      }
+    } catch (error) {
+      logError('Logout error', error);
+      showMessage(statusMessage, 'Logout failed', 'error');
+    }
   });
 
   // Change folder button
@@ -90,8 +120,9 @@ function showLoggedInView(email) {
 }
 
 function showLoggedOutView() {
-  loggedInView.style.display = "none";
-  loggedOutView.style.display = "block";
+  loggedInView.style.display = 'none';
+  loggedOutView.style.display = 'block';
+  changeFolderButton.disabled = true;
 }
 
 // Communication with background script
