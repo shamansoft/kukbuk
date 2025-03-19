@@ -103,12 +103,14 @@ section {
 
 /* Status Messages */
 #status-container {
-    min-height: 20px;
+  min-height: 20px;
+  margin-top: 12px;
 }
 
 #status-message {
-    font-size: 14px;
-    text-align: center;
+  font-size: 14px;
+  text-align: center;
+  transition: opacity 0.3s ease;
 }
 
 .success {
@@ -125,4 +127,17 @@ section {
 
 .info {
     color: #0dcaf0;
+}
+
+/* Loading animation */
+.loading::after {
+  content: '';
+  animation: dots 1.5s steps(5, end) infinite;
+}
+
+@keyframes dots {
+  0%, 20% { content: '.'; }
+  40% { content: '..'; }
+  60% { content: '...'; }
+  80%, 100% { content: ''; }
 }

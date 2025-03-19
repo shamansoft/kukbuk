@@ -1,6 +1,6 @@
 // Import common utilities and constants
 import { logError, showMessage } from '../common/error-handler.js';
-import { STORAGE_KEYS, MESSAGE_TYPES } from '../common/constants.js';
+import { STORAGE_KEYS, MESSAGE_TYPES, ERROR_CODES } from '../common/constants.js';
 
 // DOM elements
 const loginSection = document.getElementById('login-section');
@@ -70,10 +70,56 @@ function setupEventListeners() {
     }
   });
 
-  // Save recipe button
-  saveRecipeButton.addEventListener("click", () => {
-    // Will be implemented in US-3: Save Current Recipe
-    showMessage(statusMessage, "Recipe saving not implemented yet", "info");
+// Save recipe button
+  saveRecipeButton.addEventListener('click', async () => {
+    try {
+      // Show saving state
+      showMessage(statusMessage, 'Extracting recipe...', 'info');
+
+      // Get the current tab
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const activeTab = tabs[0];
+
+      if (!activeTab) {
+        throw new Error('Could not determine active tab');
+      }
+
+      // Extract recipe data from content script
+      const extractResponse = await chrome.tabs.sendMessage(
+        activeTab.id,
+        { type: MESSAGE_TYPES.EXTRACT_RECIPE }
+      );
+
+      if (!extractResponse.success) {
+        throw new Error(extractResponse.error || 'Failed to extract recipe');
+      }
+
+      // Update status
+      showMessage(statusMessage, 'Saving recipe...', 'info');
+
+      // Send to background for saving
+      const saveResponse = await sendMessageToBackground(
+        MESSAGE_TYPES.SAVE_RECIPE,
+        extractResponse.data
+      );
+
+      if (saveResponse.success) {
+        showMessage(statusMessage, `Saved: ${saveResponse.recipeName}`, 'success');
+      } else {
+        // Handle specific error codes
+        if (saveResponse.errorCode === ERROR_CODES.AUTH_REQUIRED) {
+          showLoginView();
+          showMessage(statusMessage, 'Please login to save recipes', 'error');
+        } else if (saveResponse.errorCode === ERROR_CODES.FOLDER_REQUIRED) {
+          showMessage(statusMessage, 'Please set up a Google Drive folder', 'error');
+        } else {
+          showMessage(statusMessage, saveResponse.error || 'Failed to save recipe', 'error');
+        }
+      }
+    } catch (error) {
+      logError('Save recipe error', error);
+      showMessage(statusMessage, error.message || 'Error saving recipe', 'error');
+    }
   });
 
   // Settings button
