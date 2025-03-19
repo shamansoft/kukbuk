@@ -1,4 +1,4 @@
-# MyKukbuk Chrome Extension User Stories
+# MyKukBuk Chrome Extension User Stories
 
 ## Code Organization
 

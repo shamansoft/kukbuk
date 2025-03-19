@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "MyKukbuk",
+  "name": "MyKukBuk",
   "version": "1.0.0",
   "description": "Save recipes to your Google Drive",
   "permissions": [

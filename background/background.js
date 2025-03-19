@@ -8,7 +8,7 @@ import { MESSAGE_TYPES } from '../common/constants.js';
 // Initialize background script
 function initBackground() {
   try {
-    console.log("Initializing MyKukbuk background script");
+    console.log("Initializing MyKukBuk background script");
 
     // Setup context menu
     setupContextMenu();

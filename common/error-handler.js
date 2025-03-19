@@ -4,7 +4,7 @@
  * @param {Error} error - Error object
  */
 export function logError(message, error) {
-  console.error(`MyKukbuk Error: ${message}`, error);
+  console.error(`MyKukBuk Error: ${message}`, error);
 }
 
 /**

@@ -1,4 +1,4 @@
-// Content script for MyKukbuk
+// Content script for MyKukBuk
 
 // Listen for messages from the popup or background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -33,7 +33,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Initialize content script
 function init() {
-  console.log("MyKukbuk content script initialized");
+  console.log("MyKukBuk content script initialized");
 
   // This is a placeholder for any initialization needed in the content script
 }

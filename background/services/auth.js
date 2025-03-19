@@ -1,4 +1,4 @@
-// Authentication service for MyKukbuk
+// Authentication service for MyKukBuk
 
 import { logError } from '../../common/error-handler.js';
 import { STORAGE_KEYS, MESSAGE_TYPES } from '../../common/constants.js';
