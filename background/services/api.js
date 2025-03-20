@@ -2,6 +2,7 @@
 
 import { logError } from '../../common/error-handler.js';
 import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from '../../common/constants.js';
+import { transformContent } from './transformation.js';
 
 // Backend API URL - replace with your actual Cloud Run function URL
 const API_URL = 'https://us-central1-mykukbuk.cloudfunctions.net/processRecipe';
@@ -65,6 +66,8 @@ async function saveRecipe(recipeData) {
       throw new Error('Invalid recipe data');
     }
 
+    const content = transformContent(recipeData.pageContent);
+
 //    // Send to backend
 //    const response = await fetch(API_URL, {
 //      method: 'POST',
@@ -72,18 +75,19 @@ async function saveRecipe(recipeData) {
 //        'Content-Type': 'application/json'
 //      },
 //      body: JSON.stringify({
-//        pageHtml: recipeData.pageContent,
+//        pageHtml: content,
 //        pageUrl: recipeData.pageUrl,
 //        authToken: token,
 ////        driveFolder: folderId
 //      })
 //    });
 
+
     console.log("pageUrl ", recipeData.pageUrl);
-    console.log("pageContent len ", recipeData.pageContent.length);
-    console.log("pageContent first 100 ", recipeData.pageContent.length > 100
-        ? recipeData.pageContent.substring(0, 100)
-        : recipeData.pageContent);
+    console.log("pageContent len ", content.length);
+    console.log("pageContent first 100 ", content.length > 100
+        ? content.substring(0, 100)
+        : content);
     const response = {
         ok: true,
         status: 200,
