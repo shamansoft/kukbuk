@@ -66,7 +66,8 @@ async function saveRecipe(recipeData) {
       throw new Error('Invalid recipe data');
     }
 
-    const content = transformContent(recipeData.pageContent);
+    const contentObject = await transformContent(recipeData.pageContent);
+    const content = contentObject.transformed;
 
 //    // Send to backend
 //    const response = await fetch(API_URL, {
