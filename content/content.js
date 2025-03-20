@@ -42,54 +42,58 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 async function extractRecipeData() {
   // Basic data about the page
   const pageData = {
-    pageContent: document.documentElement.outerHTML,
     pageUrl: window.location.href,
     title: document.title
   };
 
-  // Try to find structured recipe data (Schema.org)
-  const structuredData = findStructuredRecipeData();
-  if (structuredData) {
-    pageData.structuredData = structuredData;
-  }
+  // Get cleaned up content (basic cleanup only)
+  pageData.pageContent = performBasicCleanup();
 
   return pageData;
 }
 
 /**
- * Attempts to find structured recipe data in the page (Schema.org)
- * @returns {Object|null} Structured recipe data or null if not found
+ * Performs basic cleanup of the page content to remove definitely non-content elements
+ * Only removes scripts, styles, and other clearly non-content tags
+ * @returns {string} Cleaned HTML content
  */
-function findStructuredRecipeData() {
+function performBasicCleanup() {
   try {
-    // Look for JSON-LD script tags
-    const scriptElements = document.querySelectorAll('script[type="application/ld+json"]');
+    const initialDocSize = document.documentElement.outerHTML.length;
+    console.log("doc size", initialDocSize);
 
-    for (const script of scriptElements) {
-      try {
-        const jsonData = JSON.parse(script.textContent);
+    // Create a clone of the document to avoid modifying the actual page
+    const docClone = document.cloneNode(true);
 
-        // Check if this is a Recipe object or part of a Graph
-        if (jsonData['@type'] === 'Recipe') {
-          return jsonData;
+    // ONLY remove these definitely non-content elements
+    const elementsToRemove = [
+      'script',         // JavaScript
+      'style',          // CSS
+      'noscript',       // No-JS fallback
+      'iframe',         // Embedded frames
+      'svg',            // Vector graphics
+      'canvas',         // Drawing canvas
+      'template'        // Template elements
+    ];
+
+    // Remove elements
+    elementsToRemove.forEach(tag => {
+      const elements = docClone.querySelectorAll(tag);
+      elements.forEach(el => {
+        try {
+          el.parentNode?.removeChild(el);
+        } catch (e) {
+          // Ignore errors
         }
-
-        // Check for recipes in a graph
-        if (jsonData['@graph'] && Array.isArray(jsonData['@graph'])) {
-          const recipe = jsonData['@graph'].find(item => item['@type'] === 'Recipe');
-          if (recipe) {
-            return recipe;
-          }
-        }
-      } catch (parseError) {
-        console.warn('Error parsing JSON-LD script:', parseError);
-      }
-    }
-
-    return null;
+      });
+    });
+    console.log("doc size after cleanup", docClone.documentElement.outerHTML.length);
+    console.log("doc size diff", initialDocSize - docClone.documentElement.outerHTML.length);
+    return docClone.documentElement.outerHTML;
   } catch (error) {
-    console.error('Error finding structured recipe data:', error);
-    return null;
+    console.error('Error performing basic cleanup:', error);
+    // On any error, return the original HTML
+    return document.documentElement.outerHTML;
   }
 }
 
