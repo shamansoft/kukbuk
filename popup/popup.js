@@ -79,19 +79,60 @@ function setupEventListeners() {
       // Get the current tab
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
       const activeTab = tabs[0];
+      console.log("activeTab", activeTab);
 
       if (!activeTab) {
         throw new Error('Could not determine active tab');
       }
 
-      // Extract recipe data from content script
-      const extractResponse = await chrome.tabs.sendMessage(
-        activeTab.id,
-        { type: MESSAGE_TYPES.EXTRACT_RECIPE }
-      );
+      // First, make sure the content script is loaded
+      try {
+        // Try to inject the content script if it hasn't been loaded yet
+        await chrome.scripting.executeScript({
+          target: { tabId: activeTab.id },
+          files: ['content/content.js']
+        });
+      } catch (injectionError) {
+        console.warn('Content script injection error (might already be loaded):', injectionError);
+        // Continue anyway - the script might already be loaded
+      }
 
-      if (!extractResponse.success) {
-        throw new Error(extractResponse.error || 'Failed to extract recipe');
+      // Extract recipe data using executeScript as fallback if messaging fails
+      let recipeData;
+
+      try {
+        // First try using messaging
+        const extractResponse = await Promise.race([
+          chrome.tabs.sendMessage(activeTab.id, { type: MESSAGE_TYPES.EXTRACT_RECIPE }),
+          // Timeout after 2 seconds
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Content script communication timeout')), 2000))
+        ]);
+
+        if (!extractResponse || !extractResponse.success) {
+          throw new Error(extractResponse?.error || 'Failed to extract recipe via messaging');
+        }
+
+        recipeData = extractResponse.data;
+      } catch (messagingError) {
+        console.warn('Messaging to content script failed, using executeScript fallback:', messagingError);
+
+        // Fallback: Extract directly using executeScript
+        const [executeResult] = await chrome.scripting.executeScript({
+          target: { tabId: activeTab.id },
+          func: () => {
+            return {
+              pageContent: document.documentElement.outerHTML,
+              pageUrl: window.location.href,
+              title: document.title
+            };
+          }
+        });
+
+        if (!executeResult || !executeResult.result) {
+          throw new Error('Failed to extract recipe content');
+        }
+
+        recipeData = executeResult.result;
       }
 
       // Update status
@@ -100,7 +141,7 @@ function setupEventListeners() {
       // Send to background for saving
       const saveResponse = await sendMessageToBackground(
         MESSAGE_TYPES.SAVE_RECIPE,
-        extractResponse.data
+        recipeData
       );
 
       if (saveResponse.success) {
@@ -162,6 +203,7 @@ function showLoggedInView(email) {
 
 // Communication with background script
 function sendMessageToBackground(type, data) {
+  console.log("sendMessageToBackground", type);
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({ type, data }, (response) => {
       if (chrome.runtime.lastError) {

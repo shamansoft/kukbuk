@@ -65,19 +65,33 @@ async function saveRecipe(recipeData) {
       throw new Error('Invalid recipe data');
     }
 
-    // Send to backend
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        pageHtml: recipeData.pageContent,
-        pageUrl: recipeData.pageUrl,
-        authToken: token,
-//        driveFolder: folderId
-      })
-    });
+//    // Send to backend
+//    const response = await fetch(API_URL, {
+//      method: 'POST',
+//      headers: {
+//        'Content-Type': 'application/json'
+//      },
+//      body: JSON.stringify({
+//        pageHtml: recipeData.pageContent,
+//        pageUrl: recipeData.pageUrl,
+//        authToken: token,
+////        driveFolder: folderId
+//      })
+//    });
+
+    console.log("pageUrl ", recipeData.pageUrl);
+    console.log("pageContent len ", recipeData.pageContent.length);
+    console.log("pageContent first 100 ", recipeData.pageContent.length > 100
+        ? recipeData.pageContent.substring(0, 100)
+        : recipeData.pageContent);
+    const response = {
+        ok: true,
+        status: 200,
+        json: async () => ({
+            recipeName: 'Test Recipe',
+            message: 'Recipe saved successfully'
+        })
+    }
 
     // Check for network errors
     if (!response.ok) {

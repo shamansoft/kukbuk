@@ -1,5 +1,9 @@
 // Content script for MyKukbuk
-import { MESSAGE_TYPES } from '../common/constants.js';
+
+// Message type constants (duplicated from constants.js since content scripts can't import modules)
+const MESSAGE_TYPES = {
+  EXTRACT_RECIPE: 'EXTRACT_RECIPE'
+};
 
 // Listen for messages from the popup or background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -96,3 +100,6 @@ function init() {
 
 // Run initialization
 init();
+
+// Send a ready message to let the extension know content script is available
+chrome.runtime.sendMessage({ type: 'CONTENT_SCRIPT_READY' });

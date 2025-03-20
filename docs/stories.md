@@ -42,6 +42,8 @@
 
 **Technical Stories:**
 - Extract current page HTML via content script
+- Cleanup the page: Remove all non-content related information from extracted page (scripts, css, etc.)
+- Compress the extracted content
 - Set up messaging between popup and content script
 - Create visual feedback for save operations
 - Implement secure backend communication
