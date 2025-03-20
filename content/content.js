@@ -41,14 +41,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
  */
 async function extractRecipeData() {
   // Basic data about the page
+  const pageContent = performBasicCleanup();
   const pageData = {
-    pageContent: document.documentElement.outerHTML,
+    pageContent,
     pageUrl: window.location.href,
     title: document.title
   };
-
-  // Get cleaned up content (basic cleanup only)
-  pageData.pageContent = performBasicCleanup();
 
   return pageData;
 }
@@ -58,45 +56,45 @@ async function extractRecipeData() {
  * Only removes scripts, styles, and other clearly non-content tags
  * @returns {string} Cleaned HTML content
  */
-//function performBasicCleanup() {
-//  try {
-//    const initialDocSize = document.documentElement.outerHTML.length;
-//    console.log("doc size", initialDocSize);
-//
-//    // Create a clone of the document to avoid modifying the actual page
-//    const docClone = document.cloneNode(true);
-//
-//    // ONLY remove these definitely non-content elements
-//    const elementsToRemove = [
-//      'script',         // JavaScript
-//      'style',          // CSS
-//      'noscript',       // No-JS fallback
-//      'iframe',         // Embedded frames
-//      'svg',            // Vector graphics
-//      'canvas',         // Drawing canvas
-//      'template'        // Template elements
-//    ];
-//
-//    // Remove elements
-//    elementsToRemove.forEach(tag => {
-//      const elements = docClone.querySelectorAll(tag);
-//      elements.forEach(el => {
-//        try {
-//          el.parentNode?.removeChild(el);
-//        } catch (e) {
-//          // Ignore errors
-//        }
-//      });
-//    });
-//    console.log("doc size after cleanup", docClone.documentElement.outerHTML.length);
-//    console.log("doc size diff", initialDocSize - docClone.documentElement.outerHTML.length);
-//    return docClone.documentElement.outerHTML;
-//  } catch (error) {
-//    console.error('Error performing basic cleanup:', error);
-//    // On any error, return the original HTML
-//    return document.documentElement.outerHTML;
-//  }
-//}
+function performBasicCleanup() {
+  try {
+    const initialDocSize = document.documentElement.outerHTML.length;
+    console.log("doc size", initialDocSize);
+
+    // Create a clone of the document to avoid modifying the actual page
+    const docClone = document.cloneNode(true);
+
+    // ONLY remove these definitely non-content elements
+    const elementsToRemove = [
+      'script',         // JavaScript
+      'style',          // CSS
+      'noscript',       // No-JS fallback
+      'iframe',         // Embedded frames
+      'svg',            // Vector graphics
+      'canvas',         // Drawing canvas
+      'template'        // Template elements
+    ];
+
+    // Remove elements
+    elementsToRemove.forEach(tag => {
+      const elements = docClone.querySelectorAll(tag);
+      elements.forEach(el => {
+        try {
+          el.parentNode?.removeChild(el);
+        } catch (e) {
+          // Ignore errors
+        }
+      });
+    });
+    console.log("doc size after cleanup", docClone.documentElement.outerHTML.length);
+    console.log("doc size diff", initialDocSize - docClone.documentElement.outerHTML.length);
+    return docClone.documentElement.outerHTML;
+  } catch (error) {
+    console.error('Error performing basic cleanup:', error);
+    // On any error, return the original HTML
+    return document.documentElement.outerHTML;
+  }
+}
 
 // Initialize content script
 function init() {
