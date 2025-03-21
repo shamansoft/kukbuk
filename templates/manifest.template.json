@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MyKukBuk",
-  "version": "1.0.0",
+  "version": "${EXTENSION_VERSION}",
   "description": "Save recipes to your Google Drive",
   "permissions": [
     "activeTab",
@@ -38,7 +38,7 @@
     "128": "icons/icon128.png"
   },
   "oauth2": {
-    "client_id": "${YOUR_CLIENT_ID_HERE}.apps.googleusercontent.com",
+    "client_id": "${GOOGLE_CLIENT_ID}",
     "scopes": [
       "https://www.googleapis.com/auth/drive.file",
       "https://www.googleapis.com/auth/userinfo.email"

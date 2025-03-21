@@ -1,1 +1,29 @@
 /local/
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Generated files
+manifest.json
+common/env-config.js
+
+# Build output
+dist/
+build/
+*.zip
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
