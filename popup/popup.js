@@ -88,10 +88,17 @@ function setupEventListeners() {
       // First, make sure the content script is loaded
       try {
         // Try to inject the content script if it hasn't been loaded yet
-        await chrome.scripting.executeScript({
-          target: { tabId: activeTab.id },
-          files: ['content/content.js']
-        });
+        try {
+          // Try messaging first to see if content script is already loaded
+          await chrome.tabs.sendMessage(activeTab.id, { type: 'PING' });
+          console.log('Content script already loaded');
+        } catch (error) {
+          // Only inject if messaging fails (script not loaded)
+          await chrome.scripting.executeScript({
+            target: { tabId: activeTab.id },
+            files: ['content/content.js']
+          });
+        }
       } catch (injectionError) {
         console.warn('Content script injection error (might already be loaded):', injectionError);
         // Continue anyway - the script might already be loaded

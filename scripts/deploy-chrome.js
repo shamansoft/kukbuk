@@ -8,6 +8,11 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+// Parse command line arguments for environment file
+const args = process.argv.slice(2);
+const envArg = args.find(arg => arg.startsWith('--env='));
+const envFile = envArg ? envArg.replace('--env=', '') : '.env';
+
 // Configuration
 const EXTENSION_DIR = path.resolve(__dirname, '..');
 const CHROME_PROFILES_DIR = getDefaultChromeProfilesDir();

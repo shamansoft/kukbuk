@@ -3,6 +3,7 @@
 .env
 .env.local
 .env.*.local
+*.local
 
 # Generated files
 manifest.json

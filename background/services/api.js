@@ -3,9 +3,7 @@
 import { logError } from '../../common/error-handler.js';
 import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from '../../common/constants.js';
 import { transformContent } from './transformation.js';
-
-// Backend API URL - replace with your actual Cloud Run function URL
-const API_URL = 'https://us-central1-mykukbuk.cloudfunctions.net/processRecipe';
+import { ENV } from '../../common/env-config.js';
 
 /**
  * Sets up the API service
@@ -69,34 +67,36 @@ async function saveRecipe(recipeData) {
     const contentObject = await transformContent(recipeData.pageContent);
     const content = contentObject.transformed;
 
-//    // Send to backend
-//    const response = await fetch(API_URL, {
-//      method: 'POST',
-//      headers: {
-//        'Content-Type': 'application/json'
-//      },
-//      body: JSON.stringify({
-//        pageHtml: content,
-//        pageUrl: recipeData.pageUrl,
-//        authToken: token,
-////        driveFolder: folderId
-//      })
-//    });
-
-
     console.log("pageUrl ", recipeData.pageUrl);
     console.log("pageContent len ", content.length);
-    console.log("pageContent first 100 ", content.length > 100
-        ? content.substring(0, 100)
-        : content);
-    const response = {
-        ok: true,
-        status: 200,
-        json: async () => ({
-            recipeName: 'Test Recipe',
-            message: 'Recipe saved successfully'
-        })
-    }
+    console.log("pageContent zipped ", content);
+
+    const request = {
+      method: 'POST',
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+//        "X-Extension-ID": extensionId,
+//        "X-Request-ID": requestId,
+      },
+      body: JSON.stringify({
+        html: content,
+        url: recipeData.pageUrl,
+        title: recipeData.title
+      })
+    };
+    console.log("fetch ", ENV.COOKBOOK_API_URL, request);
+    // Send to backend
+    const response = await fetch(ENV.COOKBOOK_API_URL, request);
+//    or mock while debugging
+//    const response = {
+//        ok: true,
+//        status: 200,
+//        json: async () => ({
+//            recipeName: 'Test Recipe',
+//            message: 'Recipe saved successfully'
+//        })
+//    }
 
     // Check for network errors
     if (!response.ok) {
@@ -117,9 +117,14 @@ async function saveRecipe(recipeData) {
     // Parse success response
     const result = await response.json();
 
+    if(result.content) {
+        console.log("content first 100 symbols", result.content.length > 100
+            ? result.content.substring(0, 100) : result.content);
+    }
+
     return {
       success: true,
-      recipeName: result.recipeName,
+      recipeName: result.title,
       message: result.message || 'Recipe saved successfully'
     };
   } catch (error) {

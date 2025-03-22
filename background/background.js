@@ -29,6 +29,9 @@ function initBackground() {
 
 // Set up context menu for extension
 function setupContextMenu() {
+
+  chrome.contextMenus.removeAll();
+
   chrome.contextMenus.create({
     id: "kukbuk-settings",
     title: "Settings",
@@ -62,11 +65,6 @@ function setupMessageListeners() {
 
     // Handle only messages not handled by specific services
     switch (message.type) {
-      case 'SAVE_RECIPE':
-        // Will be implemented in US-3: Save Current Recipe
-        sendResponse({ success: false, error: "Not implemented yet" });
-        break;
-
       default:
         // Do nothing - the message should be handled by a specific service
         // If no handler responds, Chrome will show a warning in the console
