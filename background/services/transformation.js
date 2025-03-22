@@ -69,7 +69,7 @@ async function compressHtml(htmlContent) {
   console.log(`Original size: ${htmlContent.length} bytes`);
   console.log(`Compressed size: ${base64.length} bytes`);
   console.log(
-    `Data size saving: ${1 - ((base64.length / htmlContent.length) * 100).toFixed(2)}%`,
+    `Data size saving: ${((1 - (base64.length / htmlContent.length)) * 100).toFixed(2)}%`,
   );
 
   return base64;

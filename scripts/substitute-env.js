@@ -7,8 +7,14 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 
-// Load environment variables from .env file
-dotenv.config();
+// Parse command-line arguments
+const args = process.argv.slice(2);
+const envArg = args.find(arg => arg.startsWith('--env='));
+const envFile = envArg ? envArg.replace('--env=', '') : '.env';
+
+// Load environment variables from specified .env file
+dotenv.config({ path: envFile });
+console.log(`Using environment file: ${envFile}`);
 
 // Files to process with environment variable substitution
 const FILES_TO_PROCESS = [

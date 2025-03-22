@@ -4,10 +4,15 @@
   "description": "Chrome extension to save recipes to Google Drive",
   "scripts": {
     "prebuild": "node scripts/substitute-env.js",
+    "prebuild:local": "node scripts/substitute-env.js --env=.env.local",
     "build": "webpack --config webpack.config.js",
+    "build:local": "npm run prebuild:local && webpack --config webpack.config.js",
     "dev": "cross-env NODE_ENV=development npm run prebuild && webpack --watch --config webpack.config.js",
+    "dev:local": "cross-env NODE_ENV=development npm run prebuild:local && webpack --watch --config webpack.config.js",
     "zip": "npm run build && node scripts/zip-extension.js",
-    "deploy": "node scripts/deploy-chrome.js"
+    "zip:local": "npm run build:local && node scripts/zip-extension.js",
+    "deploy": "node scripts/deploy-chrome.js",
+    "deploy:local": "node scripts/deploy-chrome.js --env=.env.local"
   },
   "author": "",
   "license": "ISC",
