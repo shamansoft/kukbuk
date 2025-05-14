@@ -31,10 +31,10 @@
 - [x] **As a first-time user**, I want to select or create a Google Drive folder for recipe storage.
 
 **Technical Stories:**
-- [x] Build folder selection UI showing available Drive folders
-- [x] Implement Drive API calls to list folders
-- [x] Add functionality to create new folders
-- [x] Store selected folder ID in extension storage
+- [ ] Build folder selection UI showing available Drive folders
+- [ ] Implement Drive API calls to list folders
+- [ ] Add functionality to create new folders
+- [ ] Store selected folder ID in extension storage
 
 ## Core Functionality
 

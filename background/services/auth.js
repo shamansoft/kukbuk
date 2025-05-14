@@ -1,12 +1,13 @@
 // Authentication service for MyKukBuk
 
-import { logError } from '../../common/error-handler.js';
-import { STORAGE_KEYS, MESSAGE_TYPES } from '../../common/constants.js';
+import { logError } from "../../common/error-handler.js";
+import { STORAGE_KEYS, MESSAGE_TYPES } from "../../common/constants.js";
 
 // Google API constants
 const GOOGLE_AUTH_SCOPES = [
-  'https://www.googleapis.com/auth/drive.file',
-  'https://www.googleapis.com/auth/userinfo.email'
+  "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/cloud-platform",
 ];
 
 // Token expiration buffer (5 minutes in milliseconds)
@@ -16,15 +17,15 @@ const TOKEN_EXPIRATION_BUFFER = 5 * 60 * 1000;
  * Sets up the authentication service
  */
 export function setupAuth() {
-  console.log('Setting up authentication service');
+  console.log("Setting up authentication service");
 
   // Listen for authentication messages
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === MESSAGE_TYPES.AUTH_REQUEST) {
       authenticateUser()
-        .then(response => sendResponse(response))
-        .catch(error => {
-          logError('Authentication error', error);
+        .then((response) => sendResponse(response))
+        .catch((error) => {
+          logError("Authentication error", error);
           sendResponse({ success: false, error: error.message });
         });
 
@@ -34,9 +35,9 @@ export function setupAuth() {
 
     if (message.type === MESSAGE_TYPES.AUTH_CHECK) {
       checkAuthStatus()
-        .then(response => sendResponse(response))
-        .catch(error => {
-          logError('Auth check error', error);
+        .then((response) => sendResponse(response))
+        .catch((error) => {
+          logError("Auth check error", error);
           sendResponse({ success: false, error: error.message });
         });
 
@@ -45,9 +46,9 @@ export function setupAuth() {
 
     if (message.type === MESSAGE_TYPES.AUTH_LOGOUT) {
       logoutUser()
-        .then(response => sendResponse(response))
-        .catch(error => {
-          logError('Logout error', error);
+        .then((response) => sendResponse(response))
+        .catch((error) => {
+          logError("Logout error", error);
           sendResponse({ success: false, error: error.message });
         });
 
@@ -72,19 +73,19 @@ async function authenticateUser() {
     await chrome.storage.local.set({
       [STORAGE_KEYS.AUTH_TOKEN]: token,
       [STORAGE_KEYS.USER_EMAIL]: userInfo.email,
-      [STORAGE_KEYS.AUTH_EXPIRY]: Date.now() + (60 * 60 * 1000) // Rough estimation (1 hour)
+      [STORAGE_KEYS.AUTH_EXPIRY]: Date.now() + 60 * 60 * 1000, // Rough estimation (1 hour)
     });
 
     return {
       success: true,
-      email: userInfo.email
+      email: userInfo.email,
     };
   } catch (error) {
     // Clean up any partial authentication data
     await chrome.storage.local.remove([
       STORAGE_KEYS.AUTH_TOKEN,
       STORAGE_KEYS.USER_EMAIL,
-      STORAGE_KEYS.AUTH_EXPIRY
+      STORAGE_KEYS.AUTH_EXPIRY,
     ]);
 
     throw error;
@@ -98,15 +99,21 @@ async function authenticateUser() {
  */
 async function getAuthToken(interactive = false) {
   return new Promise((resolve, reject) => {
-    chrome.identity.getAuthToken({ interactive }, (token) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-      } else if (!token) {
-        reject(new Error('Failed to obtain auth token'));
-      } else {
-        resolve(token);
-      }
-    });
+    chrome.identity.getAuthToken(
+      {
+        interactive,
+        scopes: GOOGLE_AUTH_SCOPES,
+      },
+      (token) => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else if (!token) {
+          reject(new Error("Failed to obtain auth token"));
+        } else {
+          resolve(token);
+        }
+      },
+    );
   });
 }
 
@@ -117,20 +124,25 @@ async function getAuthToken(interactive = false) {
  */
 async function getUserInfo(token) {
   try {
-    const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
-    });
+    const response = await fetch(
+      "https://www.googleapis.com/oauth2/v2/userinfo",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
 
     if (!response.ok) {
-      throw new Error(`Failed to get user info: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Failed to get user info: ${response.status} ${response.statusText}`,
+      );
     }
 
     return await response.json();
   } catch (error) {
-    logError('Error getting user info', error);
-    throw new Error('Failed to get user information');
+    logError("Error getting user info", error);
+    throw new Error("Failed to get user information");
   }
 }
 
@@ -144,7 +156,7 @@ async function checkAuthStatus() {
     const authData = await chrome.storage.local.get([
       STORAGE_KEYS.AUTH_TOKEN,
       STORAGE_KEYS.USER_EMAIL,
-      STORAGE_KEYS.AUTH_EXPIRY
+      STORAGE_KEYS.AUTH_EXPIRY,
     ]);
 
     const token = authData[STORAGE_KEYS.AUTH_TOKEN];
@@ -156,7 +168,7 @@ async function checkAuthStatus() {
       return {
         success: false,
         authenticated: false,
-        error: 'Not authenticated'
+        error: "Not authenticated",
       };
     }
 
@@ -173,28 +185,28 @@ async function checkAuthStatus() {
         // Update storage
         await chrome.storage.local.set({
           [STORAGE_KEYS.AUTH_TOKEN]: newToken,
-          [STORAGE_KEYS.AUTH_EXPIRY]: Date.now() + (60 * 60 * 1000) // Rough estimation (1 hour)
+          [STORAGE_KEYS.AUTH_EXPIRY]: Date.now() + 60 * 60 * 1000, // Rough estimation (1 hour)
         });
 
         return {
           success: true,
           authenticated: true,
           email: email,
-          refreshed: true
+          refreshed: true,
         };
       } catch (refreshError) {
-        logError('Token refresh error', refreshError);
+        logError("Token refresh error", refreshError);
         // Token refresh failed, user needs to re-authenticate
         await chrome.storage.local.remove([
           STORAGE_KEYS.AUTH_TOKEN,
           STORAGE_KEYS.USER_EMAIL,
-          STORAGE_KEYS.AUTH_EXPIRY
+          STORAGE_KEYS.AUTH_EXPIRY,
         ]);
 
         return {
           success: false,
           authenticated: false,
-          error: 'Authentication expired'
+          error: "Authentication expired",
         };
       }
     }
@@ -205,28 +217,28 @@ async function checkAuthStatus() {
       return {
         success: true,
         authenticated: true,
-        email: email
+        email: email,
       };
     } catch (validationError) {
       // Token is invalid, user needs to re-authenticate
       await chrome.storage.local.remove([
         STORAGE_KEYS.AUTH_TOKEN,
         STORAGE_KEYS.USER_EMAIL,
-        STORAGE_KEYS.AUTH_EXPIRY
+        STORAGE_KEYS.AUTH_EXPIRY,
       ]);
 
       return {
         success: false,
         authenticated: false,
-        error: 'Invalid authentication'
+        error: "Invalid authentication",
       };
     }
   } catch (error) {
-    logError('Error checking auth status', error);
+    logError("Error checking auth status", error);
     return {
       success: false,
       authenticated: false,
-      error: 'Error checking authentication status'
+      error: "Error checking authentication status",
     };
   }
 }
@@ -250,16 +262,16 @@ async function logoutUser() {
     await chrome.storage.local.remove([
       STORAGE_KEYS.AUTH_TOKEN,
       STORAGE_KEYS.USER_EMAIL,
-      STORAGE_KEYS.AUTH_EXPIRY
+      STORAGE_KEYS.AUTH_EXPIRY,
     ]);
 
     return {
       success: true,
-      message: 'Logged out successfully'
+      message: "Logged out successfully",
     };
   } catch (error) {
-    logError('Error logging out', error);
-    throw new Error('Error logging out');
+    logError("Error logging out", error);
+    throw new Error("Error logging out");
   }
 }
 
