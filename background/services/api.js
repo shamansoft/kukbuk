@@ -48,15 +48,16 @@ async function saveRecipe(recipeData) {
       //      STORAGE_KEYS.DRIVE_FOLDER
     ]);
 
-    const token = authData[STORAGE_KEYS.AUTH_TOKEN];
-    //    const folderId = authData[STORAGE_KEYS.DRIVE_FOLDER];
+    const authResponse = await chrome.runtime.sendMessage({
+        type: MESSAGE_TYPES.GET_ID_TOKEN
+    });
 
-    // Validate required data
-    if (!token) {
-      const error = new Error("Authentication required");
-      error.code = ERROR_CODES.AUTH_REQUIRED;
-      throw error;
+    if (!authResponse.success) {
+        const error = new Error("Authentication required");
+        error.code = ERROR_CODES.AUTH_REQUIRED;
+        throw error;
     }
+    const token = authResponse.idToken;
 
     //    if (!folderId) {
     //      const error = new Error('Google Drive folder not set');
