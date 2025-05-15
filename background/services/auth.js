@@ -2,6 +2,9 @@
 
 import { logError } from "../../common/error-handler.js";
 import { STORAGE_KEYS, MESSAGE_TYPES } from "../../common/constants.js";
+import { ENV } from "../../common/env-config.js";
+
+// JWT parsing and validation functions
 
 // Google API constants
 const GOOGLE_AUTH_SCOPES = [
@@ -9,9 +12,6 @@ const GOOGLE_AUTH_SCOPES = [
   "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/cloud-platform",
 ];
-
-// Cloud Run service URL - replace with your actual URL
-const CLOUD_RUN_URL = 'https://cookbook-577683305271.us-west1.run.app';
 
 // Token expiration buffer (5 minutes in milliseconds)
 const TOKEN_EXPIRATION_BUFFER = 5 * 60 * 1000;
@@ -49,9 +49,9 @@ export function setupAuth() {
 
     if (message.type === MESSAGE_TYPES.AUTH_LOGOUT) {
       logoutUser()
-        .then(response => sendResponse(response))
-        .catch(error => {
-          logError('Logout error', error);
+        .then((response) => sendResponse(response))
+        .catch((error) => {
+          logError("Logout error", error);
           sendResponse({ success: false, error: error.message });
         });
 
@@ -60,9 +60,9 @@ export function setupAuth() {
 
     if (message.type === MESSAGE_TYPES.GET_ID_TOKEN) {
       getIdTokenForCloudRun()
-        .then(idToken => sendResponse({ success: true, idToken }))
-        .catch(error => {
-          logError('ID token error', error);
+        .then((idToken) => sendResponse({ success: true, idToken }))
+        .catch((error) => {
+          logError("ID token error", error);
           sendResponse({ success: false, error: error.message });
         });
 
@@ -80,35 +80,46 @@ export async function getIdTokenForCloudRun() {
     // Check if we have a cached ID token that's still valid
     const tokenData = await chrome.storage.local.get([
       STORAGE_KEYS.ID_TOKEN,
-      STORAGE_KEYS.ID_TOKEN_EXPIRY
+      STORAGE_KEYS.ID_TOKEN_EXPIRY,
     ]);
 
     const cachedToken = tokenData[STORAGE_KEYS.ID_TOKEN];
     const expiry = tokenData[STORAGE_KEYS.ID_TOKEN_EXPIRY];
 
+    console.log("cachedIdToken: ", cachedToken);
+
     // If token exists and isn't expired, return it
-    if (cachedToken && expiry && Date.now() < expiry - TOKEN_EXPIRATION_BUFFER) {
+    if (
+      cachedToken &&
+      expiry &&
+      Date.now() < expiry - TOKEN_EXPIRATION_BUFFER
+    ) {
       return cachedToken;
     }
 
     // Otherwise get a new token
     // First get the OAuth token (needed to get the ID token)
     const oauthToken = await getAuthToken(false);
-
+    console.log("oauthToken ", oauthToken);
     // Use the OAuth token to get an ID token
     const idToken = await fetchIdToken(oauthToken);
 
     // Store the ID token with a 1 hour expiry (typical for ID tokens)
     await chrome.storage.local.set({
       [STORAGE_KEYS.ID_TOKEN]: idToken,
-      [STORAGE_KEYS.ID_TOKEN_EXPIRY]: Date.now() + (60 * 60 * 1000)
+      [STORAGE_KEYS.ID_TOKEN_EXPIRY]: getTokenExpiry(idToken),
     });
 
     return idToken;
   } catch (error) {
-    logError('Error getting ID token', error);
-    throw new Error('Failed to get ID token for Cloud Run');
+    logError("Error getting ID token", error);
+    throw new Error("Failed to get ID token for Cloud Run");
   }
+}
+
+function getTokenExpiry(jwt) {
+  const payload = JSON.parse(atob(jwt.split(".")[1]));
+  return payload.exp * 1000; // Convert seconds to milliseconds
 }
 
 /**
@@ -118,42 +129,21 @@ export async function getIdTokenForCloudRun() {
  */
 async function fetchIdToken(oauthToken) {
   try {
-    // Use Google's tokeninfo endpoint to get an ID token
-    // This is a workaround for extensions since they don't have direct
-    // access to gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().id_token
-    const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${oauthToken}`);
+    const response = await fetch(`${ENV.AUTH_URL}/token-broker`, {
+      headers: {
+        Authorization: `Bearer ${oauthToken}`,
+      },
+    });
 
     if (!response.ok) {
-      throw new Error(`Failed to verify token: ${response.status}`);
+      throw new Error(`Failed to get ID token: ${response.status}`);
     }
 
     const data = await response.json();
-
-    // Use Google's token endpoint to exchange the OAuth token for an ID token
-    // The actual implementation might vary based on your setup
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
-        subject_token: oauthToken,
-        subject_token_type: 'urn:ietf:params:oauth:token-type:access_token',
-        requested_token_type: 'urn:ietf:params:oauth:token-type:id_token',
-        audience: CLOUD_RUN_URL
-      })
-    });
-
-    if (!tokenResponse.ok) {
-      throw new Error(`Failed to get ID token: ${tokenResponse.status}`);
-    }
-
-    const tokenData = await tokenResponse.json();
-    return tokenData.id_token;
+    return data.id_token;
   } catch (error) {
-    logError('Error fetching ID token', error);
-    throw new Error('Failed to fetch ID token');
+    logError("Error fetching ID token", error);
+    throw new Error("Failed to fetch ID token");
   }
 }
 
@@ -172,9 +162,9 @@ async function authenticateUser() {
     // Also get an ID token for Cloud Run
     try {
       const idToken = await getIdTokenForCloudRun();
-      console.log('ID token obtained for Cloud Run');
+      console.log("ID token obtained for Cloud Run");
     } catch (idTokenError) {
-      logError('Warning: Failed to get ID token', idTokenError);
+      logError("Warning: Failed to get ID token", idTokenError);
       // Continue with authentication even if ID token fails
     }
 
@@ -182,7 +172,7 @@ async function authenticateUser() {
     await chrome.storage.local.set({
       [STORAGE_KEYS.AUTH_TOKEN]: token,
       [STORAGE_KEYS.USER_EMAIL]: userInfo.email,
-      [STORAGE_KEYS.AUTH_EXPIRY]: Date.now() + (60 * 60 * 1000) // Rough estimation (1 hour)
+      [STORAGE_KEYS.AUTH_EXPIRY]: Date.now() + 60 * 60 * 1000, // Rough estimation (1 hour)
     });
 
     return {
@@ -197,14 +187,14 @@ async function authenticateUser() {
   }
 }
 
-async cleanupLocalStorage() {
-    await chrome.storage.local.remove([
-      STORAGE_KEYS.AUTH_TOKEN,
-      STORAGE_KEYS.USER_EMAIL,
-      STORAGE_KEYS.AUTH_EXPIRY,
-      STORAGE_KEYS.ID_TOKEN,
-      STORAGE_KEYS.ID_TOKEN_EXPIRY
-    ]);
+async function cleanupLocalStorage() {
+  await chrome.storage.local.remove([
+    STORAGE_KEYS.AUTH_TOKEN,
+    STORAGE_KEYS.USER_EMAIL,
+    STORAGE_KEYS.AUTH_EXPIRY,
+    STORAGE_KEYS.ID_TOKEN,
+    STORAGE_KEYS.ID_TOKEN_EXPIRY,
+  ]);
 }
 
 /**
@@ -301,14 +291,14 @@ async function checkAuthStatus() {
         try {
           await getIdTokenForCloudRun();
         } catch (idTokenError) {
-          logError('Warning: Failed to refresh ID token', idTokenError);
+          logError("Warning: Failed to refresh ID token", idTokenError);
           // Continue even if ID token refresh fails
         }
 
         // Update storage
         await chrome.storage.local.set({
           [STORAGE_KEYS.AUTH_TOKEN]: newToken,
-          [STORAGE_KEYS.AUTH_EXPIRY]: Date.now() + (60 * 60 * 1000) // Rough estimation (1 hour)
+          [STORAGE_KEYS.AUTH_EXPIRY]: Date.now() + 60 * 60 * 1000, // Rough estimation (1 hour)
         });
 
         return {

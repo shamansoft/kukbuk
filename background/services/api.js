@@ -7,6 +7,7 @@ import {
   ERROR_CODES,
 } from "../../common/constants.js";
 import { transformContent } from "./transformation.js";
+import { getIdTokenForCloudRun } from "./auth.js";
 import { ENV } from "../../common/env-config.js";
 
 /**
@@ -41,33 +42,22 @@ export function setupApi() {
  * @returns {Promise<Object>} Save result
  */
 async function saveRecipe(recipeData) {
+  if (!recipeData || !recipeData.pageContent) {
+    throw new Error("Invalid recipe data");
+  }
+
   try {
     // Check authentication status
-    const authData = await chrome.storage.local.get([
-      STORAGE_KEYS.AUTH_TOKEN,
-      //      STORAGE_KEYS.DRIVE_FOLDER
-    ]);
-
-    const authResponse = await chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.GET_ID_TOKEN
-    });
-
-    if (!authResponse.success) {
-        const error = new Error("Authentication required");
-        error.code = ERROR_CODES.AUTH_REQUIRED;
-        throw error;
-    }
-    const token = authResponse.idToken;
+    //
+    console.log("seveRecipe ", recipeData.pageUrl);
+    const token = await getIdTokenForCloudRun();
+    console.log("idToken ", token);
 
     //    if (!folderId) {
     //      const error = new Error('Google Drive folder not set');
     //      error.code = ERROR_CODES.FOLDER_REQUIRED;
     //      throw error;
     //    }
-
-    if (!recipeData || !recipeData.pageContent) {
-      throw new Error("Invalid recipe data");
-    }
 
     const contentObject = await transformContent(recipeData.pageContent);
     const content = contentObject.transformed;
