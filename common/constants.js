@@ -24,6 +24,7 @@ export const MESSAGE_TYPES = {
   // Folder management
   FOLDER_SELECT: "FOLDER_SELECT",
   FOLDER_CREATE: "FOLDER_CREATE",
+  FOLDER_LIST: "FOLDER_LIST",
 };
 
 // Error codes

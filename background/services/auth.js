@@ -202,7 +202,8 @@ async function cleanupLocalStorage() {
  * @param {boolean} interactive - Whether to show the auth UI
  * @returns {Promise<string>} Auth token
  */
-async function getAuthToken(interactive = false) {
+
+export async function getAuthToken(interactive = false) {
   return new Promise((resolve, reject) => {
     chrome.identity.getAuthToken(
       {
