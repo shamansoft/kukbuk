@@ -2,7 +2,8 @@
 
 // Message type constants (duplicated from constants.js since content scripts can't import modules)
 const MESSAGE_TYPES = {
-  EXTRACT_RECIPE: 'EXTRACT_RECIPE'
+  EXTRACT_RECIPE: 'EXTRACT_RECIPE',
+  PING: 'PING'
 };
 
 // Listen for messages from the popup or background script
@@ -10,6 +11,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Content script received message:", message.type);
 
   switch (message.type) {
+    case MESSAGE_TYPES.PING:
+      // Respond to ping to indicate content script is loaded
+      sendResponse({ success: true });
+      return false; // No async response needed
+      
     case MESSAGE_TYPES.EXTRACT_RECIPE:
       extractRecipeData()
         .then(data => sendResponse({ success: true, data }))

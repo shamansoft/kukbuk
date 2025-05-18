@@ -50,10 +50,8 @@ async function saveRecipe(recipeData) {
   try {
     // Check authentication status
     //
-    console.log("seveRecipe ", recipeData.pageUrl);
     const token = await getIdTokenForCloudRun();
     const authToken = await getAuthToken();
-    console.log("idToken ", token);
 
     // Check if Drive folder is selected
     // const folder = await getCurrentFolder();
@@ -66,10 +64,7 @@ async function saveRecipe(recipeData) {
     const contentObject = await transformContent(recipeData.pageContent);
     const content = contentObject.transformed;
 
-    console.log("pageUrl ", recipeData.pageUrl);
-    console.log("pageContent len ", content.length);
-    console.log("pageContent zipped ", content);
-    console.log("token ", token);
+    // Prepare data for sending to API
 
     const request = {
       method: "POST",
@@ -122,14 +117,7 @@ async function saveRecipe(recipeData) {
     // Parse success response
     const result = await response.json();
 
-    // if (result.content) {
-    //   console.log(
-    //     "content first 100 symbols",
-    //     result.content.length > 100
-    //       ? result.content.substring(0, 100)
-    //       : result.content,
-    //   );
-    // }
+
 
     return {
       success: true,

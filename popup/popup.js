@@ -118,77 +118,32 @@ function setupEventListeners() {
         throw new Error("Could not determine active tab");
       }
 
-      // First, make sure the content script is loaded
+      // Make sure the content script is loaded
       try {
-        // Try to inject the content script if it hasn't been loaded yet
-        try {
-          // Try messaging first to see if content script is already loaded
-          await chrome.tabs.sendMessage(activeTab.id, { type: "PING" });
-          console.log("Content script already loaded");
-        } catch (error) {
-          // Only inject if messaging fails (script not loaded)
-          await chrome.scripting.executeScript({
-            target: { tabId: activeTab.id },
-            files: ["content/content.js"],
-          });
-        }
-      } catch (injectionError) {
-        console.warn(
-          "Content script injection error (might already be loaded):",
-          injectionError,
-        );
-        // Continue anyway - the script might already be loaded
-      }
-
-      // Extract recipe data using executeScript as fallback if messaging fails
-      let recipeData;
-
-      try {
-        // First try using messaging
-        const extractResponse = await Promise.race([
-          chrome.tabs.sendMessage(activeTab.id, {
-            type: MESSAGE_TYPES.EXTRACT_RECIPE,
-          }),
-          // Timeout after 2 seconds
-          new Promise((_, reject) =>
-            setTimeout(
-              () => reject(new Error("Content script communication timeout")),
-              2000,
-            ),
-          ),
-        ]);
-
-        if (!extractResponse || !extractResponse.success) {
-          throw new Error(
-            extractResponse?.error || "Failed to extract recipe via messaging",
-          );
-        }
-
-        recipeData = extractResponse.data;
-      } catch (messagingError) {
-        console.warn(
-          "Messaging to content script failed, using executeScript fallback:",
-          messagingError,
-        );
-
-        // Fallback: Extract directly using executeScript
-        const [executeResult] = await chrome.scripting.executeScript({
+        // Try messaging first to see if content script is already loaded
+        await chrome.tabs.sendMessage(activeTab.id, { type: "PING" });
+        console.log("Content script already loaded");
+      } catch (error) {
+        // Only inject if messaging fails (script not loaded)
+        await chrome.scripting.executeScript({
           target: { tabId: activeTab.id },
-          func: () => {
-            return {
-              pageContent: document.documentElement.outerHTML,
-              pageUrl: window.location.href,
-              title: document.title,
-            };
-          },
+          files: ["content/content.js"],
         });
-
-        if (!executeResult || !executeResult.result) {
-          throw new Error("Failed to extract recipe content");
-        }
-
-        recipeData = executeResult.result;
       }
+
+      // Extract recipe data using content script messaging
+      let recipeData;
+      const extractResponse = await chrome.tabs.sendMessage(activeTab.id, {
+        type: MESSAGE_TYPES.EXTRACT_RECIPE,
+      });
+
+      if (!extractResponse || !extractResponse.success) {
+        throw new Error(
+          extractResponse?.error || "Failed to extract recipe"
+        );
+      }
+
+      recipeData = extractResponse.data;
 
       // Update status
       showMessage(statusMessage, "Saving recipe...", "info");
@@ -315,22 +270,4 @@ function sendMessageToBackground(type, data) {
   });
 }
 
-// Add CSS for the View in Drive button
-function addStyles() {
-  const style = document.createElement("style");
-  style.textContent = `
-    .view-drive-btn {
-      display: block;
-      margin: 10px auto 0;
-      background-color: #4285f4;
-      color: white;
-    }
-    .view-drive-btn:hover {
-      background-color: #3367d6;
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-// Initialize styles
-// addStyles();
+// No view in drive button needed
