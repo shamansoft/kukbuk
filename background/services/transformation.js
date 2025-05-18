@@ -1,12 +1,12 @@
 // Transformation service for MyKukbuk
 
-import { logError } from '../../common/error-handler.js';
+import { logError } from "../../common/error-handler.js";
 
 /**
  * Sets up the transformation service
  */
 export function setupTransformation() {
-    console.log('Setting up transformation service');
+  console.log("Setting up transformation service");
 }
 
 /**
@@ -28,20 +28,20 @@ export async function transformContent(html) {
     console.log("transformContent transformedHtml size", compressed.length);
     console.log("transformContent diff", html.length - compressed.length);
     return {
-        original: html,
-        transformed: compressed,
-        success: true,
-        isCompressed: true
-    }
+      original: html,
+      transformed: compressed,
+      success: true,
+      isCompressed: true,
+    };
   } catch (error) {
-    logError('Content transformation error', error);
+    logError("Content transformation error", error);
     // Return original content on error
     return {
-        original: html,
-        transformed: html,
-        success: false,
-        isCompressed: false
-    }
+      original: html,
+      transformed: html,
+      success: false,
+      isCompressed: false,
+    };
   }
 }
 
@@ -56,9 +56,7 @@ async function compressHtml(htmlContent) {
   const data = encoder.encode(htmlContent);
 
   // Compress using CompressionStream (GZIP)
-  const compressedStream = new Blob([data])
-    .stream()
-    .pipeThrough(new CompressionStream("gzip"));
+  const compressedStream = new Blob([data]).stream().pipeThrough(new CompressionStream("gzip"));
 
   // Convert compressed stream to Blob
   const compressedBlob = await new Response(compressedStream).blob();
@@ -68,9 +66,7 @@ async function compressHtml(htmlContent) {
 
   console.log(`Original size: ${htmlContent.length} bytes`);
   console.log(`Compressed size: ${base64.length} bytes`);
-  console.log(
-    `Data size saving: ${((1 - (base64.length / htmlContent.length)) * 100).toFixed(2)}%`,
-  );
+  console.log(`Data size saving: ${((1 - base64.length / htmlContent.length) * 100).toFixed(2)}%`);
 
   return base64;
 }

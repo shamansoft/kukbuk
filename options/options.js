@@ -1,6 +1,6 @@
 // Import common utilities and constants
-import { logError, showMessage } from '../common/error-handler.js';
-import { STORAGE_KEYS, MESSAGE_TYPES, ERROR_CODES } from '../common/constants.js';
+import { logError, showMessage } from "../common/error-handler.js";
+import { STORAGE_KEYS, MESSAGE_TYPES, ERROR_CODES } from "../common/constants.js";
 
 // DOM elements
 const userEmail = document.getElementById("user-email");
@@ -24,7 +24,7 @@ async function initOptions() {
     versionElement.textContent = manifest.version;
 
     // Show loading state
-    showMessage(statusMessage, 'Loading...', 'info');
+    showMessage(statusMessage, "Loading...", "info");
 
     // Check authentication status
     const authStatus = await sendMessageToBackground(MESSAGE_TYPES.AUTH_CHECK);
@@ -33,23 +33,23 @@ async function initOptions() {
       // Get drive folder info
       const folderData = await chrome.storage.local.get([
         STORAGE_KEYS.DRIVE_FOLDER,
-        STORAGE_KEYS.DRIVE_FOLDER_NAME
+        STORAGE_KEYS.DRIVE_FOLDER_NAME,
       ]);
 
       // User is authenticated
       showLoggedInView(authStatus.email);
-      folderName.textContent = folderData[STORAGE_KEYS.DRIVE_FOLDER_NAME] || 'Not set';
+      folderName.textContent = folderData[STORAGE_KEYS.DRIVE_FOLDER_NAME] || "Not set";
       changeFolderButton.disabled = !folderData[STORAGE_KEYS.DRIVE_FOLDER];
-      statusMessage.textContent = '';
+      statusMessage.textContent = "";
     } else {
       // User is not authenticated
       showLoggedOutView();
       folderName.textContent = "Login required";
       changeFolderButton.disabled = true;
       if (authStatus.error) {
-        showMessage(statusMessage, authStatus.error, 'info');
+        showMessage(statusMessage, authStatus.error, "info");
       } else {
-        statusMessage.textContent = '';
+        statusMessage.textContent = "";
       }
     }
 
@@ -58,16 +58,16 @@ async function initOptions() {
   } catch (error) {
     logError("Error initializing options page", error);
     showLoggedOutView();
-    showMessage(statusMessage, 'Error initializing settings', 'error');
+    showMessage(statusMessage, "Error initializing settings", "error");
   }
 }
 
 // Setup UI event listeners
 function setupEventListeners() {
   // Login button
-  loginButton.addEventListener('click', async () => {
+  loginButton.addEventListener("click", async () => {
     try {
-      showMessage(statusMessage, 'Authenticating...', 'info');
+      showMessage(statusMessage, "Authenticating...", "info");
 
       // Request authentication
       const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_REQUEST);
@@ -76,18 +76,18 @@ function setupEventListeners() {
         // Reload page to update UI
         window.location.reload();
       } else {
-        showMessage(statusMessage, authResponse.error || 'Authentication failed', 'error');
+        showMessage(statusMessage, authResponse.error || "Authentication failed", "error");
       }
     } catch (error) {
-      logError('Login error', error);
-      showMessage(statusMessage, 'Authentication failed', 'error');
+      logError("Login error", error);
+      showMessage(statusMessage, "Authentication failed", "error");
     }
   });
 
   // Logout button
-  logoutButton.addEventListener('click', async () => {
+  logoutButton.addEventListener("click", async () => {
     try {
-      showMessage(statusMessage, 'Logging out...', 'info');
+      showMessage(statusMessage, "Logging out...", "info");
 
       // Request logout
       const logoutResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_LOGOUT);
@@ -96,11 +96,11 @@ function setupEventListeners() {
         // Reload page to update UI
         window.location.reload();
       } else {
-        showMessage(statusMessage, logoutResponse.error || 'Logout failed', 'error');
+        showMessage(statusMessage, logoutResponse.error || "Logout failed", "error");
       }
     } catch (error) {
-      logError('Logout error', error);
-      showMessage(statusMessage, 'Logout failed', 'error');
+      logError("Logout error", error);
+      showMessage(statusMessage, "Logout failed", "error");
     }
   });
 
@@ -110,8 +110,8 @@ function setupEventListeners() {
       // Show folder selection UI
       await showFolderSelectionModal();
     } catch (error) {
-      logError('Folder selection error', error);
-      showMessage(statusMessage, 'Error selecting folder', 'error');
+      logError("Folder selection error", error);
+      showMessage(statusMessage, "Error selecting folder", "error");
     }
   });
 }
@@ -125,8 +125,8 @@ function showLoggedInView(email) {
 }
 
 function showLoggedOutView() {
-  loggedInView.style.display = 'none';
-  loggedOutView.style.display = 'block';
+  loggedInView.style.display = "none";
+  loggedOutView.style.display = "block";
   changeFolderButton.disabled = true;
 }
 
@@ -136,8 +136,8 @@ function showLoggedOutView() {
 async function showFolderSelectionModal() {
   try {
     // Create modal elements
-    const modal = document.createElement('div');
-    modal.className = 'modal';
+    const modal = document.createElement("div");
+    modal.className = "modal";
     modal.innerHTML = `
       <div class="modal-content">
         <div class="modal-header">
@@ -164,120 +164,121 @@ async function showFolderSelectionModal() {
         </div>
       </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Get modal elements
-    const closeButton = modal.querySelector('.close');
-    const folderList = modal.querySelector('#folder-list');
-    const newFolderName = modal.querySelector('#new-folder-name');
-    const createFolderButton = modal.querySelector('#create-folder-button');
-    const modalStatus = modal.querySelector('#modal-status');
-    
+    const closeButton = modal.querySelector(".close");
+    const folderList = modal.querySelector("#folder-list");
+    const newFolderName = modal.querySelector("#new-folder-name");
+    const createFolderButton = modal.querySelector("#create-folder-button");
+    const modalStatus = modal.querySelector("#modal-status");
+
     // Close modal when clicking X
-    closeButton.addEventListener('click', () => {
+    closeButton.addEventListener("click", () => {
       document.body.removeChild(modal);
     });
-    
+
     // Create folder button click handler
-    createFolderButton.addEventListener('click', async () => {
+    createFolderButton.addEventListener("click", async () => {
       try {
-        modalStatus.textContent = 'Creating folder...';
-        modalStatus.className = 'status info';
-        
+        modalStatus.textContent = "Creating folder...";
+        modalStatus.className = "status info";
+
         const name = newFolderName.value.trim();
         if (!name) {
-          throw new Error('Folder name is required');
+          throw new Error("Folder name is required");
         }
-        
+
         const response = await sendMessageToBackground(MESSAGE_TYPES.FOLDER_CREATE, { name });
-        
+
         if (response.success) {
           modalStatus.textContent = `Folder "${response.folder.name}" created successfully`;
-          modalStatus.className = 'status success';
-          
+          modalStatus.className = "status success";
+
           // Update the main UI
           folderName.textContent = response.folder.name;
-          
+
           // Close modal after a delay
           setTimeout(() => {
             document.body.removeChild(modal);
           }, 1500);
         } else {
-          throw new Error(response.error || 'Failed to create folder');
+          throw new Error(response.error || "Failed to create folder");
         }
       } catch (error) {
-        logError('Create folder error', error);
+        logError("Create folder error", error);
         modalStatus.textContent = error.message;
-        modalStatus.className = 'status error';
+        modalStatus.className = "status error";
       }
     });
-    
+
     // Load folder list
     try {
       const foldersResponse = await sendMessageToBackground(MESSAGE_TYPES.FOLDER_LIST);
-      
+
       if (foldersResponse.success) {
         // Clear loading message
-        folderList.innerHTML = '';
-        
+        folderList.innerHTML = "";
+
         if (foldersResponse.folders.length === 0) {
-          folderList.innerHTML = '<div class="no-folders">No folders found. Create a new one.</div>';
+          folderList.innerHTML =
+            "<div class=\"no-folders\">No folders found. Create a new one.</div>";
         } else {
           // Create folder items
-          foldersResponse.folders.forEach(folder => {
-            const folderItem = document.createElement('div');
-            folderItem.className = 'folder-item';
+          foldersResponse.folders.forEach((folder) => {
+            const folderItem = document.createElement("div");
+            folderItem.className = "folder-item";
             folderItem.innerHTML = `
               <div class="folder-icon">📁</div>
               <div class="folder-name">${folder.name}</div>
             `;
-            
+
             // Click handler for folder selection
-            folderItem.addEventListener('click', async () => {
+            folderItem.addEventListener("click", async () => {
               try {
-                modalStatus.textContent = 'Selecting folder...';
-                modalStatus.className = 'status info';
-                
-                const response = await sendMessageToBackground(
-                  MESSAGE_TYPES.FOLDER_SELECT, 
-                  { folderId: folder.id, folderName: folder.name }
-                );
-                
+                modalStatus.textContent = "Selecting folder...";
+                modalStatus.className = "status info";
+
+                const response = await sendMessageToBackground(MESSAGE_TYPES.FOLDER_SELECT, {
+                  folderId: folder.id,
+                  folderName: folder.name,
+                });
+
                 if (response.success) {
                   modalStatus.textContent = `Folder "${response.folder.name}" selected`;
-                  modalStatus.className = 'status success';
-                  
+                  modalStatus.className = "status success";
+
                   // Update the main UI
                   folderName.textContent = response.folder.name;
-                  
+
                   // Close modal after a delay
                   setTimeout(() => {
                     document.body.removeChild(modal);
                   }, 1500);
                 } else {
-                  throw new Error(response.error || 'Failed to select folder');
+                  throw new Error(response.error || "Failed to select folder");
                 }
               } catch (error) {
-                logError('Folder selection error', error);
+                logError("Folder selection error", error);
                 modalStatus.textContent = error.message;
-                modalStatus.className = 'status error';
+                modalStatus.className = "status error";
               }
             });
-            
+
             folderList.appendChild(folderItem);
           });
         }
       } else {
-        throw new Error(foldersResponse.error || 'Failed to load folders');
+        throw new Error(foldersResponse.error || "Failed to load folders");
       }
     } catch (error) {
-      logError('List folders error', error);
+      logError("List folders error", error);
       folderList.innerHTML = `<div class="error">Error loading folders: ${error.message}</div>`;
     }
   } catch (error) {
-    logError('Modal creation error', error);
-    showMessage(statusMessage, 'Error showing folder selection', 'error');
+    logError("Modal creation error", error);
+    showMessage(statusMessage, "Error showing folder selection", "error");
   }
 }
 

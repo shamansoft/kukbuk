@@ -1,10 +1,6 @@
 // Import common utilities and constants
 import { logError, showMessage } from "../common/error-handler.js";
-import {
-  STORAGE_KEYS,
-  MESSAGE_TYPES,
-  ERROR_CODES,
-} from "../common/constants.js";
+import { STORAGE_KEYS, MESSAGE_TYPES, ERROR_CODES } from "../common/constants.js";
 
 // DOM elements
 const loginSection = document.getElementById("login-section");
@@ -74,19 +70,13 @@ function setupEventListeners() {
       showMessage(statusMessage, "Authenticating...", "info");
 
       // Request authentication
-      const authResponse = await sendMessageToBackground(
-        MESSAGE_TYPES.AUTH_REQUEST,
-      );
+      const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_REQUEST);
 
       if (authResponse.success) {
         showLoggedInView(authResponse.email);
         showMessage(statusMessage, "Logged in successfully", "success");
       } else {
-        showMessage(
-          statusMessage,
-          authResponse.error || "Authentication failed",
-          "error",
-        );
+        showMessage(statusMessage, authResponse.error || "Authentication failed", "error");
       }
     } catch (error) {
       logError("Login error", error);
@@ -138,9 +128,7 @@ function setupEventListeners() {
       });
 
       if (!extractResponse || !extractResponse.success) {
-        throw new Error(
-          extractResponse?.error || "Failed to extract recipe"
-        );
+        throw new Error(extractResponse?.error || "Failed to extract recipe");
       }
 
       recipeData = extractResponse.data;
@@ -149,10 +137,7 @@ function setupEventListeners() {
       showMessage(statusMessage, "Saving recipe...", "info");
 
       // Send to background for saving
-      const saveResponse = await sendMessageToBackground(
-        MESSAGE_TYPES.SAVE_RECIPE,
-        recipeData,
-      );
+      const saveResponse = await sendMessageToBackground(MESSAGE_TYPES.SAVE_RECIPE, recipeData);
 
       if (saveResponse.success) {
         console.log("recipe saved", saveResponse);
@@ -189,26 +174,14 @@ function setupEventListeners() {
           showLoginView();
           showMessage(statusMessage, "Please login to save recipes", "error");
         } else if (saveResponse.errorCode === ERROR_CODES.FOLDER_REQUIRED) {
-          showMessage(
-            statusMessage,
-            "Please set up a Google Drive folder in settings",
-            "error",
-          );
+          showMessage(statusMessage, "Please set up a Google Drive folder in settings", "error");
         } else {
-          showMessage(
-            statusMessage,
-            saveResponse.error || "Failed to save recipe",
-            "error",
-          );
+          showMessage(statusMessage, saveResponse.error || "Failed to save recipe", "error");
         }
       }
     } catch (error) {
       logError("Save recipe error", error);
-      showMessage(
-        statusMessage,
-        error.message || "Error saving recipe",
-        "error",
-      );
+      showMessage(statusMessage, error.message || "Error saving recipe", "error");
     }
   });
 
@@ -223,19 +196,13 @@ function setupEventListeners() {
       showMessage(statusMessage, "Logging out...", "info");
 
       // Request logout
-      const logoutResponse = await sendMessageToBackground(
-        MESSAGE_TYPES.AUTH_LOGOUT,
-      );
+      const logoutResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_LOGOUT);
 
       if (logoutResponse.success) {
         showLoginView();
         showMessage(statusMessage, "Logged out successfully", "success");
       } else {
-        showMessage(
-          statusMessage,
-          logoutResponse.error || "Logout failed",
-          "error",
-        );
+        showMessage(statusMessage, logoutResponse.error || "Logout failed", "error");
       }
     } catch (error) {
       logError("Logout error", error);

@@ -2,8 +2,8 @@
 
 // Message type constants (duplicated from constants.js since content scripts can't import modules)
 const MESSAGE_TYPES = {
-  EXTRACT_RECIPE: 'EXTRACT_RECIPE',
-  PING: 'PING'
+  EXTRACT_RECIPE: "EXTRACT_RECIPE",
+  PING: "PING",
 };
 
 // Listen for messages from the popup or background script
@@ -15,15 +15,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Respond to ping to indicate content script is loaded
       sendResponse({ success: true });
       return false; // No async response needed
-      
+
     case MESSAGE_TYPES.EXTRACT_RECIPE:
       extractRecipeData()
-        .then(data => sendResponse({ success: true, data }))
-        .catch(error => {
-          console.error('Error extracting recipe:', error);
+        .then((data) => sendResponse({ success: true, data }))
+        .catch((error) => {
+          console.error("Error extracting recipe:", error);
           sendResponse({
             success: false,
-            error: error.message || 'Failed to extract recipe data'
+            error: error.message || "Failed to extract recipe data",
           });
         });
 
@@ -51,7 +51,7 @@ async function extractRecipeData() {
   const pageData = {
     pageContent,
     pageUrl: window.location.href,
-    title: document.title
+    title: document.title,
   };
 
   return pageData;
@@ -72,19 +72,19 @@ function performBasicCleanup() {
 
     // ONLY remove these definitely non-content elements
     const elementsToRemove = [
-      'script',         // JavaScript
-      'style',          // CSS
-      'noscript',       // No-JS fallback
-      'iframe',         // Embedded frames
-      'svg',            // Vector graphics
-      'canvas',         // Drawing canvas
-      'template'        // Template elements
+      "script", // JavaScript
+      "style", // CSS
+      "noscript", // No-JS fallback
+      "iframe", // Embedded frames
+      "svg", // Vector graphics
+      "canvas", // Drawing canvas
+      "template", // Template elements
     ];
 
     // Remove elements
-    elementsToRemove.forEach(tag => {
+    elementsToRemove.forEach((tag) => {
       const elements = docClone.querySelectorAll(tag);
-      elements.forEach(el => {
+      elements.forEach((el) => {
         try {
           el.parentNode?.removeChild(el);
         } catch (e) {
@@ -96,7 +96,7 @@ function performBasicCleanup() {
     console.log("doc size diff", initialDocSize - docClone.documentElement.outerHTML.length);
     return docClone.documentElement.outerHTML;
   } catch (error) {
-    console.error('Error performing basic cleanup:', error);
+    console.error("Error performing basic cleanup:", error);
     // On any error, return the original HTML
     return document.documentElement.outerHTML;
   }
@@ -104,11 +104,11 @@ function performBasicCleanup() {
 
 // Initialize content script
 function init() {
-  console.log('MyKukbuk content script initialized');
+  console.log("MyKukbuk content script initialized");
 }
 
 // Run initialization
 init();
 
 // Send a ready message to let the extension know content script is available
-chrome.runtime.sendMessage({ type: 'CONTENT_SCRIPT_READY' });
+chrome.runtime.sendMessage({ type: "CONTENT_SCRIPT_READY" });

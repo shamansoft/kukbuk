@@ -89,11 +89,7 @@ export async function getIdTokenForCloudRun() {
     console.log("cachedIdToken: ", cachedToken);
 
     // If token exists and isn't expired, return it
-    if (
-      cachedToken &&
-      expiry &&
-      Date.now() < expiry - TOKEN_EXPIRATION_BUFFER
-    ) {
+    if (cachedToken && expiry && Date.now() < expiry - TOKEN_EXPIRATION_BUFFER) {
       return cachedToken;
     }
 
@@ -230,19 +226,14 @@ export async function getAuthToken(interactive = false) {
  */
 async function getUserInfo(token) {
   try {
-    const response = await fetch(
-      "https://www.googleapis.com/oauth2/v2/userinfo",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+    const response = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: {
+        Authorization: `Bearer ${token}`,
       },
-    );
+    });
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to get user info: ${response.status} ${response.statusText}`,
-      );
+      throw new Error(`Failed to get user info: ${response.status} ${response.statusText}`);
     }
 
     return await response.json();

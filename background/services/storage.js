@@ -1,15 +1,15 @@
-import { logError } from '../../common/error-handler.js';
-import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from '../../common/constants.js';
-import { getAuthToken } from './auth.js';
+import { logError } from "../../common/error-handler.js";
+import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from "../../common/constants.js";
+import { getAuthToken } from "./auth.js";
 
 // Google Drive API endpoint
-const DRIVE_API_URL = 'https://www.googleapis.com/drive/v3';
+const DRIVE_API_URL = "https://www.googleapis.com/drive/v3";
 
 // Folder MIME type
-const FOLDER_MIME_TYPE = 'application/vnd.google-apps.folder';
+const FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";
 
 // Default folder name
-const DEFAULT_FOLDER_NAME = 'MyKukBuk Recipes';
+const DEFAULT_FOLDER_NAME = "MyKukBuk Recipes";
 
 /**
  * Sets up the storage service
@@ -21,13 +21,13 @@ export function setupStorage() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === MESSAGE_TYPES.FOLDER_SELECT) {
       selectDriveFolder(message.data)
-        .then(response => sendResponse(response))
-        .catch(error => {
-          logError('Folder selection error', error);
+        .then((response) => sendResponse(response))
+        .catch((error) => {
+          logError("Folder selection error", error);
           sendResponse({
             success: false,
             error: error.message,
-            errorCode: error.code || ERROR_CODES.UNKNOWN_ERROR
+            errorCode: error.code || ERROR_CODES.UNKNOWN_ERROR,
           });
         });
 
@@ -37,29 +37,29 @@ export function setupStorage() {
 
     if (message.type === MESSAGE_TYPES.FOLDER_CREATE) {
       createDriveFolder(message.data)
-        .then(response => sendResponse(response))
-        .catch(error => {
-          logError('Folder creation error', error);
+        .then((response) => sendResponse(response))
+        .catch((error) => {
+          logError("Folder creation error", error);
           sendResponse({
             success: false,
             error: error.message,
-            errorCode: error.code || ERROR_CODES.UNKNOWN_ERROR
+            errorCode: error.code || ERROR_CODES.UNKNOWN_ERROR,
           });
         });
 
       // Return true to indicate we'll respond asynchronously
       return true;
     }
-    
+
     if (message.type === MESSAGE_TYPES.FOLDER_LIST) {
       listDriveFolders()
-        .then(response => sendResponse(response))
-        .catch(error => {
-          logError('Folder listing error', error);
+        .then((response) => sendResponse(response))
+        .catch((error) => {
+          logError("Folder listing error", error);
           sendResponse({
             success: false,
             error: error.message,
-            errorCode: error.code || ERROR_CODES.UNKNOWN_ERROR
+            errorCode: error.code || ERROR_CODES.UNKNOWN_ERROR,
           });
         });
 
@@ -76,17 +76,18 @@ export function setupStorage() {
 export async function listDriveFolders() {
   try {
     const token = await getAuthToken(false);
-    
+
     // Query for folders owned by the user
-    const query = "mimeType = 'application/vnd.google-apps.folder' and 'root' in parents and trashed = false";
-    
+    const query =
+      "mimeType = 'application/vnd.google-apps.folder' and 'root' in parents and trashed = false";
+
     const response = await fetch(
-      `${DRIVE_API_URL}/files?q=${encodeURIComponent(query)}&fields=files(id,name)`, 
+      `${DRIVE_API_URL}/files?q=${encodeURIComponent(query)}&fields=files(id,name)`,
       {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
+          Authorization: `Bearer ${token}`,
+        },
+      },
     );
 
     if (!response.ok) {
@@ -96,10 +97,10 @@ export async function listDriveFolders() {
     const data = await response.json();
     return {
       success: true,
-      folders: data.files || []
+      folders: data.files || [],
     };
   } catch (error) {
-    logError('Error listing Drive folders', error);
+    logError("Error listing Drive folders", error);
     throw error;
   }
 }
@@ -113,19 +114,19 @@ export async function listDriveFolders() {
 export async function createDriveFolder({ name = DEFAULT_FOLDER_NAME } = {}) {
   try {
     const token = await getAuthToken(false);
-    
+
     // Create folder in Drive
     const response = await fetch(`${DRIVE_API_URL}/files`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         name,
         mimeType: FOLDER_MIME_TYPE,
-        parents: ['root'] // Create in root folder
-      })
+        parents: ["root"], // Create in root folder
+      }),
     });
 
     if (!response.ok) {
@@ -133,22 +134,22 @@ export async function createDriveFolder({ name = DEFAULT_FOLDER_NAME } = {}) {
     }
 
     const folder = await response.json();
-    
+
     // Store folder ID and name
     await chrome.storage.local.set({
       [STORAGE_KEYS.DRIVE_FOLDER]: folder.id,
-      [STORAGE_KEYS.DRIVE_FOLDER_NAME]: folder.name
+      [STORAGE_KEYS.DRIVE_FOLDER_NAME]: folder.name,
     });
 
     return {
       success: true,
       folder: {
         id: folder.id,
-        name: folder.name
-      }
+        name: folder.name,
+      },
     };
   } catch (error) {
-    logError('Error creating Drive folder', error);
+    logError("Error creating Drive folder", error);
     throw error;
   }
 }
@@ -163,20 +164,17 @@ export async function createDriveFolder({ name = DEFAULT_FOLDER_NAME } = {}) {
 export async function selectDriveFolder({ folderId, folderName }) {
   try {
     if (!folderId) {
-      throw new Error('Folder ID is required');
+      throw new Error("Folder ID is required");
     }
 
     if (!folderName) {
       // If folder name not provided, fetch it
       const token = await getAuthToken(false);
-      const response = await fetch(
-        `${DRIVE_API_URL}/files/${folderId}?fields=name`, 
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
+      const response = await fetch(`${DRIVE_API_URL}/files/${folderId}?fields=name`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to get folder name: ${response.status} ${response.statusText}`);
@@ -189,18 +187,18 @@ export async function selectDriveFolder({ folderId, folderName }) {
     // Store folder ID and name
     await chrome.storage.local.set({
       [STORAGE_KEYS.DRIVE_FOLDER]: folderId,
-      [STORAGE_KEYS.DRIVE_FOLDER_NAME]: folderName
+      [STORAGE_KEYS.DRIVE_FOLDER_NAME]: folderName,
     });
 
     return {
       success: true,
       folder: {
         id: folderId,
-        name: folderName
-      }
+        name: folderName,
+      },
     };
   } catch (error) {
-    logError('Error selecting Drive folder', error);
+    logError("Error selecting Drive folder", error);
     throw error;
   }
 }
@@ -213,7 +211,7 @@ export async function getCurrentFolder() {
   try {
     const data = await chrome.storage.local.get([
       STORAGE_KEYS.DRIVE_FOLDER,
-      STORAGE_KEYS.DRIVE_FOLDER_NAME
+      STORAGE_KEYS.DRIVE_FOLDER_NAME,
     ]);
 
     const folderId = data[STORAGE_KEYS.DRIVE_FOLDER];
@@ -225,10 +223,10 @@ export async function getCurrentFolder() {
 
     return {
       id: folderId,
-      name: folderName || 'Unknown'
+      name: folderName || "Unknown",
     };
   } catch (error) {
-    logError('Error getting current folder', error);
+    logError("Error getting current folder", error);
     return null;
   }
 }
