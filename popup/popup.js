@@ -1,25 +1,29 @@
 // Import common utilities and constants
-import { logError, showMessage } from '../common/error-handler.js';
-import { STORAGE_KEYS, MESSAGE_TYPES, ERROR_CODES } from '../common/constants.js';
+import { logError, showMessage } from "../common/error-handler.js";
+import {
+  STORAGE_KEYS,
+  MESSAGE_TYPES,
+  ERROR_CODES,
+} from "../common/constants.js";
 
 // DOM elements
-const loginSection = document.getElementById('login-section');
-const mainSection = document.getElementById('main-section');
-const userEmail = document.getElementById('user-email');
-const loginButton = document.getElementById('login-button');
-const saveRecipeButton = document.getElementById('save-recipe-button');
-const settingsButton = document.getElementById('settings-button');
-const logoutButton = document.getElementById('logout-button');
-const statusMessage = document.getElementById('status-message');
+const loginSection = document.getElementById("login-section");
+const mainSection = document.getElementById("main-section");
+const userEmail = document.getElementById("user-email");
+const loginButton = document.getElementById("login-button");
+const saveRecipeButton = document.getElementById("save-recipe-button");
+const settingsButton = document.getElementById("settings-button");
+const logoutButton = document.getElementById("logout-button");
+const statusMessage = document.getElementById("status-message");
 
 // Initialize popup
-document.addEventListener('DOMContentLoaded', initPopup);
+document.addEventListener("DOMContentLoaded", initPopup);
 
 // Main initialization function
 async function initPopup() {
   try {
     // Display loading state
-    showMessage(statusMessage, 'Loading...', 'info');
+    showMessage(statusMessage, "Loading...", "info");
 
     // Check authentication status
     const authStatus = await sendMessageToBackground(MESSAGE_TYPES.AUTH_CHECK);
@@ -27,146 +31,184 @@ async function initPopup() {
     if (authStatus.success && authStatus.authenticated) {
       // User is authenticated
       showLoggedInView(authStatus.email);
-      showMessage(statusMessage, authStatus.refreshed ? 'Session refreshed' : '', 'success');
+
+      // // Check if Google Drive folder is set
+      // const folderData = await chrome.storage.local.get([
+      //   STORAGE_KEYS.DRIVE_FOLDER,
+      //   STORAGE_KEYS.DRIVE_FOLDER_NAME
+      // ]);
+
+      // const hasDriveFolder = !!folderData[STORAGE_KEYS.DRIVE_FOLDER];
+
+      // if (!hasDriveFolder) {
+      //   showMessage(statusMessage, 'Please set a Google Drive folder in settings', 'warning');
+      // } else if (authStatus.refreshed) {
+      //   showMessage(statusMessage, 'Session refreshed', 'success');
+      // } else {
+      //   statusMessage.textContent = '';
+      // }
     } else {
       // User is not authenticated
       showLoginView();
       if (authStatus.error) {
-        showMessage(statusMessage, authStatus.error, 'info');
+        showMessage(statusMessage, authStatus.error, "info");
       } else {
-        statusMessage.textContent = '';
+        statusMessage.textContent = "";
       }
     }
 
     // Set up event listeners
     setupEventListeners();
-
   } catch (error) {
     logError("Error initializing popup", error);
     showLoginView();
-    showMessage(statusMessage, 'Error initializing extension', 'error');
+    showMessage(statusMessage, "Error initializing extension", "error");
   }
 }
 
 // Setup UI event listeners
 function setupEventListeners() {
   // Login button
-  loginButton.addEventListener('click', async () => {
+  loginButton.addEventListener("click", async () => {
     try {
-      showMessage(statusMessage, 'Authenticating...', 'info');
+      showMessage(statusMessage, "Authenticating...", "info");
 
       // Request authentication
-      const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_REQUEST);
+      const authResponse = await sendMessageToBackground(
+        MESSAGE_TYPES.AUTH_REQUEST,
+      );
 
       if (authResponse.success) {
         showLoggedInView(authResponse.email);
-        showMessage(statusMessage, 'Logged in successfully', 'success');
+        showMessage(statusMessage, "Logged in successfully", "success");
       } else {
-        showMessage(statusMessage, authResponse.error || 'Authentication failed', 'error');
+        showMessage(
+          statusMessage,
+          authResponse.error || "Authentication failed",
+          "error",
+        );
       }
     } catch (error) {
-      logError('Login error', error);
-      showMessage(statusMessage, 'Authentication failed', 'error');
+      logError("Login error", error);
+      showMessage(statusMessage, "Authentication failed", "error");
     }
   });
 
-// Save recipe button
-  saveRecipeButton.addEventListener('click', async () => {
+  // Save recipe button
+  saveRecipeButton.addEventListener("click", async () => {
+    // Remove any previous "View in Drive" button if it exists
+    // const existingViewButton = document.querySelector('.view-drive-btn');
+    // if (existingViewButton && existingViewButton.parentNode) {
+    //   existingViewButton.parentNode.removeChild(existingViewButton);
+    // }
+
     try {
       // Show saving state
-      showMessage(statusMessage, 'Extracting recipe...', 'info');
+      showMessage(statusMessage, "Extracting recipe...", "info");
 
       // Get the current tab
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabs = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
       const activeTab = tabs[0];
       console.log("activeTab", activeTab);
 
       if (!activeTab) {
-        throw new Error('Could not determine active tab');
+        throw new Error("Could not determine active tab");
       }
 
-      // First, make sure the content script is loaded
+      // Make sure the content script is loaded
       try {
-        // Try to inject the content script if it hasn't been loaded yet
-        try {
-          // Try messaging first to see if content script is already loaded
-          await chrome.tabs.sendMessage(activeTab.id, { type: 'PING' });
-          console.log('Content script already loaded');
-        } catch (error) {
-          // Only inject if messaging fails (script not loaded)
-          await chrome.scripting.executeScript({
-            target: { tabId: activeTab.id },
-            files: ['content/content.js']
-          });
-        }
-      } catch (injectionError) {
-        console.warn('Content script injection error (might already be loaded):', injectionError);
-        // Continue anyway - the script might already be loaded
-      }
-
-      // Extract recipe data using executeScript as fallback if messaging fails
-      let recipeData;
-
-      try {
-        // First try using messaging
-        const extractResponse = await Promise.race([
-          chrome.tabs.sendMessage(activeTab.id, { type: MESSAGE_TYPES.EXTRACT_RECIPE }),
-          // Timeout after 2 seconds
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Content script communication timeout')), 2000))
-        ]);
-
-        if (!extractResponse || !extractResponse.success) {
-          throw new Error(extractResponse?.error || 'Failed to extract recipe via messaging');
-        }
-
-        recipeData = extractResponse.data;
-      } catch (messagingError) {
-        console.warn('Messaging to content script failed, using executeScript fallback:', messagingError);
-
-        // Fallback: Extract directly using executeScript
-        const [executeResult] = await chrome.scripting.executeScript({
+        // Try messaging first to see if content script is already loaded
+        await chrome.tabs.sendMessage(activeTab.id, { type: "PING" });
+        console.log("Content script already loaded");
+      } catch (error) {
+        // Only inject if messaging fails (script not loaded)
+        await chrome.scripting.executeScript({
           target: { tabId: activeTab.id },
-          func: () => {
-            return {
-              pageContent: document.documentElement.outerHTML,
-              pageUrl: window.location.href,
-              title: document.title
-            };
-          }
+          files: ["content/content.js"],
         });
-
-        if (!executeResult || !executeResult.result) {
-          throw new Error('Failed to extract recipe content');
-        }
-
-        recipeData = executeResult.result;
       }
+
+      // Extract recipe data using content script messaging
+      let recipeData;
+      const extractResponse = await chrome.tabs.sendMessage(activeTab.id, {
+        type: MESSAGE_TYPES.EXTRACT_RECIPE,
+      });
+
+      if (!extractResponse || !extractResponse.success) {
+        throw new Error(
+          extractResponse?.error || "Failed to extract recipe"
+        );
+      }
+
+      recipeData = extractResponse.data;
 
       // Update status
-      showMessage(statusMessage, 'Saving recipe...', 'info');
+      showMessage(statusMessage, "Saving recipe...", "info");
 
       // Send to background for saving
       const saveResponse = await sendMessageToBackground(
         MESSAGE_TYPES.SAVE_RECIPE,
-        recipeData
+        recipeData,
       );
 
       if (saveResponse.success) {
-        showMessage(statusMessage, `Saved: ${saveResponse.recipeName}`, 'success');
+        console.log("recipe saved", saveResponse);
+        // Create success message with Drive info
+        let successMsg = `Saved: ${saveResponse.recipeName}`;
+        if (saveResponse.driveUrl) {
+          successMsg += ` to "${saveResponse.driveUrl}"`;
+        }
+        console.log("save msg: ", successMsg);
+        showMessage(statusMessage, successMsg, "success");
+        console.log("save msg / done");
+        // If we have a Drive URL, show a "View in Drive" button
+        // if (saveResponse.driveUrl) {
+        //   const viewButton = document.createElement('button');
+        //   viewButton.textContent = 'View in Drive';
+        //   viewButton.className = 'btn secondary view-drive-btn';
+        //   viewButton.addEventListener('click', () => {
+        //     chrome.tabs.create({ url: saveResponse.driveUrl });
+        //   });
+
+        //   // Add button below status message
+        //   statusMessage.parentNode.appendChild(viewButton);
+
+        //   // Remove the button after 30 seconds
+        //   setTimeout(() => {
+        //     if (viewButton.parentNode) {
+        //       viewButton.parentNode.removeChild(viewButton);
+        //     }
+        //   }, 30000);
+        // }
       } else {
         // Handle specific error codes
         if (saveResponse.errorCode === ERROR_CODES.AUTH_REQUIRED) {
           showLoginView();
-          showMessage(statusMessage, 'Please login to save recipes', 'error');
+          showMessage(statusMessage, "Please login to save recipes", "error");
         } else if (saveResponse.errorCode === ERROR_CODES.FOLDER_REQUIRED) {
-          showMessage(statusMessage, 'Please set up a Google Drive folder', 'error');
+          showMessage(
+            statusMessage,
+            "Please set up a Google Drive folder in settings",
+            "error",
+          );
         } else {
-          showMessage(statusMessage, saveResponse.error || 'Failed to save recipe', 'error');
+          showMessage(
+            statusMessage,
+            saveResponse.error || "Failed to save recipe",
+            "error",
+          );
         }
       }
     } catch (error) {
-      logError('Save recipe error', error);
-      showMessage(statusMessage, error.message || 'Error saving recipe', 'error');
+      logError("Save recipe error", error);
+      showMessage(
+        statusMessage,
+        error.message || "Error saving recipe",
+        "error",
+      );
     }
   });
 
@@ -176,22 +218,28 @@ function setupEventListeners() {
   });
 
   // Logout button
-  logoutButton.addEventListener('click', async () => {
+  logoutButton.addEventListener("click", async () => {
     try {
-      showMessage(statusMessage, 'Logging out...', 'info');
+      showMessage(statusMessage, "Logging out...", "info");
 
       // Request logout
-      const logoutResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_LOGOUT);
+      const logoutResponse = await sendMessageToBackground(
+        MESSAGE_TYPES.AUTH_LOGOUT,
+      );
 
       if (logoutResponse.success) {
         showLoginView();
-        showMessage(statusMessage, 'Logged out successfully', 'success');
+        showMessage(statusMessage, "Logged out successfully", "success");
       } else {
-        showMessage(statusMessage, logoutResponse.error || 'Logout failed', 'error');
+        showMessage(
+          statusMessage,
+          logoutResponse.error || "Logout failed",
+          "error",
+        );
       }
     } catch (error) {
-      logError('Logout error', error);
-      showMessage(statusMessage, 'Logout failed', 'error');
+      logError("Logout error", error);
+      showMessage(statusMessage, "Logout failed", "error");
     }
   });
 }
@@ -221,3 +269,5 @@ function sendMessageToBackground(type, data) {
     });
   });
 }
+
+// No view in drive button needed

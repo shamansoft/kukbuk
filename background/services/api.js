@@ -7,7 +7,8 @@ import {
   ERROR_CODES,
 } from "../../common/constants.js";
 import { transformContent } from "./transformation.js";
-import { getIdTokenForCloudRun } from "./auth.js";
+import { getAuthToken, getIdTokenForCloudRun } from "./auth.js";
+// import { getCurrentFolder } from "./storage.js";
 import { ENV } from "../../common/env-config.js";
 
 /**
@@ -49,29 +50,28 @@ async function saveRecipe(recipeData) {
   try {
     // Check authentication status
     //
-    console.log("seveRecipe ", recipeData.pageUrl);
     const token = await getIdTokenForCloudRun();
-    console.log("idToken ", token);
+    const authToken = await getAuthToken();
 
-    //    if (!folderId) {
-    //      const error = new Error('Google Drive folder not set');
-    //      error.code = ERROR_CODES.FOLDER_REQUIRED;
-    //      throw error;
-    //    }
+    // Check if Drive folder is selected
+    // const folder = await getCurrentFolder();
+    // if (!folder) {
+    //   const error = new Error('Google Drive folder not set. Please select a folder in settings.');
+    //   error.code = ERROR_CODES.FOLDER_REQUIRED;
+    //   throw error;
+    // }
 
     const contentObject = await transformContent(recipeData.pageContent);
     const content = contentObject.transformed;
 
-    console.log("pageUrl ", recipeData.pageUrl);
-    console.log("pageContent len ", content.length);
-    console.log("pageContent zipped ", content);
-    console.log("token ", token);
+    // Prepare data for sending to API
 
     const request = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        "X-S-AUTH-TOKEN": authToken,
         "X-Extension-ID": ENV.EXTENSION_ID,
         // "X-Request-ID": requestId,
       },
@@ -79,6 +79,8 @@ async function saveRecipe(recipeData) {
         html: content,
         url: recipeData.pageUrl,
         title: recipeData.title,
+        // folderId: folder.id,
+        // folderName: folder.name
       }),
     };
     console.log("fetch ", ENV.COOKBOOK_API_URL, request);
@@ -115,19 +117,14 @@ async function saveRecipe(recipeData) {
     // Parse success response
     const result = await response.json();
 
-    if (result.content) {
-      console.log(
-        "content first 100 symbols",
-        result.content.length > 100
-          ? result.content.substring(0, 100)
-          : result.content,
-      );
-    }
+
 
     return {
       success: true,
       recipeName: result.title,
-      message: result.message || "Recipe saved successfully",
+      message: result.message || "Recipe saved to Google Drive successfully",
+      driveUrl: result.driveFileUrl || null,
+      // folderName: folder.name,
     };
   } catch (error) {
     // Handle auth errors
