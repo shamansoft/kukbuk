@@ -1,7 +1,6 @@
 {
   "name": "mykukbuk-extension",
   "version": "1.0.0",
-  "type": "module",
   "description": "Chrome extension to save recipes to Google Drive",
   "scripts": {
     "prebuild": "node scripts/substitute-env.js",
