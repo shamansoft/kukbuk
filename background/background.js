@@ -1,10 +1,10 @@
 // Import services
-import { setupAuth } from './services/auth.js';
-import { setupStorage } from './services/storage.js';
-import { setupTransformation } from './services/transformation.js';
-import { setupApi } from './services/api.js';
-import { logError } from '../common/error-handler.js';
-import { MESSAGE_TYPES } from '../common/constants.js';
+import { setupAuth } from "./services/auth.js";
+import { setupStorage } from "./services/storage.js";
+import { setupTransformation } from "./services/transformation.js";
+import { setupApi } from "./services/api.js";
+import { logError } from "../common/error-handler.js";
+import { MESSAGE_TYPES } from "../common/constants.js";
 
 // Initialize background script
 function initBackground() {
@@ -29,7 +29,6 @@ function initBackground() {
 
 // Set up context menu for extension
 function setupContextMenu() {
-
   chrome.contextMenus.removeAll();
 
   chrome.contextMenus.create({
@@ -47,13 +46,16 @@ function setupContextMenu() {
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "kukbuk-settings") {
       chrome.runtime.openOptionsPage();
-    } else if (info.menuItemId === 'kukbuk-logout') {
+    } else if (info.menuItemId === "kukbuk-logout") {
       // Send logout message to self (handled by auth service)
-      chrome.runtime.sendMessage({
-        type: MESSAGE_TYPES.AUTH_LOGOUT
-      }, (response) => {
-        console.log('Logout response:', response);
-      });
+      chrome.runtime.sendMessage(
+        {
+          type: MESSAGE_TYPES.AUTH_LOGOUT,
+        },
+        (response) => {
+          console.log("Logout response:", response);
+        },
+      );
     }
   });
 }
@@ -61,7 +63,7 @@ function setupContextMenu() {
 // Set up message listeners
 function setupMessageListeners() {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('Background script received message:', message.type);
+    console.log("Background script received message:", message.type);
 
     // Handle only messages not handled by specific services
     switch (message.type) {

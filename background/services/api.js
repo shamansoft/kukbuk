@@ -1,11 +1,7 @@
 // API service for MyKukbuk
 
 import { logError } from "../../common/error-handler.js";
-import {
-  MESSAGE_TYPES,
-  STORAGE_KEYS,
-  ERROR_CODES,
-} from "../../common/constants.js";
+import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from "../../common/constants.js";
 import { transformContent } from "./transformation.js";
 import { getAuthToken, getIdTokenForCloudRun } from "./auth.js";
 // import { getCurrentFolder } from "./storage.js";
@@ -101,9 +97,7 @@ async function saveRecipe(recipeData) {
       // Try to parse error response
       try {
         const errorData = await response.json();
-        const error = new Error(
-          errorData.error || `Server error: ${response.status}`,
-        );
+        const error = new Error(errorData.error || `Server error: ${response.status}`);
         error.code = errorData.errorCode || ERROR_CODES.UNKNOWN_ERROR;
         throw error;
       } catch (parseError) {
@@ -116,8 +110,6 @@ async function saveRecipe(recipeData) {
 
     // Parse success response
     const result = await response.json();
-
-
 
     return {
       success: true,

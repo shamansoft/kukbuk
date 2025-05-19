@@ -1,0 +1,21 @@
+# Dependency directories
+node_modules/
+dist/
+build/
+
+# Generated files
+.cache/
+coverage/
+*.min.js
+*.min.css
+
+# Specific files or directories
+package-lock.json
+*.lock
+*.log
+
+# Build outputs
+/mykukbuk.zip
+
+# Webpack generated files
+webpack_output/
