@@ -6,8 +6,14 @@ import { setupApi } from "./services/api.js";
 import { logError } from "../common/error-handler.js";
 import { MESSAGE_TYPES } from "../common/constants.js";
 
+let isInitialized = false;
 // Initialize background script
 function initBackground() {
+  if (isInitialized) {
+    console.log("Background already initialized.");
+    return;
+  }
+  isInitialized = true;
   try {
     console.log("Initializing MyKukBuk background script");
 
