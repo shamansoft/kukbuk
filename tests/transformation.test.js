@@ -1,4 +1,5 @@
-import { transformContent } from '../background/services/transformation.js';
+import { describe, it, expect, vi } from 'vitest';
+import { transformContent, compressHtml } from '../../background/services/transformation.js';
 
 describe('Transformation Service', () => {
   describe('transformContent', () => {
@@ -24,11 +25,9 @@ describe('Transformation Service', () => {
     });
 
     it('should handle compression errors', async () => {
-      // Make a spy on compressHtml and make it throw an error
-      jest.spyOn(TransformationService, 'compressHtml').mockImplementationOnce(() => {
-        throw new Error('Compression failed');
-      });
-
+      // Mock compressHtml to throw an error
+      vi.mocked(compressHtml).mockRejectedValueOnce(new Error('Compression failed'));
+      
       const html = '<html><body><h1>Hello World</h1></body></html>';
       const result = await transformContent(html);
       
