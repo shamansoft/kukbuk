@@ -32,4 +32,7 @@ export function showMessage(element, message, type = "info") {
       }
     }, 3000);
   }
+  if (type === "error") {
+    console.log(message);
+  }
 }

@@ -61,7 +61,7 @@ async function initOptions() {
 
     // Set up event listeners
     setupEventListeners();
-    
+
     // Load notification preferences
     loadNotificationPreferences();
   } catch (error) {
@@ -77,16 +77,16 @@ async function initOptions() {
 async function loadNotificationPreferences() {
   try {
     const response = await sendMessageToBackground(MESSAGE_TYPES.GET_NOTIFICATION_PREFERENCES);
-    
+
     if (response.success) {
       const prefs = response.preferences;
-      
+
       // Set toggle states based on preferences
       notificationsEnabled.checked = prefs.enabled;
       notificationSaveRecipe.checked = prefs.saveRecipe;
       notificationAuthentication.checked = prefs.authentication;
       notificationFolder.checked = prefs.folderOperations;
-      
+
       // Disable sub-preferences if main toggle is off
       toggleSubPreferences(prefs.enabled);
     } else {
@@ -163,16 +163,16 @@ function setupEventListeners() {
   notificationsEnabled.addEventListener("change", async () => {
     try {
       const enabled = notificationsEnabled.checked;
-      
+
       // Enable/disable sub-preferences
       toggleSubPreferences(enabled);
-      
+
       // Save preference
       const response = await sendMessageToBackground(
-        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES, 
-        { enabled }
+        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES,
+        { enabled },
       );
-      
+
       if (response.success) {
         showMessage(statusMessage, "Notification preferences updated", "success");
       } else {
@@ -180,17 +180,21 @@ function setupEventListeners() {
       }
     } catch (error) {
       logError("Error updating notification preferences", error);
-      showMessage(statusMessage, "Error updating preferences", "error");
+      showMessage(
+        statusMessage,
+        "We couldn’t update your notification preferences. Please try again.",
+        "error",
+      );
     }
   });
 
   notificationSaveRecipe.addEventListener("change", async () => {
     try {
       const response = await sendMessageToBackground(
-        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES, 
-        { saveRecipe: notificationSaveRecipe.checked }
+        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES,
+        { saveRecipe: notificationSaveRecipe.checked },
       );
-      
+
       if (response.success) {
         showMessage(statusMessage, "Notification preferences updated", "success");
       } else {
@@ -205,10 +209,10 @@ function setupEventListeners() {
   notificationAuthentication.addEventListener("change", async () => {
     try {
       const response = await sendMessageToBackground(
-        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES, 
-        { authentication: notificationAuthentication.checked }
+        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES,
+        { authentication: notificationAuthentication.checked },
       );
-      
+
       if (response.success) {
         showMessage(statusMessage, "Notification preferences updated", "success");
       } else {
@@ -223,10 +227,10 @@ function setupEventListeners() {
   notificationFolder.addEventListener("change", async () => {
     try {
       const response = await sendMessageToBackground(
-        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES, 
-        { folderOperations: notificationFolder.checked }
+        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES,
+        { folderOperations: notificationFolder.checked },
       );
-      
+
       if (response.success) {
         showMessage(statusMessage, "Notification preferences updated", "success");
       } else {
@@ -346,7 +350,7 @@ async function showFolderSelectionModal() {
 
         if (foldersResponse.folders.length === 0) {
           folderList.innerHTML =
-            "<div class=\"no-folders\">No folders found. Create a new one.</div>";
+            '<div class="no-folders">No folders found. Create a new one.</div>';
         } else {
           // Create folder items
           foldersResponse.folders.forEach((folder) => {

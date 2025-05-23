@@ -49,10 +49,14 @@
 **Technical Stories:**
 - [x] Create status message system in popup
 - [x] Add toast notifications for background operations
-- [ ] Implement user-friendly error messages
-- [ ] Add loading indicators for async operations
+- [x] Implement user-friendly error messages
+
 
 ## V 1.1
+
+### US-5.1 Visual Feedback
+- [ ] Add loading indicators for async operations
+
 ### US-2: First-time Setup
 - [ ] **As a first-time user**, I want to select or create a Google Drive folder for recipe storage.
 

@@ -79,8 +79,7 @@ function setupEventListeners() {
         showMessage(statusMessage, "Logged in successfully", "success");
         toast.success(`Logged in as ${authResponse.email}`);
       } else {
-        showMessage(statusMessage, authResponse.error || "Authentication failed", "error");
-        toast.error(authResponse.error || "Authentication failed");
+        toast.error("We couldn’t log you in. Please try again.");
       }
     } catch (error) {
       logError("Login error", error);
@@ -155,17 +154,17 @@ function setupEventListeners() {
         }
         console.log("save msg: ", successMsg);
         showMessage(statusMessage, successMsg, "success");
-        
+
         // Show toast notification with link to Drive
         if (saveResponse.driveUrl) {
           toast.success(`Recipe "${saveResponse.recipeName}" saved successfully`, {
             onClick: () => chrome.tabs.create({ url: saveResponse.driveUrl }),
-            duration: 5000
+            duration: 5000,
           });
         } else {
           toast.success(`Recipe "${saveResponse.recipeName}" saved successfully`);
         }
-        
+
         console.log("save msg / done");
         // If we have a Drive URL, show a "View in Drive" button
         // if (saveResponse.driveUrl) {
@@ -190,14 +189,21 @@ function setupEventListeners() {
         // Handle specific error codes
         if (saveResponse.errorCode === ERROR_CODES.AUTH_REQUIRED) {
           showLoginView();
-          showMessage(statusMessage, "Please login to save recipes", "error");
-          toast.error("Authentication required. Please login to save recipes.");
+          showMessage(
+            statusMessage,
+            "It looks like you need to be signed in to save recipes. Please log in.",
+            "error",
+          );
+          toast.error("Please sign in to save recipes.");
         } else if (saveResponse.errorCode === ERROR_CODES.FOLDER_REQUIRED) {
-          showMessage(statusMessage, "Please set up a Google Drive folder in settings", "error");
-          toast.error("Google Drive folder not set. Please select a folder in settings.");
+          showMessage(
+            statusMessage,
+            "Please set up your Google Drive folder in settings so we know where to save your recipes.",
+            "error",
+          );
+          toast.error("Please choose a folder in your settings.");
         } else {
-          showMessage(statusMessage, saveResponse.error || "Failed to save recipe", "error");
-          toast.error(saveResponse.error || "Failed to save recipe");
+          toast.error(saveResponse.error || "Unable to save your recipe. Please try again.");
         }
       }
     } catch (error) {
@@ -231,8 +237,8 @@ function setupEventListeners() {
       }
     } catch (error) {
       logError("Logout error", error);
-      showMessage(statusMessage, "Logout failed", "error");
-      toast.error("Logout failed. Please try again.");
+      showMessage(statusMessage, "We couldn’t log you out. Please try again later.", "error");
+      toast.error("Logout unsuccessful. Please try again.");
     }
   });
 }
