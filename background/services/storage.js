@@ -1,6 +1,7 @@
 import { logError } from "../../common/error-handler.js";
 import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from "../../common/constants.js";
 import { getAuthToken } from "./auth.js";
+import { notify } from "./notifications.js";
 
 // Google Drive API endpoint
 const DRIVE_API_URL = "https://www.googleapis.com/drive/v3";
@@ -140,6 +141,13 @@ export async function createDriveFolder({ name = DEFAULT_FOLDER_NAME } = {}) {
       [STORAGE_KEYS.DRIVE_FOLDER]: folder.id,
       [STORAGE_KEYS.DRIVE_FOLDER_NAME]: folder.name,
     });
+    
+    // Send notification for folder creation
+    notify.folderOperation({
+      operation: "created",
+      folderName: folder.name,
+      success: true
+    });
 
     return {
       success: true,
@@ -188,6 +196,13 @@ export async function selectDriveFolder({ folderId, folderName }) {
     await chrome.storage.local.set({
       [STORAGE_KEYS.DRIVE_FOLDER]: folderId,
       [STORAGE_KEYS.DRIVE_FOLDER_NAME]: folderName,
+    });
+    
+    // Send notification for folder selection
+    notify.folderOperation({
+      operation: "selected",
+      folderName: folderName,
+      success: true
     });
 
     return {

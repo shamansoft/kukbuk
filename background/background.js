@@ -3,6 +3,7 @@ import { setupAuth } from "./services/auth.js";
 import { setupStorage } from "./services/storage.js";
 import { setupTransformation } from "./services/transformation.js";
 import { setupApi } from "./services/api.js";
+import { setupNotifications } from "./services/notifications.js";
 import { logError } from "../common/error-handler.js";
 import { MESSAGE_TYPES } from "../common/constants.js";
 
@@ -25,6 +26,7 @@ function initBackground() {
     setupStorage();
     setupApi();
     setupTransformation();
+    setupNotifications();
 
     // Setup message listeners
     setupMessageListeners();
@@ -73,6 +75,9 @@ function setupMessageListeners() {
 
     // Handle only messages not handled by specific services
     switch (message.type) {
+      case MESSAGE_TYPES.NOTIFY_BACKGROUND_OPERATION:
+        // This will be handled by the notifications service
+        break;
       default:
         // Do nothing - the message should be handled by a specific service
         // If no handler responds, Chrome will show a warning in the console
