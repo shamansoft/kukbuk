@@ -13,6 +13,12 @@ const changeFolderButton = document.getElementById("change-folder-button");
 const versionElement = document.getElementById("version");
 const statusMessage = document.getElementById("status-message");
 
+// Notification preference elements
+const notificationsEnabled = document.getElementById("notifications-enabled");
+const notificationSaveRecipe = document.getElementById("notification-save-recipe");
+const notificationAuthentication = document.getElementById("notification-authentication");
+const notificationFolder = document.getElementById("notification-folder");
+
 // Initialize options page
 document.addEventListener("DOMContentLoaded", initOptions);
 
@@ -55,11 +61,49 @@ async function initOptions() {
 
     // Set up event listeners
     setupEventListeners();
+    
+    // Load notification preferences
+    loadNotificationPreferences();
   } catch (error) {
     logError("Error initializing options page", error);
     showLoggedOutView();
     showMessage(statusMessage, "Error initializing settings", "error");
   }
+}
+
+/**
+ * Loads notification preferences from storage
+ */
+async function loadNotificationPreferences() {
+  try {
+    const response = await sendMessageToBackground(MESSAGE_TYPES.GET_NOTIFICATION_PREFERENCES);
+    
+    if (response.success) {
+      const prefs = response.preferences;
+      
+      // Set toggle states based on preferences
+      notificationsEnabled.checked = prefs.enabled;
+      notificationSaveRecipe.checked = prefs.saveRecipe;
+      notificationAuthentication.checked = prefs.authentication;
+      notificationFolder.checked = prefs.folderOperations;
+      
+      // Disable sub-preferences if main toggle is off
+      toggleSubPreferences(prefs.enabled);
+    } else {
+      throw new Error(response.error || "Failed to load notification preferences");
+    }
+  } catch (error) {
+    logError("Error loading notification preferences", error);
+  }
+}
+
+/**
+ * Enables or disables sub-preference toggles
+ */
+function toggleSubPreferences(enabled) {
+  notificationSaveRecipe.disabled = !enabled;
+  notificationAuthentication.disabled = !enabled;
+  notificationFolder.disabled = !enabled;
 }
 
 // Setup UI event listeners
@@ -112,6 +156,85 @@ function setupEventListeners() {
     } catch (error) {
       logError("Folder selection error", error);
       showMessage(statusMessage, "Error selecting folder", "error");
+    }
+  });
+
+  // Notification preference toggles
+  notificationsEnabled.addEventListener("change", async () => {
+    try {
+      const enabled = notificationsEnabled.checked;
+      
+      // Enable/disable sub-preferences
+      toggleSubPreferences(enabled);
+      
+      // Save preference
+      const response = await sendMessageToBackground(
+        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES, 
+        { enabled }
+      );
+      
+      if (response.success) {
+        showMessage(statusMessage, "Notification preferences updated", "success");
+      } else {
+        throw new Error(response.error || "Failed to update preferences");
+      }
+    } catch (error) {
+      logError("Error updating notification preferences", error);
+      showMessage(statusMessage, "Error updating preferences", "error");
+    }
+  });
+
+  notificationSaveRecipe.addEventListener("change", async () => {
+    try {
+      const response = await sendMessageToBackground(
+        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES, 
+        { saveRecipe: notificationSaveRecipe.checked }
+      );
+      
+      if (response.success) {
+        showMessage(statusMessage, "Notification preferences updated", "success");
+      } else {
+        throw new Error(response.error || "Failed to update preferences");
+      }
+    } catch (error) {
+      logError("Error updating notification preferences", error);
+      showMessage(statusMessage, "Error updating preferences", "error");
+    }
+  });
+
+  notificationAuthentication.addEventListener("change", async () => {
+    try {
+      const response = await sendMessageToBackground(
+        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES, 
+        { authentication: notificationAuthentication.checked }
+      );
+      
+      if (response.success) {
+        showMessage(statusMessage, "Notification preferences updated", "success");
+      } else {
+        throw new Error(response.error || "Failed to update preferences");
+      }
+    } catch (error) {
+      logError("Error updating notification preferences", error);
+      showMessage(statusMessage, "Error updating preferences", "error");
+    }
+  });
+
+  notificationFolder.addEventListener("change", async () => {
+    try {
+      const response = await sendMessageToBackground(
+        MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES, 
+        { folderOperations: notificationFolder.checked }
+      );
+      
+      if (response.success) {
+        showMessage(statusMessage, "Notification preferences updated", "success");
+      } else {
+        throw new Error(response.error || "Failed to update preferences");
+      }
+    } catch (error) {
+      logError("Error updating notification preferences", error);
+      showMessage(statusMessage, "Error updating preferences", "error");
     }
   });
 }

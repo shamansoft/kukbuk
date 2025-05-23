@@ -6,6 +6,7 @@ import { transformContent } from "./transformation.js";
 import { getAuthToken, getIdTokenForCloudRun } from "./auth.js";
 // import { getCurrentFolder } from "./storage.js";
 import { ENV } from "../../common/env-config.js";
+import { notify } from "./notifications.js";
 
 /**
  * Sets up the API service
@@ -110,6 +111,13 @@ async function saveRecipe(recipeData) {
 
     // Parse success response
     const result = await response.json();
+
+    // Send notification for successful save
+    notify.recipeSaved({
+      recipeName: result.title,
+      driveUrl: result.driveFileUrl || null,
+      // folderName: folder.name
+    });
 
     return {
       success: true,

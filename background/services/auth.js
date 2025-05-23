@@ -3,6 +3,7 @@
 import { logError } from "../../common/error-handler.js";
 import { STORAGE_KEYS, MESSAGE_TYPES } from "../../common/constants.js";
 import { ENV } from "../../common/env-config.js";
+import { notify } from "./notifications.js";
 
 // JWT parsing and validation functions
 
@@ -171,6 +172,12 @@ async function authenticateUser() {
       [STORAGE_KEYS.AUTH_EXPIRY]: Date.now() + 60 * 60 * 1000, // Rough estimation (1 hour)
     });
 
+    // Send notification for successful authentication
+    notify.authentication({
+      success: true,
+      email: userInfo.email
+    });
+
     return {
       success: true,
       email: userInfo.email,
@@ -303,6 +310,12 @@ async function checkAuthStatus() {
         logError("Token refresh error", refreshError);
         // Token refresh failed, user needs to re-authenticate
         await cleanupLocalStorage();
+        
+        // Send notification for auth failure
+        notify.authentication({
+          success: false,
+          error: "Authentication expired"
+        });
 
         return {
           success: false,
@@ -346,15 +359,23 @@ async function checkAuthStatus() {
  */
 async function logoutUser() {
   try {
-    // Get the current token
-    const authData = await chrome.storage.local.get([STORAGE_KEYS.AUTH_TOKEN]);
+    // Get the current token and user info
+    const authData = await chrome.storage.local.get([STORAGE_KEYS.AUTH_TOKEN, STORAGE_KEYS.USER_EMAIL]);
     const token = authData[STORAGE_KEYS.AUTH_TOKEN];
+    const email = authData[STORAGE_KEYS.USER_EMAIL];
 
     if (token) {
       // Revoke the token
       await removeToken(token);
     }
     await cleanupLocalStorage();
+    
+    // Send notification for logout
+    notify.authentication({
+      success: true,
+      email: email || "Unknown user",
+      message: "Logged out successfully"
+    });
 
     return {
       success: true,

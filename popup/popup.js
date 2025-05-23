@@ -1,6 +1,7 @@
 // Import common utilities and constants
 import { logError, showMessage } from "../common/error-handler.js";
 import { STORAGE_KEYS, MESSAGE_TYPES, ERROR_CODES } from "../common/constants.js";
+import { toast } from "../common/toast-notification.js";
 
 // DOM elements
 const loginSection = document.getElementById("login-section");
@@ -68,6 +69,7 @@ function setupEventListeners() {
   loginButton.addEventListener("click", async () => {
     try {
       showMessage(statusMessage, "Authenticating...", "info");
+      toast.info("Authenticating with Google...");
 
       // Request authentication
       const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_REQUEST);
@@ -75,12 +77,15 @@ function setupEventListeners() {
       if (authResponse.success) {
         showLoggedInView(authResponse.email);
         showMessage(statusMessage, "Logged in successfully", "success");
+        toast.success(`Logged in as ${authResponse.email}`);
       } else {
         showMessage(statusMessage, authResponse.error || "Authentication failed", "error");
+        toast.error(authResponse.error || "Authentication failed");
       }
     } catch (error) {
       logError("Login error", error);
       showMessage(statusMessage, "Authentication failed", "error");
+      toast.error("Authentication failed. Please try again.");
     }
   });
 
@@ -95,6 +100,7 @@ function setupEventListeners() {
     try {
       // Show saving state
       showMessage(statusMessage, "Extracting recipe...", "info");
+      toast.info("Extracting recipe from page...");
 
       // Get the current tab
       const tabs = await chrome.tabs.query({
@@ -135,6 +141,7 @@ function setupEventListeners() {
 
       // Update status
       showMessage(statusMessage, "Saving recipe...", "info");
+      toast.info("Saving recipe to Google Drive...");
 
       // Send to background for saving
       const saveResponse = await sendMessageToBackground(MESSAGE_TYPES.SAVE_RECIPE, recipeData);
@@ -148,6 +155,17 @@ function setupEventListeners() {
         }
         console.log("save msg: ", successMsg);
         showMessage(statusMessage, successMsg, "success");
+        
+        // Show toast notification with link to Drive
+        if (saveResponse.driveUrl) {
+          toast.success(`Recipe "${saveResponse.recipeName}" saved successfully`, {
+            onClick: () => chrome.tabs.create({ url: saveResponse.driveUrl }),
+            duration: 5000
+          });
+        } else {
+          toast.success(`Recipe "${saveResponse.recipeName}" saved successfully`);
+        }
+        
         console.log("save msg / done");
         // If we have a Drive URL, show a "View in Drive" button
         // if (saveResponse.driveUrl) {
@@ -173,15 +191,19 @@ function setupEventListeners() {
         if (saveResponse.errorCode === ERROR_CODES.AUTH_REQUIRED) {
           showLoginView();
           showMessage(statusMessage, "Please login to save recipes", "error");
+          toast.error("Authentication required. Please login to save recipes.");
         } else if (saveResponse.errorCode === ERROR_CODES.FOLDER_REQUIRED) {
           showMessage(statusMessage, "Please set up a Google Drive folder in settings", "error");
+          toast.error("Google Drive folder not set. Please select a folder in settings.");
         } else {
           showMessage(statusMessage, saveResponse.error || "Failed to save recipe", "error");
+          toast.error(saveResponse.error || "Failed to save recipe");
         }
       }
     } catch (error) {
       logError("Save recipe error", error);
       showMessage(statusMessage, error.message || "Error saving recipe", "error");
+      toast.error(error.message || "Error occurred while saving recipe");
     }
   });
 
@@ -194,6 +216,7 @@ function setupEventListeners() {
   logoutButton.addEventListener("click", async () => {
     try {
       showMessage(statusMessage, "Logging out...", "info");
+      toast.info("Logging out...");
 
       // Request logout
       const logoutResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_LOGOUT);
@@ -201,12 +224,15 @@ function setupEventListeners() {
       if (logoutResponse.success) {
         showLoginView();
         showMessage(statusMessage, "Logged out successfully", "success");
+        toast.success("Logged out successfully");
       } else {
         showMessage(statusMessage, logoutResponse.error || "Logout failed", "error");
+        toast.error(logoutResponse.error || "Logout failed");
       }
     } catch (error) {
       logError("Logout error", error);
       showMessage(statusMessage, "Logout failed", "error");
+      toast.error("Logout failed. Please try again.");
     }
   });
 }

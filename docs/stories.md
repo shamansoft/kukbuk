@@ -48,7 +48,7 @@
 
 **Technical Stories:**
 - [x] Create status message system in popup
-- [ ] Add toast notifications for background operations
+- [x] Add toast notifications for background operations
 - [ ] Implement user-friendly error messages
 - [ ] Add loading indicators for async operations
 
