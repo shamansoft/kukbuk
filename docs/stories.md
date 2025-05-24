@@ -99,11 +99,11 @@
 - **As a system**, I want to avoid storing non-recipe content to maintain data quality.
 
 **Technical Stories:**
-- [ ] Enhance Gemini prompt to detect non-recipe pages
-- [ ] Update response DTO to include recipe detection result
-- [ ] Modify Drive storage logic to skip non-recipes
-- [ ] Add specific error response for non-recipe pages
-- [ ] Update frontend to handle non-recipe responses gracefully
+- [x] Enhance Gemini prompt to detect non-recipe pages
+- [x] Update response DTO to include recipe detection result
+- [x] Modify Drive storage logic to skip non-recipes
+- [x] Add specific error response for non-recipe pages
+- [x] Update frontend to handle non-recipe responses gracefully
 - [ ] Add logging for non-recipe detection analytics
 
 **Acceptance Criteria:**

@@ -28,20 +28,20 @@ export const mockFetch = () => {
  */
 export const setupMockStorage = (initialData = {}) => {
   const storage = { ...initialData };
-  
+
   return {
     get: jest.fn((keys, callback) => {
-      if (typeof keys === 'string') {
+      if (typeof keys === "string") {
         callback({ [keys]: storage[keys] });
       } else if (Array.isArray(keys)) {
         const result = {};
-        keys.forEach(key => {
+        keys.forEach((key) => {
           result[key] = storage[key];
         });
         callback(result);
-      } else if (typeof keys === 'object') {
+      } else if (typeof keys === "object") {
         const result = {};
-        Object.keys(keys).forEach(key => {
+        Object.keys(keys).forEach((key) => {
           result[key] = storage[key] !== undefined ? storage[key] : keys[key];
         });
         callback(result);
@@ -49,28 +49,28 @@ export const setupMockStorage = (initialData = {}) => {
         callback(storage);
       }
     }),
-    
+
     set: jest.fn((items, callback) => {
       Object.assign(storage, items);
       if (callback) callback();
     }),
-    
+
     remove: jest.fn((keys, callback) => {
-      if (typeof keys === 'string') {
+      if (typeof keys === "string") {
         delete storage[keys];
       } else if (Array.isArray(keys)) {
-        keys.forEach(key => delete storage[key]);
+        keys.forEach((key) => delete storage[key]);
       }
       if (callback) callback();
     }),
-    
-    clear: jest.fn(callback => {
-      Object.keys(storage).forEach(key => delete storage[key]);
+
+    clear: jest.fn((callback) => {
+      Object.keys(storage).forEach((key) => delete storage[key]);
       if (callback) callback();
     }),
-    
+
     // Expose storage for tests
-    _store: storage
+    _store: storage,
   };
 };
 
@@ -79,9 +79,9 @@ export const setupMockStorage = (initialData = {}) => {
  * @returns {jest.SpyInstance} Console log spy
  */
 export const mockConsole = () => {
-  const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
-  jest.spyOn(console, 'error').mockImplementation(() => {});
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-  
+  const logSpy = jest.spyOn(console, "log").mockImplementation(() => {});
+  jest.spyOn(console, "error").mockImplementation(() => {});
+  jest.spyOn(console, "warn").mockImplementation(() => {});
+
   return logSpy;
 };

@@ -1,6 +1,6 @@
 /**
  * Toast Notification System for MyKukBuk
- * 
+ *
  * This module manages toast notifications that can be shown across different parts of the extension.
  */
 
@@ -8,20 +8,20 @@ import { logError } from "./error-handler.js";
 
 // Constants for toast types
 export const TOAST_TYPES = {
-  SUCCESS: 'success',
-  ERROR: 'error',
-  INFO: 'info',
-  WARNING: 'warning',
+  SUCCESS: "success",
+  ERROR: "error",
+  INFO: "info",
+  WARNING: "warning",
 };
 
 // Constants for toast positions
 export const TOAST_POSITIONS = {
-  TOP_RIGHT: 'top-right',
-  TOP_LEFT: 'top-left',
-  BOTTOM_RIGHT: 'bottom-right',
-  BOTTOM_LEFT: 'bottom-left',
-  TOP_CENTER: 'top-center',
-  BOTTOM_CENTER: 'bottom-center',
+  TOP_RIGHT: "top-right",
+  TOP_LEFT: "top-left",
+  BOTTOM_RIGHT: "bottom-right",
+  BOTTOM_LEFT: "bottom-left",
+  TOP_CENTER: "top-center",
+  BOTTOM_CENTER: "bottom-center",
 };
 
 // Default toast duration in milliseconds
@@ -42,7 +42,13 @@ let toastContainer = null;
  * @param {string} [options.position=bottom-right] - Position of the toast
  * @param {Function} [options.onClick] - Function to call when toast is clicked
  */
-export function showToast({ message, type = TOAST_TYPES.INFO, duration = DEFAULT_TOAST_DURATION, position = DEFAULT_POSITION, onClick }) {
+export function showToast({
+  message,
+  type = TOAST_TYPES.INFO,
+  duration = DEFAULT_TOAST_DURATION,
+  position = DEFAULT_POSITION,
+  onClick,
+}) {
   try {
     // Create container if it doesn't exist
     if (!toastContainer) {
@@ -50,30 +56,30 @@ export function showToast({ message, type = TOAST_TYPES.INFO, duration = DEFAULT
     }
 
     // Adjust container position if different from current
-    if (toastContainer.getAttribute('data-position') !== position) {
-      toastContainer.setAttribute('data-position', position);
+    if (toastContainer.getAttribute("data-position") !== position) {
+      toastContainer.setAttribute("data-position", position);
       updateContainerPosition(position);
     }
 
     // Create toast element
-    const toast = document.createElement('div');
+    const toast = document.createElement("div");
     toast.className = `kukbuk-toast ${type}`;
     toast.textContent = message;
 
     // Add click handler if provided
-    if (typeof onClick === 'function') {
-      toast.addEventListener('click', () => {
+    if (typeof onClick === "function") {
+      toast.addEventListener("click", () => {
         onClick();
         hideToast(toast);
       });
-      toast.style.cursor = 'pointer';
+      toast.style.cursor = "pointer";
     }
 
     // Add close button
-    const closeButton = document.createElement('span');
-    closeButton.className = 'toast-close-btn';
-    closeButton.innerHTML = '&times;';
-    closeButton.addEventListener('click', (e) => {
+    const closeButton = document.createElement("span");
+    closeButton.className = "toast-close-btn";
+    closeButton.innerHTML = "&times;";
+    closeButton.addEventListener("click", (e) => {
       e.stopPropagation();
       hideToast(toast);
     });
@@ -84,7 +90,7 @@ export function showToast({ message, type = TOAST_TYPES.INFO, duration = DEFAULT
 
     // Show the toast with animation
     setTimeout(() => {
-      toast.classList.add('show');
+      toast.classList.add("show");
     }, 10);
 
     // Auto-hide after duration
@@ -96,7 +102,7 @@ export function showToast({ message, type = TOAST_TYPES.INFO, duration = DEFAULT
 
     return toast;
   } catch (error) {
-    logError('Error showing toast notification', error);
+    logError("Error showing toast notification", error);
     return null;
   }
 }
@@ -107,16 +113,16 @@ export function showToast({ message, type = TOAST_TYPES.INFO, duration = DEFAULT
  */
 function hideToast(toast) {
   if (!toast) return;
-  
+
   // Add hiding class for animation
-  toast.classList.add('hiding');
-  
+  toast.classList.add("hiding");
+
   // Remove after animation
   setTimeout(() => {
     if (toast.parentNode) {
       toast.parentNode.removeChild(toast);
     }
-    
+
     // Remove container if empty
     if (toastContainer && toastContainer.children.length === 0) {
       document.body.removeChild(toastContainer);
@@ -131,41 +137,41 @@ function hideToast(toast) {
  */
 function updateContainerPosition(position) {
   if (!toastContainer) return;
-  
+
   // Reset all position properties
-  toastContainer.style.top = '';
-  toastContainer.style.right = '';
-  toastContainer.style.bottom = '';
-  toastContainer.style.left = '';
-  
+  toastContainer.style.top = "";
+  toastContainer.style.right = "";
+  toastContainer.style.bottom = "";
+  toastContainer.style.left = "";
+
   // Set new position
   switch (position) {
     case TOAST_POSITIONS.TOP_LEFT:
-      toastContainer.style.top = '20px';
-      toastContainer.style.left = '20px';
+      toastContainer.style.top = "20px";
+      toastContainer.style.left = "20px";
       break;
     case TOAST_POSITIONS.TOP_RIGHT:
-      toastContainer.style.top = '20px';
-      toastContainer.style.right = '20px';
+      toastContainer.style.top = "20px";
+      toastContainer.style.right = "20px";
       break;
     case TOAST_POSITIONS.BOTTOM_LEFT:
-      toastContainer.style.bottom = '20px';
-      toastContainer.style.left = '20px';
+      toastContainer.style.bottom = "20px";
+      toastContainer.style.left = "20px";
       break;
     case TOAST_POSITIONS.TOP_CENTER:
-      toastContainer.style.top = '20px';
-      toastContainer.style.left = '50%';
-      toastContainer.style.transform = 'translateX(-50%)';
+      toastContainer.style.top = "20px";
+      toastContainer.style.left = "50%";
+      toastContainer.style.transform = "translateX(-50%)";
       break;
     case TOAST_POSITIONS.BOTTOM_CENTER:
-      toastContainer.style.bottom = '20px';
-      toastContainer.style.left = '50%';
-      toastContainer.style.transform = 'translateX(-50%)';
+      toastContainer.style.bottom = "20px";
+      toastContainer.style.left = "50%";
+      toastContainer.style.transform = "translateX(-50%)";
       break;
     case TOAST_POSITIONS.BOTTOM_RIGHT:
     default:
-      toastContainer.style.bottom = '20px';
-      toastContainer.style.right = '20px';
+      toastContainer.style.bottom = "20px";
+      toastContainer.style.right = "20px";
       break;
   }
 }
@@ -176,18 +182,18 @@ function updateContainerPosition(position) {
  */
 function createToastContainer(position) {
   if (toastContainer) return;
-  
+
   // Create container element
-  toastContainer = document.createElement('div');
-  toastContainer.className = 'kukbuk-toast-container';
-  toastContainer.setAttribute('data-position', position);
-  
+  toastContainer = document.createElement("div");
+  toastContainer.className = "kukbuk-toast-container";
+  toastContainer.setAttribute("data-position", position);
+
   // Set initial position
   updateContainerPosition(position);
-  
+
   // Add container to body
   document.body.appendChild(toastContainer);
-  
+
   // Inject CSS if not already present
   injectToastStyles();
 }
@@ -197,10 +203,10 @@ function createToastContainer(position) {
  */
 function injectToastStyles() {
   // Check if styles already exist
-  if (document.getElementById('kukbuk-toast-styles')) return;
-  
-  const styleEl = document.createElement('style');
-  styleEl.id = 'kukbuk-toast-styles';
+  if (document.getElementById("kukbuk-toast-styles")) return;
+
+  const styleEl = document.createElement("style");
+  styleEl.id = "kukbuk-toast-styles";
   styleEl.textContent = `
     .kukbuk-toast-container {
       position: fixed;
@@ -259,7 +265,7 @@ function injectToastStyles() {
       line-height: 1;
     }
   `;
-  
+
   document.head.appendChild(styleEl);
 }
 
@@ -267,17 +273,13 @@ function injectToastStyles() {
  * Helper functions for common toast types
  */
 export const toast = {
-  success: (message, options = {}) => 
-    showToast({ message, type: TOAST_TYPES.SUCCESS, ...options }),
-  
-  error: (message, options = {}) => 
-    showToast({ message, type: TOAST_TYPES.ERROR, ...options }),
-  
-  warning: (message, options = {}) => 
-    showToast({ message, type: TOAST_TYPES.WARNING, ...options }),
-  
-  info: (message, options = {}) => 
-    showToast({ message, type: TOAST_TYPES.INFO, ...options })
+  success: (message, options = {}) => showToast({ message, type: TOAST_TYPES.SUCCESS, ...options }),
+
+  error: (message, options = {}) => showToast({ message, type: TOAST_TYPES.ERROR, ...options }),
+
+  warning: (message, options = {}) => showToast({ message, type: TOAST_TYPES.WARNING, ...options }),
+
+  info: (message, options = {}) => showToast({ message, type: TOAST_TYPES.INFO, ...options }),
 };
 
 /**
@@ -285,10 +287,10 @@ export const toast = {
  */
 export function clearAllToasts() {
   if (!toastContainer) return;
-  
+
   // Get all toasts
-  const toasts = Array.from(toastContainer.querySelectorAll('.kukbuk-toast'));
-  
+  const toasts = Array.from(toastContainer.querySelectorAll(".kukbuk-toast"));
+
   // Hide each toast
-  toasts.forEach(toast => hideToast(toast));
+  toasts.forEach((toast) => hideToast(toast));
 }

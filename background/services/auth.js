@@ -175,7 +175,7 @@ async function authenticateUser() {
     // Send notification for successful authentication
     notify.authentication({
       success: true,
-      email: userInfo.email
+      email: userInfo.email,
     });
 
     return {
@@ -310,11 +310,11 @@ async function checkAuthStatus() {
         logError("Token refresh error", refreshError);
         // Token refresh failed, user needs to re-authenticate
         await cleanupLocalStorage();
-        
+
         // Send notification for auth failure
         notify.authentication({
           success: false,
-          error: "Authentication expired"
+          error: "Authentication expired",
         });
 
         return {
@@ -360,7 +360,10 @@ async function checkAuthStatus() {
 async function logoutUser() {
   try {
     // Get the current token and user info
-    const authData = await chrome.storage.local.get([STORAGE_KEYS.AUTH_TOKEN, STORAGE_KEYS.USER_EMAIL]);
+    const authData = await chrome.storage.local.get([
+      STORAGE_KEYS.AUTH_TOKEN,
+      STORAGE_KEYS.USER_EMAIL,
+    ]);
     const token = authData[STORAGE_KEYS.AUTH_TOKEN];
     const email = authData[STORAGE_KEYS.USER_EMAIL];
 
@@ -369,12 +372,12 @@ async function logoutUser() {
       await removeToken(token);
     }
     await cleanupLocalStorage();
-    
+
     // Send notification for logout
     notify.authentication({
       success: true,
       email: email || "Unknown user",
-      message: "Logged out successfully"
+      message: "Logged out successfully",
     });
 
     return {
