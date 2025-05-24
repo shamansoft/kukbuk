@@ -83,8 +83,8 @@ function setupEventListeners() {
       }
     } catch (error) {
       logError("Login error", error);
-      showMessage(statusMessage, "Authentication failed", "error");
-      toast.error("Authentication failed. Please try again.");
+      showMessage(statusMessage, "We couldn't log you in. Please try again later.", "error");
+      toast.error("We couldn't log you in. Please try again.");
     }
   });
 
@@ -97,10 +97,6 @@ function setupEventListeners() {
     // }
 
     try {
-      // Show saving state
-      showMessage(statusMessage, "Extracting recipe...", "info");
-      toast.info("Extracting recipe from page...");
-
       // Get the current tab
       const tabs = await chrome.tabs.query({
         active: true,
@@ -147,22 +143,32 @@ function setupEventListeners() {
 
       if (saveResponse.success) {
         console.log("recipe saved", saveResponse);
-        // Create success message with Drive info
-        let successMsg = `Saved: ${saveResponse.recipeName}`;
-        if (saveResponse.driveUrl) {
-          successMsg += ` to "${saveResponse.driveUrl}"`;
-        }
-        console.log("save msg: ", successMsg);
-        showMessage(statusMessage, successMsg, "success");
 
-        // Show toast notification with link to Drive
-        if (saveResponse.driveUrl) {
-          toast.success(`Recipe "${saveResponse.recipeName}" saved successfully`, {
-            onClick: () => chrome.tabs.create({ url: saveResponse.driveUrl }),
-            duration: 5000,
-          });
+        // Check if the page is actually a recipe
+        if (saveResponse.isRecipe === false) {
+          // Not a recipe - show appropriate message
+          showMessage(statusMessage, "This page does not appear to be a recipe.", "info");
+          toast.info("This page doesn't seem to contain a valid recipe.");
+          console.log("Not identified as a recipe");
         } else {
-          toast.success(`Recipe "${saveResponse.recipeName}" saved successfully`);
+          // It's a recipe (or isRecipe wasn't specified) - show success message
+          // Create success message with Drive info
+          let successMsg = `Saved: ${saveResponse.recipeName}`;
+          if (saveResponse.driveUrl) {
+            successMsg += ` to "${saveResponse.driveUrl}"`;
+          }
+          console.log("save msg: ", successMsg);
+          showMessage(statusMessage, successMsg, "success");
+
+          // Show toast notification with link to Drive
+          if (saveResponse.driveUrl) {
+            toast.success(`Recipe "${saveResponse.recipeName}" saved successfully`, {
+              onClick: () => chrome.tabs.create({ url: saveResponse.driveUrl }),
+              duration: 5000,
+            });
+          } else {
+            toast.success(`Recipe "${saveResponse.recipeName}" saved successfully`);
+          }
         }
 
         console.log("save msg / done");
@@ -209,7 +215,7 @@ function setupEventListeners() {
     } catch (error) {
       logError("Save recipe error", error);
       showMessage(statusMessage, error.message || "Error saving recipe", "error");
-      toast.error(error.message || "Error occurred while saving recipe");
+      toast.error(error.message || "We couldn't save this recipe. Please try again later.");
     }
   });
 

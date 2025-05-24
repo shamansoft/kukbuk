@@ -46,23 +46,23 @@ function setupMessageListeners() {
  * @param {string} [options.iconUrl] - URL to icon for notification
  * @param {Function} [options.onClick] - Callback when notification is clicked
  */
-export async function createNotification({ 
-  title, 
-  message, 
-  type = "basic", 
-  iconUrl = "../icons/icon48.png", 
-  onClick 
+export async function createNotification({
+  title,
+  message,
+  type = "basic",
+  iconUrl = "../icons/icon48.png",
+  onClick,
 }) {
   try {
     // Check if notifications are enabled
     const prefs = await getNotificationPreferences();
-    
+
     if (!prefs.enabled) {
       return;
     }
 
     const notificationId = `mykukbuk-${Date.now()}`;
-    
+
     const notificationOptions = {
       type: type,
       iconUrl: iconUrl,
@@ -75,7 +75,7 @@ export async function createNotification({
     chrome.notifications.create(notificationId, notificationOptions);
 
     // Handle click event if provided
-    if (onClick && typeof onClick === 'function') {
+    if (onClick && typeof onClick === "function") {
       const listener = (clickedId) => {
         if (clickedId === notificationId) {
           onClick();
@@ -85,7 +85,7 @@ export async function createNotification({
       chrome.notifications.onClicked.addListener(listener);
     }
   } catch (error) {
-    logError('Error creating notification', error);
+    logError("Error creating notification", error);
   }
 }
 
@@ -93,38 +93,38 @@ export async function createNotification({
  // Gets user notification preferences
   * @returns {Promise<Object>} Notification preferences
   */
- export async function getNotificationPreferences() {
-   try {
-     const data = await chrome.storage.local.get([NOTIFICATION_PREFS_KEY]);
-     return data[NOTIFICATION_PREFS_KEY] || DEFAULT_PREFERENCES;
-   } catch (error) {
-     logError('Error getting notification preferences', error);
-     return DEFAULT_PREFERENCES;
-   }
- }
+export async function getNotificationPreferences() {
+  try {
+    const data = await chrome.storage.local.get([NOTIFICATION_PREFS_KEY]);
+    return data[NOTIFICATION_PREFS_KEY] || DEFAULT_PREFERENCES;
+  } catch (error) {
+    logError("Error getting notification preferences", error);
+    return DEFAULT_PREFERENCES;
+  }
+}
 
- // Make getNotificationPreferences available to content scripts via messaging
- chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-   if (message.type === MESSAGE_TYPES.GET_NOTIFICATION_PREFERENCES) {
-     getNotificationPreferences()
-       .then(preferences => sendResponse({ success: true, preferences }))
-       .catch(error => {
-         logError('Error getting notification preferences via message', error);
-         sendResponse({ success: false, error: error.message });
-       });
-     return true; // Indicate async response
-   }
-  
-   if (message.type === MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES) {
-     updateNotificationPreferences(message.data)
-       .then(success => sendResponse({ success }))
-       .catch(error => {
-         logError('Error updating notification preferences via message', error);
-         sendResponse({ success: false, error: error.message });
-       });
-     return true; // Indicate async response
-   }
- });
+// Make getNotificationPreferences available to content scripts via messaging
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === MESSAGE_TYPES.GET_NOTIFICATION_PREFERENCES) {
+    getNotificationPreferences()
+      .then((preferences) => sendResponse({ success: true, preferences }))
+      .catch((error) => {
+        logError("Error getting notification preferences via message", error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Indicate async response
+  }
+
+  if (message.type === MESSAGE_TYPES.UPDATE_NOTIFICATION_PREFERENCES) {
+    updateNotificationPreferences(message.data)
+      .then((success) => sendResponse({ success }))
+      .catch((error) => {
+        logError("Error updating notification preferences via message", error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Indicate async response
+  }
+});
 
 /**
  * Updates user notification preferences
@@ -135,21 +135,21 @@ export async function updateNotificationPreferences(preferences) {
   try {
     // Get existing preferences
     const currentPrefs = await getNotificationPreferences();
-    
+
     // Merge with new preferences
     const updatedPrefs = {
       ...currentPrefs,
-      ...preferences
+      ...preferences,
     };
-    
+
     // Save back to storage
     await chrome.storage.local.set({
-      [NOTIFICATION_PREFS_KEY]: updatedPrefs
+      [NOTIFICATION_PREFS_KEY]: updatedPrefs,
     });
-    
+
     return true;
   } catch (error) {
-    logError('Error updating notification preferences', error);
+    logError("Error updating notification preferences", error);
     return false;
   }
 }
@@ -164,23 +164,33 @@ export const notify = {
    * @param {string} data.recipeName - Name of saved recipe
    * @param {string} [data.folderName] - Name of folder where recipe was saved
    * @param {string} [data.driveUrl] - URL to the saved recipe
+   * @param {boolean} [data.isRecipe] - Whether the page is actually a recipe
    */
-  recipeSaved: async ({ recipeName, folderName, driveUrl }) => {
+  recipeSaved: async ({ recipeName, folderName, driveUrl, isRecipe }) => {
     const prefs = await getNotificationPreferences();
     if (!prefs.enabled || !prefs.saveRecipe) return;
-    
+
+    // Check if the page is actually a recipe
+    if (isRecipe === false) {
+      createNotification({
+        title: "Not a Recipe",
+        message: "The page you tried to save doesn't appear to be a recipe.",
+      });
+      return;
+    }
+
     let message = `Successfully saved "${recipeName}"`;
     if (folderName) {
       message += ` to ${folderName}`;
     }
-    
+
     createNotification({
       title: "Recipe Saved",
       message,
-      onClick: driveUrl ? () => chrome.tabs.create({ url: driveUrl }) : undefined
+      onClick: driveUrl ? () => chrome.tabs.create({ url: driveUrl }) : undefined,
     });
   },
-  
+
   /**
    * Shows an authentication notification
    * @param {Object} data - Notification data
@@ -191,20 +201,20 @@ export const notify = {
   authentication: async ({ success, email, error }) => {
     const prefs = await getNotificationPreferences();
     if (!prefs.enabled || !prefs.authentication) return;
-    
+
     if (success) {
       createNotification({
         title: "Authentication Successful",
-        message: `Logged in as ${email}`
+        message: `Logged in as ${email}`,
       });
     } else {
       createNotification({
         title: "Authentication Failed",
-        message: error || "Failed to authenticate"
+        message: error || "Failed to authenticate",
       });
     }
   },
-  
+
   /**
    * Shows a folder operation notification
    * @param {Object} data - Notification data
@@ -216,17 +226,17 @@ export const notify = {
   folderOperation: async ({ operation, folderName, success, error }) => {
     const prefs = await getNotificationPreferences();
     if (!prefs.enabled || !prefs.folderOperations) return;
-    
+
     if (success) {
       createNotification({
         title: `Folder ${operation}`,
-        message: `"${folderName}" has been ${operation}`
+        message: `"${folderName}" has been ${operation}`,
       });
     } else {
       createNotification({
-        title: `Folder Operation Failed`,
-        message: error || `Failed to ${operation} folder`
+        title: "Folder Operation Failed",
+        message: error || `Failed to ${operation} folder`,
       });
     }
-  }
+  },
 };

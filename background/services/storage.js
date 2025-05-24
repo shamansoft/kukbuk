@@ -141,12 +141,12 @@ export async function createDriveFolder({ name = DEFAULT_FOLDER_NAME } = {}) {
       [STORAGE_KEYS.DRIVE_FOLDER]: folder.id,
       [STORAGE_KEYS.DRIVE_FOLDER_NAME]: folder.name,
     });
-    
+
     // Send notification for folder creation
     notify.folderOperation({
       operation: "created",
       folderName: folder.name,
-      success: true
+      success: true,
     });
 
     return {
@@ -197,12 +197,12 @@ export async function selectDriveFolder({ folderId, folderName }) {
       [STORAGE_KEYS.DRIVE_FOLDER]: folderId,
       [STORAGE_KEYS.DRIVE_FOLDER_NAME]: folderName,
     });
-    
+
     // Send notification for folder selection
     notify.folderOperation({
       operation: "selected",
       folderName: folderName,
-      success: true
+      success: true,
     });
 
     return {

@@ -116,6 +116,7 @@ async function saveRecipe(recipeData) {
     notify.recipeSaved({
       recipeName: result.title,
       driveUrl: result.driveFileUrl || null,
+      isRecipe: result.isRecipe,
       // folderName: folder.name
     });
 
@@ -124,6 +125,7 @@ async function saveRecipe(recipeData) {
       recipeName: result.title,
       message: result.message || "Recipe saved to Google Drive successfully",
       driveUrl: result.driveFileUrl || null,
+      isRecipe: result.isRecipe,
       // folderName: folder.name,
     };
   } catch (error) {
