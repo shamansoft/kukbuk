@@ -144,15 +144,6 @@
 
 ### US-11: Smart Extension Click Behavior
 - **As a user**, I want the extension to intelligently handle my click based on my current state.
-- **As a user**, I want seamless token refresh without manual intervention.
-
-**Technical Stories:**
-- [ ] Modify extension icon click handler to check auth state first
-- [ ] Implement automatic token refresh before recipe extraction
-- [ ] Add token expiry validation with buffer time
-- [ ] Create unified authentication flow for icon clicks
-- [ ] Add loading states for authentication processes
-- [ ] Implement retry logic for failed token refresh
 
 **Acceptance Criteria:**
 - Given I click the extension icon while logged out

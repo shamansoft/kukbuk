@@ -46,17 +46,8 @@ async function saveRecipe(recipeData) {
 
   try {
     // Check authentication status
-    //
     const token = await getIdTokenForCloudRun();
     const authToken = await getAuthToken();
-
-    // Check if Drive folder is selected
-    // const folder = await getCurrentFolder();
-    // if (!folder) {
-    //   const error = new Error('Google Drive folder not set. Please select a folder in settings.');
-    //   error.code = ERROR_CODES.FOLDER_REQUIRED;
-    //   throw error;
-    // }
 
     const contentObject = await transformContent(recipeData.pageContent);
     const content = contentObject.transformed;
@@ -70,28 +61,15 @@ async function saveRecipe(recipeData) {
         Authorization: `Bearer ${token}`,
         "X-S-AUTH-TOKEN": authToken,
         "X-Extension-ID": ENV.EXTENSION_ID,
-        // "X-Request-ID": requestId,
       },
       body: JSON.stringify({
         html: content,
         url: recipeData.pageUrl,
         title: recipeData.title,
-        // folderId: folder.id,
-        // folderName: folder.name
       }),
     };
     console.log("fetch ", ENV.COOKBOOK_API_URL, request);
-    // Send to backend
     const response = await fetch(ENV.COOKBOOK_API_URL, request);
-    //    or mock while debugging
-    //    const response = {
-    //        ok: true,
-    //        status: 200,
-    //        json: async () => ({
-    //            recipeName: 'Test Recipe',
-    //            message: 'Recipe saved successfully'
-    //        })
-    //    }
 
     // Check for network errors
     if (!response.ok) {
@@ -117,7 +95,6 @@ async function saveRecipe(recipeData) {
       recipeName: result.title,
       driveUrl: result.driveFileUrl || null,
       isRecipe: result.isRecipe,
-      // folderName: folder.name
     });
 
     return {
