@@ -24,7 +24,7 @@ export function setupAuth() {
   console.log("Setting up authentication service");
 
   // Listen for authentication messages
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === MESSAGE_TYPES.AUTH_REQUEST) {
       authenticateUser()
         .then((response) => sendResponse(response))
@@ -79,7 +79,7 @@ export function setupAuth() {
 export async function getIdTokenForCloudRun() {
   try {
     // Check if we have a cached ID token that's still valid
-    const tokenData = await chrome.storage.local.get([
+    const tokenData = await browser.storage.local.get([
       STORAGE_KEYS.ID_TOKEN,
       STORAGE_KEYS.ID_TOKEN_EXPIRY,
     ]);
@@ -102,7 +102,7 @@ export async function getIdTokenForCloudRun() {
     const idToken = await fetchIdToken(oauthToken);
 
     // Store the ID token with a 1 hour expiry (typical for ID tokens)
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       [STORAGE_KEYS.ID_TOKEN]: idToken,
       [STORAGE_KEYS.ID_TOKEN_EXPIRY]: getTokenExpiry(idToken),
     });
@@ -166,7 +166,7 @@ async function authenticateUser() {
     }
 
     // Store token and user info in local storage
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       [STORAGE_KEYS.AUTH_TOKEN]: token,
       [STORAGE_KEYS.USER_EMAIL]: userInfo.email,
       [STORAGE_KEYS.AUTH_EXPIRY]: Date.now() + 60 * 60 * 1000, // Rough estimation (1 hour)
@@ -191,7 +191,7 @@ async function authenticateUser() {
 }
 
 async function cleanupLocalStorage() {
-  await chrome.storage.local.remove([
+  await browser.storage.local.remove([
     STORAGE_KEYS.AUTH_TOKEN,
     STORAGE_KEYS.USER_EMAIL,
     STORAGE_KEYS.AUTH_EXPIRY,
@@ -208,21 +208,49 @@ async function cleanupLocalStorage() {
 
 export async function getAuthToken(interactive = false) {
   return new Promise((resolve, reject) => {
-    chrome.identity.getAuthToken(
-      {
-        interactive,
-        scopes: GOOGLE_AUTH_SCOPES,
-      },
-      (token) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else if (!token) {
-          reject(new Error("Failed to obtain auth token"));
-        } else {
-          resolve(token);
-        }
-      },
-    );
+    // Use browser.identity.getAuthToken for Chrome and launchWebAuthFlow for Firefox
+    // Check if the chrome object and chrome.identity is available (for Chrome and polyfill)
+    if (typeof chrome !== 'undefined' && typeof chrome.identity !== 'undefined') {
+      // Chrome-specific authentication flow (handled by polyfill for browser.identity)
+      browser.identity.getAuthToken(
+        {
+          interactive,
+          scopes: GOOGLE_AUTH_SCOPES,
+        },
+        (token) => {
+          if (!token) {
+            // Use browser.runtime.lastError for consistency with polyfill
+            reject(new Error(browser.runtime.lastError.message || "Failed to obtain auth token (Chrome)"));
+          } else {
+            resolve(token);
+          }
+        },
+      );
+    } else if (typeof browser !== 'undefined' && typeof browser.identity !== 'undefined') {
+      // Firefox-specific authentication flow
+      const redirectUri = browser.identity.getRedirectURL();
+      const authUrl = `${
+                      ENV.GOOGLE_AUTH_BASE_URL
+                    }?` +
+                      `client_id=${ENV.GOOGLE_CLIENT_ID}&` +
+                      `response_type=token&` +
+                      `scope=${GOOGLE_AUTH_SCOPES.join(' ')}&` +
+                      `redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+      browser.identity.launchWebAuthFlow({ url: authUrl, interactive: interactive })
+        .then(responseUrl => {
+          const params = new URLSearchParams(new URL(responseUrl).hash.substring(1));
+          const accessToken = params.get('access_token');
+          if (accessToken) {
+            resolve(accessToken);
+          } else {
+            reject(new Error("Failed to obtain auth token (Firefox): Access token not found in response."));
+          }
+        })
+        .catch(error => reject(new Error(`Failed to obtain auth token (Firefox): ${error.message}`)));
+    } else {
+      reject(new Error("No identity API available for authentication."));
+    }
   });
 }
 
@@ -257,7 +285,7 @@ async function getUserInfo(token) {
 async function checkAuthStatus() {
   try {
     // Get stored auth data
-    const authData = await chrome.storage.local.get([
+    const authData = await browser.storage.local.get([
       STORAGE_KEYS.AUTH_TOKEN,
       STORAGE_KEYS.USER_EMAIL,
       STORAGE_KEYS.AUTH_EXPIRY,
@@ -295,7 +323,7 @@ async function checkAuthStatus() {
         }
 
         // Update storage
-        await chrome.storage.local.set({
+        await browser.storage.local.set({
           [STORAGE_KEYS.AUTH_TOKEN]: newToken,
           [STORAGE_KEYS.AUTH_EXPIRY]: Date.now() + 60 * 60 * 1000, // Rough estimation (1 hour)
         });
@@ -360,7 +388,7 @@ async function checkAuthStatus() {
 async function logoutUser() {
   try {
     // Get the current token and user info
-    const authData = await chrome.storage.local.get([
+    const authData = await browser.storage.local.get([
       STORAGE_KEYS.AUTH_TOKEN,
       STORAGE_KEYS.USER_EMAIL,
     ]);

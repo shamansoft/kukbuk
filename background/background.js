@@ -1,3 +1,5 @@
+import 'webextension-polyfill';
+
 // Import services
 import { setupAuth } from "./services/auth.js";
 import { setupStorage } from "./services/storage.js";
@@ -37,26 +39,26 @@ function initBackground() {
 
 // Set up context menu for extension
 function setupContextMenu() {
-  chrome.contextMenus.removeAll();
+  browser.contextMenus.removeAll();
 
-  chrome.contextMenus.create({
+  browser.contextMenus.create({
     id: "kukbuk-settings",
     title: "Settings",
     contexts: ["action"],
   });
 
-  chrome.contextMenus.create({
+  browser.contextMenus.create({
     id: "kukbuk-logout",
     title: "Log Out",
     contexts: ["action"],
   });
 
-  chrome.contextMenus.onClicked.addListener((info, tab) => {
+  browser.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "kukbuk-settings") {
-      chrome.runtime.openOptionsPage();
+      browser.runtime.openOptionsPage();
     } else if (info.menuItemId === "kukbuk-logout") {
       // Send logout message to self (handled by auth service)
-      chrome.runtime.sendMessage(
+      browser.runtime.sendMessage(
         {
           type: MESSAGE_TYPES.AUTH_LOGOUT,
         },
@@ -70,7 +72,7 @@ function setupContextMenu() {
 
 // Set up message listeners
 function setupMessageListeners() {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("Background script received message:", message.type);
 
     // Handle only messages not handled by specific services
@@ -90,7 +92,7 @@ function setupMessageListeners() {
 }
 
 // Initialize on install/update
-chrome.runtime.onInstalled.addListener(() => {
+browser.runtime.onInstalled.addListener(() => {
   initBackground();
 });
 
