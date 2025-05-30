@@ -1,12 +1,12 @@
 {
   "name": "mykukbuk-extension",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Chrome extension to save recipes to Google Drive",
   "scripts": {
     "prebuild": "node scripts/substitute-env.js",
     "prebuild:local": "node scripts/substitute-env.js --env=.env.local",
-    "build": "webpack --config webpack.config.js",
-    "build:local": "npm run prebuild:local && webpack --config webpack.config.js",
+    "build": "npm run prebuild",
+    "build:local": "npm run prebuild:local",
     "dev": "cross-env NODE_ENV=development npm run prebuild && webpack --watch --config webpack.config.js",
     "dev:local": "cross-env NODE_ENV=development npm run prebuild:local && webpack --watch --config webpack.config.js",
     "zip": "npm run build && node scripts/zip-extension.js",
