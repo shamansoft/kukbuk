@@ -11,7 +11,9 @@
     "scripting",
     "tabs"
   ],
-  "host_permissions": ["https://*/*"],
+  "host_permissions": [
+    "https://*/*"
+  ],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -27,8 +29,13 @@
   "options_page": "options/options.html",
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content/content.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content/content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -37,11 +44,9 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "oauth2": {
-    "client_id": "${GOOGLE_CLIENT_ID}",
-    "scopes": [
-      "https://www.googleapis.com/auth/drive.file",
-      "https://www.googleapis.com/auth/userinfo.email"
-    ]
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "${FIREFOX_EXTENSION_ID}"
+    }
   }
 }
