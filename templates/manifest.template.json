@@ -3,14 +3,7 @@
   "name": "MyKukBuk",
   "version": "${EXTENSION_VERSION}",
   "description": "Save recipes to your Google Drive",
-  "permissions": [
-    "activeTab",
-    "storage",
-    "identity",
-    "contextMenus",
-    "scripting",
-    "tabs"
-  ],
+  "permissions": ["activeTab", "storage", "identity", "contextMenus", "scripting", "tabs"],
   "host_permissions": ["https://*/*"],
   "action": {
     "default_popup": "popup/popup.html",

@@ -82,16 +82,20 @@ async function saveRecipe(recipeData) {
     };
     console.log("fetch ", ENV.COOKBOOK_API_URL, request);
     // Send to backend
-    const response = await fetch(ENV.COOKBOOK_API_URL, request);
+    // const response = await fetch(ENV.COOKBOOK_API_URL, request);
     //    or mock while debugging
-    //    const response = {
-    //        ok: true,
-    //        status: 200,
-    //        json: async () => ({
-    //            recipeName: 'Test Recipe',
-    //            message: 'Recipe saved successfully'
-    //        })
-    //    }
+    const response = await new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            recipeName: "Test Recipe",
+            message: "Recipe saved successfully",
+          }),
+        });
+      }, 3000);
+    });
 
     // Check for network errors
     if (!response.ok) {
