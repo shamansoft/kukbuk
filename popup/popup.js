@@ -1,6 +1,8 @@
+
+/* eslint-env browser, webextensions */
 // Import common utilities and constants
 import { logError, showMessage } from "../common/error-handler.js";
-import { STORAGE_KEYS, MESSAGE_TYPES, ERROR_CODES } from "../common/constants.js";
+import { MESSAGE_TYPES, ERROR_CODES } from "../common/constants.js";
 import { toast } from "../common/toast-notification.js";
 
 // DOM elements
@@ -28,6 +30,7 @@ async function initPopup() {
     if (authStatus.success && authStatus.authenticated) {
       // User is authenticated
       showLoggedInView(authStatus.email);
+      startAutoExtractAndSave();
 
       // // Check if Google Drive folder is set
       // const folderData = await chrome.storage.local.get([
@@ -47,10 +50,31 @@ async function initPopup() {
     } else {
       // User is not authenticated
       showLoginView();
-      if (authStatus.error) {
-        showMessage(statusMessage, authStatus.error, "info");
-      } else {
-        statusMessage.textContent = "";
+      // Auto-start login flow (AC1)
+      try {
+        showMessage(statusMessage, "Authenticating...", "info");
+        toast.info("Authenticating with Google...");
+        const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_REQUEST);
+        if (authResponse && authResponse.success) {
+          showLoggedInView(authResponse.email);
+          showMessage(statusMessage, "Logged in successfully", "success");
+          toast.success(`Logged in as ${authResponse.email}`);
+          // Proceed to auto extract/save after login
+          await startAutoExtractAndSave();
+        } else {
+          if (authStatus.error) {
+            showMessage(statusMessage, authStatus.error, "info");
+          } else {
+            statusMessage.textContent = "";
+          }
+        }
+      } catch (_e) {
+        // Fall back to manual login if auto-login fails
+        if (authStatus.error) {
+          showMessage(statusMessage, authStatus.error, "info");
+        } else {
+          statusMessage.textContent = "";
+        }
       }
     }
 
@@ -60,6 +84,134 @@ async function initPopup() {
     logError("Error initializing popup", error);
     showLoginView();
     showMessage(statusMessage, "Error initializing extension", "error");
+  }
+}
+
+// Helper: ensure content script is ready on the active tab
+async function ensureContentScriptReady(tabId) {
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: "PING" });
+    return true;
+  } catch (_e) {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["content/content.js"],
+    });
+    return true;
+  }
+}
+
+// Helper: ask page to show a light bubble near the extensions bar
+async function showLightBubbleOnPage(
+  tabId,
+  { text = "Saving...", variant = "info", duration = 5000 } = {},
+) {
+  try {
+    const type = (MESSAGE_TYPES && MESSAGE_TYPES.SHOW_BUBBLE) || "SHOW_BUBBLE";
+    await chrome.tabs.sendMessage(tabId, {
+      type,
+      data: { text, variant, duration },
+    });
+  } catch (_e) {
+    // Ignore if content script doesn't support bubbles
+  }
+}
+
+// Unified auto flow on popup open when authenticated
+async function startAutoExtractAndSave() {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const activeTab = tabs && tabs[0];
+    if (!activeTab) {
+      return;
+    }
+
+    await ensureContentScriptReady(activeTab.id);
+
+    // Show blue "saving..." bubble for 5s under the extensions panel
+    await showLightBubbleOnPage(activeTab.id, {
+      text: "saving...",
+      variant: "info",
+      duration: 5000,
+    });
+
+    // Extract recipe data
+    const extractResponse = await chrome.tabs.sendMessage(activeTab.id, {
+      type: MESSAGE_TYPES.EXTRACT_RECIPE,
+    });
+    if (!extractResponse || !extractResponse.success) {
+      const errMsg = extractResponse?.error || "Failed to extract recipe";
+      showMessage(statusMessage, errMsg, "error");
+      toast.error(errMsg);
+      return;
+    }
+
+    const recipeData = extractResponse.data;
+
+    // Update status and toast, then save
+    showMessage(statusMessage, "Saving recipe...", "info");
+    toast.info("Saving recipe to Google Drive...");
+
+    const saveResponse = await sendMessageToBackground(
+      MESSAGE_TYPES.SAVE_RECIPE,
+      recipeData,
+    );
+
+    if (saveResponse.success) {
+      // If not a recipe
+      if (saveResponse.isRecipe === false) {
+        showMessage(statusMessage, "This page does not appear to be a recipe.", "info");
+        toast.info("This page doesn't seem to contain a valid recipe.");
+      } else {
+        let successMsg = `Saved: ${saveResponse.recipeName}`;
+        if (saveResponse.driveUrl) {
+          successMsg += ` to "${saveResponse.driveUrl}"`;
+        }
+        showMessage(statusMessage, successMsg, "success");
+
+        // Show green "saved!" bubble for 10s
+        await showLightBubbleOnPage(activeTab.id, {
+          text: "saved!",
+          variant: "success",
+          duration: 10000,
+        });
+
+        if (saveResponse.driveUrl) {
+          toast.success(`Recipe "${saveResponse.recipeName}" saved successfully`, {
+            onClick: () => chrome.tabs.create({ url: saveResponse.driveUrl }),
+            duration: 5000,
+          });
+        } else {
+          toast.success(`Recipe "${saveResponse.recipeName}" saved successfully`);
+        }
+      }
+    } else {
+      if (saveResponse.errorCode === ERROR_CODES.AUTH_REQUIRED) {
+        showLoginView();
+        showMessage(
+          statusMessage,
+          "It looks like you need to be signed in to save recipes. Please log in.",
+          "error",
+        );
+        toast.error("Please sign in to save recipes.");
+      } else if (saveResponse.errorCode === ERROR_CODES.FOLDER_REQUIRED) {
+        showMessage(
+          statusMessage,
+          "Please set up your Google Drive folder in settings so we know where to save your recipes.",
+          "error",
+        );
+        toast.error("Please choose a folder in your settings.");
+      } else {
+        const msg = saveResponse.error || "Unable to save your recipe. Please try again.";
+        showMessage(statusMessage, msg, "error");
+        toast.error(msg);
+      }
+    }
+  } catch (error) {
+    logError("Auto extract/save error", error);
+    const msg = error?.message || "Error saving recipe";
+    showMessage(statusMessage, msg, "error");
+    toast.error(msg);
   }
 }
 
@@ -103,7 +255,7 @@ function setupEventListeners() {
         currentWindow: true,
       });
       const activeTab = tabs[0];
-      console.log("activeTab", activeTab);
+      // removed log
 
       if (!activeTab) {
         throw new Error("Could not determine active tab");
@@ -113,8 +265,8 @@ function setupEventListeners() {
       try {
         // Try messaging first to see if content script is already loaded
         await chrome.tabs.sendMessage(activeTab.id, { type: "PING" });
-        console.log("Content script already loaded");
-      } catch (error) {
+        // removed log
+      } catch (_error) {
         // Only inject if messaging fails (script not loaded)
         await chrome.scripting.executeScript({
           target: { tabId: activeTab.id },
@@ -123,7 +275,6 @@ function setupEventListeners() {
       }
 
       // Extract recipe data using content script messaging
-      let recipeData;
       const extractResponse = await chrome.tabs.sendMessage(activeTab.id, {
         type: MESSAGE_TYPES.EXTRACT_RECIPE,
       });
@@ -132,24 +283,27 @@ function setupEventListeners() {
         throw new Error(extractResponse?.error || "Failed to extract recipe");
       }
 
-      recipeData = extractResponse.data;
+      const recipeData = extractResponse.data;
 
       // Update status
       showMessage(statusMessage, "Saving recipe...", "info");
       toast.info("Saving recipe to Google Drive...");
 
       // Send to background for saving
-      const saveResponse = await sendMessageToBackground(MESSAGE_TYPES.SAVE_RECIPE, recipeData);
+      const saveResponse = await sendMessageToBackground(
+        MESSAGE_TYPES.SAVE_RECIPE,
+        recipeData,
+      );
 
       if (saveResponse.success) {
-        console.log("recipe saved", saveResponse);
+        // removed log
 
         // Check if the page is actually a recipe
         if (saveResponse.isRecipe === false) {
           // Not a recipe - show appropriate message
           showMessage(statusMessage, "This page does not appear to be a recipe.", "info");
           toast.info("This page doesn't seem to contain a valid recipe.");
-          console.log("Not identified as a recipe");
+          // removed log
         } else {
           // It's a recipe (or isRecipe wasn't specified) - show success message
           // Create success message with Drive info
@@ -157,7 +311,7 @@ function setupEventListeners() {
           if (saveResponse.driveUrl) {
             successMsg += ` to "${saveResponse.driveUrl}"`;
           }
-          console.log("save msg: ", successMsg);
+          // removed log
           showMessage(statusMessage, successMsg, "success");
 
           // Show toast notification with link to Drive
@@ -171,7 +325,7 @@ function setupEventListeners() {
           }
         }
 
-        console.log("save msg / done");
+        // removed log
         // If we have a Drive URL, show a "View in Drive" button
         // if (saveResponse.driveUrl) {
         //   const viewButton = document.createElement('button');
@@ -263,7 +417,7 @@ function showLoggedInView(email) {
 
 // Communication with background script
 function sendMessageToBackground(type, data) {
-  console.log("sendMessageToBackground", type);
+  // removed log
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({ type, data }, (response) => {
       if (chrome.runtime.lastError) {

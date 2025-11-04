@@ -4,11 +4,12 @@
 const MESSAGE_TYPES = {
   EXTRACT_RECIPE: "EXTRACT_RECIPE",
   PING: "PING",
+  SHOW_BUBBLE: "SHOW_BUBBLE",
 };
 
 // Listen for messages from the popup or background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log("Content script received message:", message.type);
+  // log suppressed
 
   switch (message.type) {
     case MESSAGE_TYPES.PING:
@@ -20,7 +21,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       extractRecipeData()
         .then((data) => sendResponse({ success: true, data }))
         .catch((error) => {
-          console.error("Error extracting recipe:", error);
+          // error suppressed
           sendResponse({
             success: false,
             error: error.message || "Failed to extract recipe data",
@@ -29,6 +30,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       // Return true to indicate we will send a response asynchronously
       return true;
+
+    case MESSAGE_TYPES.SHOW_BUBBLE: {
+      const { text = "Saving...", variant = "info", duration = 5000 } = message.data || {};
+      showLightBubble({ text, variant, duration });
+      sendResponse({ success: true });
+      return false;
+    }
 
     default:
       sendResponse({
@@ -65,7 +73,7 @@ async function extractRecipeData() {
 function performBasicCleanup() {
   try {
     const initialDocSize = document.documentElement.outerHTML.length;
-    console.log("doc size", initialDocSize);
+    // log suppressed
 
     // Create a clone of the document to avoid modifying the actual page
     const docClone = document.cloneNode(true);
@@ -92,19 +100,117 @@ function performBasicCleanup() {
         }
       });
     });
-    console.log("doc size after cleanup", docClone.documentElement.outerHTML.length);
-    console.log("doc size diff", initialDocSize - docClone.documentElement.outerHTML.length);
+    // log suppressed
+    // log suppressed
     return docClone.documentElement.outerHTML;
   } catch (error) {
-    console.error("Error performing basic cleanup:", error);
+    // error suppressed
     // On any error, return the original HTML
     return document.documentElement.outerHTML;
   }
 }
 
+// Light bubble UI - small status pills near the top-right (under extensions bar)
+function ensureLightBubbleStyles() {
+  if (document.getElementById("kukbuk-light-bubble-styles")) return;
+  const style = document.createElement("style");
+  style.id = "kukbuk-light-bubble-styles";
+  style.textContent = `
+    #kukbuk-light-bubble-container {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 2147483647;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .kukbuk-light-bubble {
+      pointer-events: auto;
+      color: #fff;
+      background: #2196f3;
+      border-radius: 9999px;
+      padding: 6px 12px;
+      font-size: 13px;
+      line-height: 1;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      white-space: nowrap;
+      max-width: 60vw;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .kukbuk-light-bubble.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .kukbuk-light-bubble.hide {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    .kukbuk-light-bubble.info {
+      background: #2196f3;
+    }
+    .kukbuk-light-bubble.success {
+      background: #4caf50;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function ensureLightBubbleContainer() {
+  let container = document.getElementById("kukbuk-light-bubble-container");
+  if (container) return container;
+  container = document.createElement("div");
+  container.id = "kukbuk-light-bubble-container";
+  document.body.appendChild(container);
+  return container;
+}
+
+/**
+ * Show a lightweight bubble near the extensions area
+ * @param {Object} opts
+ * @param {string} opts.text - Bubble text
+ * @param {"info"|"success"} [opts.variant="info"] - Bubble style
+ * @param {number} [opts.duration=5000] - How long to show (ms)
+ */
+function showLightBubble({ text, variant = "info", duration = 5000 }) {
+  try {
+    ensureLightBubbleStyles();
+    const container = ensureLightBubbleContainer();
+    const bubble = document.createElement("div");
+    bubble.className = `kukbuk-light-bubble ${variant}`;
+    bubble.textContent = text || "";
+    container.appendChild(bubble);
+
+    // show with animation
+    window.requestAnimationFrame(() => bubble.classList.add("show"));
+
+    // auto hide
+    const delay = Math.max(0, duration || 0);
+    window.setTimeout(() => {
+      bubble.classList.add("hide");
+    }, delay);
+    window.setTimeout(() => {
+      bubble.remove();
+      if (container.childElementCount === 0) {
+        container.remove();
+      }
+    }, delay + 250);
+
+    return bubble;
+  } catch (_e) {
+    // error suppressed
+    return null;
+  }
+}
+
 // Initialize content script
 function init() {
-  console.log("MyKukbuk content script initialized");
+  // log suppressed
 }
 
 // Run initialization
