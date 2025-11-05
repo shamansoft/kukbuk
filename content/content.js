@@ -32,8 +32,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
 
     case MESSAGE_TYPES.SHOW_BUBBLE: {
-      const { text = "Saving...", variant = "info", duration = 5000 } = message.data || {};
-      showLightBubble({ text, variant, duration });
+      const {
+        text = "Saving...",
+        variant = "info",
+        duration = 5000,
+        closePrevious = true,
+      } = message.data || {};
+      showLightBubble({ text, variant, duration, closePrevious });
       sendResponse({ success: true });
       return false;
     }
@@ -157,6 +162,15 @@ function ensureLightBubbleStyles() {
     .kukbuk-light-bubble.success {
       background: #4caf50;
     }
+    .kukbuk-light-bubble.error {
+      background: #f44336;
+    }
+    .kukbuk-light-bubble.timeout {
+      background: #ff9800;
+    }
+    .kukbuk-light-bubble.loading {
+      background: #2196f3;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -170,15 +184,29 @@ function ensureLightBubbleContainer() {
   return container;
 }
 
+// Store reference to current bubble for cleanup
+let currentBubble = null;
+let currentBubbleTimeout = null;
+
 /**
  * Show a lightweight bubble near the extensions area
  * @param {Object} opts
  * @param {string} opts.text - Bubble text
- * @param {"info"|"success"} [opts.variant="info"] - Bubble style
- * @param {number} [opts.duration=5000] - How long to show (ms)
+ * @param {"info"|"success"|"error"|"timeout"|"loading"} [opts.variant="info"] - Bubble style
+ * @param {number} [opts.duration] - How long to show (ms). 0 or null means don't auto-close
+ * @param {boolean} [opts.closePrevious=true] - Whether to close previous bubble
  */
-function showLightBubble({ text, variant = "info", duration = 5000 }) {
+function showLightBubble({ text, variant = "info", duration = 5000, closePrevious = true }) {
   try {
+    // Close previous bubble if requested
+    if (closePrevious && currentBubble) {
+      closeBubble(currentBubble);
+      if (currentBubbleTimeout) {
+        clearTimeout(currentBubbleTimeout);
+        currentBubbleTimeout = null;
+      }
+    }
+
     ensureLightBubbleStyles();
     const container = ensureLightBubbleContainer();
     const bubble = document.createElement("div");
@@ -186,26 +214,45 @@ function showLightBubble({ text, variant = "info", duration = 5000 }) {
     bubble.textContent = text || "";
     container.appendChild(bubble);
 
+    // Store reference to current bubble
+    currentBubble = bubble;
+
     // show with animation
     window.requestAnimationFrame(() => bubble.classList.add("show"));
 
-    // auto hide
-    const delay = Math.max(0, duration || 0);
-    window.setTimeout(() => {
-      bubble.classList.add("hide");
-    }, delay);
-    window.setTimeout(() => {
-      bubble.remove();
-      if (container.childElementCount === 0) {
-        container.remove();
-      }
-    }, delay + 250);
+    // auto hide only if duration is specified and > 0
+    if (duration && duration > 0) {
+      const delay = Math.max(0, duration);
+      currentBubbleTimeout = window.setTimeout(() => {
+        closeBubble(bubble);
+      }, delay);
+    }
 
     return bubble;
   } catch (_e) {
     // error suppressed
     return null;
   }
+}
+
+/**
+ * Close a specific bubble
+ * @param {HTMLElement} bubble - The bubble element to close
+ */
+function closeBubble(bubble) {
+  if (!bubble || !bubble.parentNode) return;
+
+  bubble.classList.add("hide");
+  window.setTimeout(() => {
+    bubble.remove();
+    if (currentBubble === bubble) {
+      currentBubble = null;
+    }
+    const container = document.getElementById("kukbuk-light-bubble-container");
+    if (container && container.childElementCount === 0) {
+      container.remove();
+    }
+  }, 250);
 }
 
 // Initialize content script

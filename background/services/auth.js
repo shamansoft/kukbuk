@@ -1,4 +1,3 @@
-
 /* eslint-env browser, worker */
 // Authentication service for MyKukBuk
 
