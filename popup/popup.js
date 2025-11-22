@@ -33,6 +33,12 @@ async function initPopup() {
 
     if (authStatus.success && authStatus.authenticated) {
       // User is authenticated - proceed with auto-save in minimal mode
+      // Store user info for display if needed
+      window.currentUser = {
+        email: authStatus.email,
+        displayName: authStatus.displayName,
+        photoURL: authStatus.photoURL,
+      };
       await handleAuthenticatedFlow();
     } else {
       // User is NOT authenticated - show login UI
@@ -45,7 +51,11 @@ async function initPopup() {
         toast.info("Authenticating with Google...");
         const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_REQUEST);
         if (authResponse && authResponse.success) {
-          showLoggedInView(authResponse.email);
+          showLoggedInView({
+            email: authResponse.email,
+            displayName: authResponse.displayName,
+            photoURL: authResponse.photoURL,
+          });
           showMessage(
             statusMessage,
             "Logged in successfully. Click 'Save Recipe' to save.",
@@ -229,7 +239,11 @@ function setupEventListeners() {
       const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_REQUEST);
 
       if (authResponse.success) {
-        showLoggedInView(authResponse.email);
+        showLoggedInView({
+          email: authResponse.email,
+          displayName: authResponse.displayName,
+          photoURL: authResponse.photoURL,
+        });
         showMessage(statusMessage, "Logged in successfully", "success");
         toast.success(`Logged in as ${authResponse.email}`);
       } else {
@@ -413,7 +427,7 @@ function showLoginView() {
   mainSection.style.display = "none";
 }
 
-function showLoggedInView(email) {
+function showLoggedInView(userInfo) {
   // Remove minimal-mode for full height
   document.body.classList.remove("minimal-mode");
 
@@ -421,7 +435,25 @@ function showLoggedInView(email) {
   successSection.style.display = "none";
   loginSection.style.display = "none";
   mainSection.style.display = "flex";
-  userEmail.textContent = email || "Unknown user";
+
+  // Update user info display
+  if (typeof userInfo === "string") {
+    // Backward compatibility: if string is passed, treat as email
+    userEmail.textContent = userInfo;
+  } else if (userInfo) {
+    // Display user email or display name
+    const displayText = userInfo.displayName || userInfo.email || "Unknown user";
+    userEmail.textContent = displayText;
+
+    // Update user avatar if photoURL is available
+    const userAvatar = document.getElementById("user-avatar");
+    if (userAvatar && userInfo.photoURL) {
+      userAvatar.src = userInfo.photoURL;
+      userAvatar.alt = displayText;
+    }
+  } else {
+    userEmail.textContent = "Unknown user";
+  }
 }
 
 // Communication with background script

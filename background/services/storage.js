@@ -1,6 +1,7 @@
 import { logError } from "../../common/error-handler.js";
 import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from "../../common/constants.js";
-import { getAuthToken } from "./auth.js";
+// DEPRECATED: Drive folder management now handled by backend
+// import { getAuthToken } from "./auth.js";
 import { notify } from "./notifications.js";
 
 // Google Drive API endpoint
@@ -76,7 +77,9 @@ export function setupStorage() {
  */
 export async function listDriveFolders() {
   try {
-    const token = await getAuthToken(false);
+    // DEPRECATED: Drive folder management now handled by backend
+    throw new Error("Drive folder management is now handled by the backend");
+    // const token = await getAuthToken(false);
 
     // Query for folders owned by the user
     const query =
@@ -114,7 +117,9 @@ export async function listDriveFolders() {
  */
 export async function createDriveFolder({ name = DEFAULT_FOLDER_NAME } = {}) {
   try {
-    const token = await getAuthToken(false);
+    // DEPRECATED: Drive folder management now handled by backend
+    throw new Error("Drive folder management is now handled by the backend");
+    // const token = await getAuthToken(false);
 
     // Create folder in Drive
     const response = await fetch(`${DRIVE_API_URL}/files`, {

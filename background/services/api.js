@@ -3,7 +3,7 @@
 import { logError } from "../../common/error-handler.js";
 import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from "../../common/constants.js";
 import { transformContent } from "./transformation.js";
-import { getAuthToken, getIdTokenForCloudRun } from "./auth.js";
+import { authManager } from "./auth/auth-manager.js";
 // import { getCurrentFolder } from "./storage.js";
 import { ENV } from "../../common/env-config.js";
 import { notify } from "./notifications.js";
@@ -45,10 +45,8 @@ async function saveRecipe(recipeData) {
   }
 
   try {
-    // Check authentication status
-    //
-    const token = await getIdTokenForCloudRun();
-    const authToken = await getAuthToken();
+    // Get Firebase ID token for backend authentication
+    const firebaseToken = await authManager.getIdToken();
 
     // Check if Drive folder is selected
     // const folder = await getCurrentFolder();
@@ -62,13 +60,11 @@ async function saveRecipe(recipeData) {
     const content = contentObject.transformed;
 
     // Prepare data for sending to API
-
     const request = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        "X-S-AUTH-TOKEN": authToken,
+        Authorization: `Bearer ${firebaseToken}`,
         "X-Extension-ID": ENV.EXTENSION_ID,
         // "X-Request-ID": requestId,
       },
@@ -134,16 +130,33 @@ async function saveRecipe(recipeData) {
     };
   } catch (error) {
     // Handle auth errors
-    if (error.message.includes("OAuth2 not granted or revoked")) {
-      // Clear auth data - user needs to re-authenticate
-      await chrome.storage.local.remove([
-        STORAGE_KEYS.AUTH_TOKEN,
-        STORAGE_KEYS.USER_EMAIL,
-        STORAGE_KEYS.AUTH_EXPIRY,
-      ]);
-
-      const authError = new Error("Authentication expired, please login again");
+    if (
+      error.message.includes("Not authenticated") ||
+      error.message.includes("Authentication expired") ||
+      error.message.includes("OAuth2 not granted or revoked")
+    ) {
+      const authError = new Error("Authentication required, please sign in");
       authError.code = ERROR_CODES.AUTH_REQUIRED;
+
+      // Notify user
+      notify.recipeSaved({
+        success: false,
+        error: "Please sign in to save recipes",
+      });
+
+      throw authError;
+    }
+
+    // Handle 401 Unauthorized from backend
+    if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+      const authError = new Error("Authentication expired, please sign in again");
+      authError.code = ERROR_CODES.AUTH_REQUIRED;
+
+      notify.recipeSaved({
+        success: false,
+        error: "Session expired, please sign in again",
+      });
+
       throw authError;
     }
 
