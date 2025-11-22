@@ -1,3 +1,4 @@
+/* eslint-env browser, worker */
 // Authentication service for MyKukBuk
 
 import { logError } from "../../common/error-handler.js";
@@ -16,6 +17,24 @@ const GOOGLE_AUTH_SCOPES = [
 
 // Token expiration buffer (5 minutes in milliseconds)
 const TOKEN_EXPIRATION_BUFFER = 5 * 60 * 1000;
+
+// Simple retry helper for transient auth/id-token operations
+const DEFAULT_RETRY_OPTIONS = { retries: 2, delayMs: 300 };
+
+async function withRetry(fn, options = DEFAULT_RETRY_OPTIONS) {
+  const { retries = 2, delayMs = 300 } = options || {};
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt === retries) break;
+      await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
+    }
+  }
+  throw lastError;
+}
 
 /**
  * Sets up the authentication service
@@ -87,7 +106,7 @@ export async function getIdTokenForCloudRun() {
     const cachedToken = tokenData[STORAGE_KEYS.ID_TOKEN];
     const expiry = tokenData[STORAGE_KEYS.ID_TOKEN_EXPIRY];
 
-    console.log("cachedIdToken: ", cachedToken);
+    console.log("ID token cache check:", { hasToken: !!cachedToken, expiry });
 
     // If token exists and isn't expired, return it
     if (cachedToken && expiry && Date.now() < expiry - TOKEN_EXPIRATION_BUFFER) {
@@ -95,11 +114,15 @@ export async function getIdTokenForCloudRun() {
     }
 
     // Otherwise get a new token
-    // First get the OAuth token (needed to get the ID token)
-    const oauthToken = await getAuthToken(false);
+    // Remove stale ID token if present
+    if (cachedToken) {
+      await chrome.storage.local.remove([STORAGE_KEYS.ID_TOKEN, STORAGE_KEYS.ID_TOKEN_EXPIRY]);
+    }
+    // First get the OAuth token (needed to get the ID token) with retry
+    const oauthToken = await withRetry(() => getAuthToken(false), { retries: 1, delayMs: 500 });
     console.log("oauthToken ", oauthToken);
-    // Use the OAuth token to get an ID token
-    const idToken = await fetchIdToken(oauthToken);
+    // Use the OAuth token to get an ID token (with retry)
+    const idToken = await withRetry(() => fetchIdToken(oauthToken), { retries: 2, delayMs: 500 });
 
     // Store the ID token with a 1 hour expiry (typical for ID tokens)
     await chrome.storage.local.set({
@@ -280,13 +303,14 @@ async function checkAuthStatus() {
     if (expiry && Date.now() > expiry - TOKEN_EXPIRATION_BUFFER) {
       // Token needs refreshing
       try {
+        console.log("Refreshing OAuth token (near expiry)...");
         // Remove old token
         await removeToken(token);
 
-        // Get a new token
-        const newToken = await getAuthToken(false);
+        // Get a new token with retry
+        const newToken = await withRetry(() => getAuthToken(false), { retries: 1, delayMs: 500 });
 
-        // Get a new ID token too
+        // Get a new ID token too (function has its own retry)
         try {
           await getIdTokenForCloudRun();
         } catch (idTokenError) {
@@ -321,6 +345,7 @@ async function checkAuthStatus() {
           success: false,
           authenticated: false,
           error: "Authentication expired",
+          refreshFailed: true,
         };
       }
     }

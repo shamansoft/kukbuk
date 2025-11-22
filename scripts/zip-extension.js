@@ -3,36 +3,36 @@
  * Usage: node scripts/zip-extension.js
  */
 
-const fs = require('fs');
-const path = require('path');
-const AdmZip = require('adm-zip');
-const dotenv = require('dotenv');
+const fs = require("fs");
+const path = require("path");
+const AdmZip = require("adm-zip");
+const dotenv = require("dotenv");
 
 // Load environment variables
 dotenv.config();
 
 // Get version from environment or manifest
-const version = process.env.EXTENSION_VERSION || '1.0.0';
+const version = process.env.EXTENSION_VERSION || "1.0.0";
 const zipFilename = `mykukbuk-extension-v${version}.zip`;
 
 // Files and directories to include
 const INCLUDE_FILES = [
-  'manifest.json',
-  'popup/**',
-  'background/**',
-  'content/**',
-  'options/**',
-  'common/**',
-  'icons/**'
+  "manifest.json",
+  "popup/**",
+  "background/**",
+  "content/**",
+  "options/**",
+  "common/**",
+  "icons/**",
 ];
 
 // Files and directories to exclude
 const EXCLUDE_PATTERNS = [
-  '**/*.map',
-  '**/*.ts',
-  '**/*.template.*',
-  '**/node_modules/**',
-  '**/.git/**'
+  "**/*.map",
+  "**/*.ts",
+  "**/*.template.*",
+  "**/node_modules/**",
+  "**/.git/**",
 ];
 
 /**
@@ -41,13 +41,13 @@ const EXCLUDE_PATTERNS = [
  * @returns {boolean} Whether the file should be excluded
  */
 function shouldExclude(filePath) {
-  return EXCLUDE_PATTERNS.some(pattern => {
-    if (pattern.includes('*')) {
+  return EXCLUDE_PATTERNS.some((pattern) => {
+    if (pattern.includes("*")) {
       const regexPattern = pattern
-        .replace(/\./g, '\\.')
-        .replace(/\*\*/g, '.*')
-        .replace(/\*/g, '[^/]*');
-      const regex = new RegExp(`^${regexPattern}$`, 'i');
+        .replace(/\./g, "\\.")
+        .replace(/\*\*/g, ".*")
+        .replace(/\*/g, "[^/]*");
+      const regex = new RegExp(`^${regexPattern}$`, "i");
       return regex.test(filePath);
     }
     return filePath === pattern;
@@ -60,7 +60,7 @@ function shouldExclude(filePath) {
  * @param {string} dir - Directory to add
  * @param {string} [zipRoot=''] - Root path in ZIP
  */
-function addDirectoryToZip(zip, dir, zipRoot = '') {
+function addDirectoryToZip(zip, dir, zipRoot = "") {
   const files = fs.readdirSync(dir);
 
   for (const file of files) {
@@ -89,13 +89,13 @@ function addDirectoryToZip(zip, dir, zipRoot = '') {
  * @param {string} pattern - Glob pattern
  */
 function addGlobToZip(zip, pattern) {
-  if (pattern.endsWith('/**')) {
+  if (pattern.endsWith("/**")) {
     // Directory with all contents
     const dir = pattern.slice(0, -3);
     if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
       addDirectoryToZip(zip, dir, dir);
     }
-  } else if (pattern.includes('*')) {
+  } else if (pattern.includes("*")) {
     console.warn(`Skipping unsupported glob pattern: ${pattern}`);
   } else {
     // Single file

@@ -1,9 +1,15 @@
+/* eslint-env browser, webextensions */
 // Import common utilities and constants
 import { logError, showMessage } from "../common/error-handler.js";
-import { STORAGE_KEYS, MESSAGE_TYPES, ERROR_CODES } from "../common/constants.js";
+import { MESSAGE_TYPES, ERROR_CODES } from "../common/constants.js";
 import { toast } from "../common/toast-notification.js";
 
 // DOM elements
+const minimalStatusSection = document.getElementById("minimal-status-section");
+const minimalStatusIcon = document.querySelector(".minimal-status-icon");
+const minimalStatusText = document.getElementById("minimal-status-text");
+const successSection = document.getElementById("success-section");
+const driveLink = document.getElementById("drive-link");
 const loginSection = document.getElementById("login-section");
 const mainSection = document.getElementById("main-section");
 const userEmail = document.getElementById("user-email");
@@ -19,47 +25,195 @@ document.addEventListener("DOMContentLoaded", initPopup);
 // Main initialization function
 async function initPopup() {
   try {
-    // Display loading state
-    showMessage(statusMessage, "Loading...", "info");
+    // EXT-12-a: Start with minimal "checking..." state
+    showMinimalStatus("checking...", "loading");
 
     // Check authentication status
     const authStatus = await sendMessageToBackground(MESSAGE_TYPES.AUTH_CHECK);
 
     if (authStatus.success && authStatus.authenticated) {
-      // User is authenticated
-      showLoggedInView(authStatus.email);
-
-      // // Check if Google Drive folder is set
-      // const folderData = await chrome.storage.local.get([
-      //   STORAGE_KEYS.DRIVE_FOLDER,
-      //   STORAGE_KEYS.DRIVE_FOLDER_NAME
-      // ]);
-
-      // const hasDriveFolder = !!folderData[STORAGE_KEYS.DRIVE_FOLDER];
-
-      // if (!hasDriveFolder) {
-      //   showMessage(statusMessage, 'Please set a Google Drive folder in settings', 'warning');
-      // } else if (authStatus.refreshed) {
-      //   showMessage(statusMessage, 'Session refreshed', 'success');
-      // } else {
-      //   statusMessage.textContent = '';
-      // }
+      // User is authenticated - proceed with auto-save in minimal mode
+      await handleAuthenticatedFlow();
     } else {
-      // User is not authenticated
+      // User is NOT authenticated - show login UI
+      hideMinimalStatus();
       showLoginView();
-      if (authStatus.error) {
-        showMessage(statusMessage, authStatus.error, "info");
-      } else {
-        statusMessage.textContent = "";
-      }
-    }
 
-    // Set up event listeners
-    setupEventListeners();
+      // Auto-start login flow
+      try {
+        showMessage(statusMessage, "Authenticating...", "info");
+        toast.info("Authenticating with Google...");
+        const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_REQUEST);
+        if (authResponse && authResponse.success) {
+          showLoggedInView(authResponse.email);
+          showMessage(
+            statusMessage,
+            "Logged in successfully. Click 'Save Recipe' to save.",
+            "success",
+          );
+          toast.success(`Logged in as ${authResponse.email}`);
+          // EXT-12-a: DO NOT auto-save after login - user must click button
+        } else {
+          if (authStatus.error) {
+            showMessage(statusMessage, authStatus.error, "info");
+          } else {
+            statusMessage.textContent = "";
+          }
+        }
+      } catch (_e) {
+        // Fall back to manual login if auto-login fails
+        if (authStatus.error) {
+          showMessage(statusMessage, authStatus.error, "info");
+        } else {
+          statusMessage.textContent = "";
+        }
+      }
+
+      // Set up event listeners
+      setupEventListeners();
+    }
   } catch (error) {
     logError("Error initializing popup", error);
+    hideMinimalStatus();
     showLoginView();
     showMessage(statusMessage, "Error initializing extension", "error");
+    setupEventListeners();
+  }
+}
+
+/**
+ * Handles the flow for authenticated users with minimal UI states
+ */
+async function handleAuthenticatedFlow() {
+  try {
+    // Show "saving..." state
+    showMinimalStatus("saving...", "loading");
+
+    // Get the current tab
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const activeTab = tabs?.[0];
+
+    if (!activeTab?.id) {
+      throw new Error("Could not determine active tab");
+    }
+
+    // Ensure content script is ready
+    await ensureContentScriptReady(activeTab.id);
+
+    // Extract recipe data
+    const extractResponse = await chrome.tabs.sendMessage(activeTab.id, {
+      type: MESSAGE_TYPES.EXTRACT_RECIPE,
+    });
+
+    if (!extractResponse?.success) {
+      const errMsg = extractResponse?.error || "Failed to extract recipe";
+      showMinimalStatus(errMsg, "error");
+      setTimeout(() => window.close(), 600000); // 10 minutes
+      return;
+    }
+
+    const recipeData = extractResponse.data;
+
+    // Save recipe
+    const saveResponse = await sendMessageToBackground(MESSAGE_TYPES.SAVE_RECIPE, recipeData);
+
+    if (saveResponse?.success) {
+      // Success!
+      if (saveResponse.isRecipe === false) {
+        showMinimalStatus("Not a recipe", "error");
+        setTimeout(() => window.close(), 600000); // 10 minutes
+      } else {
+        // Show success message with Drive link
+        if (saveResponse.driveUrl) {
+          showSuccessWithLink(saveResponse.driveUrl);
+          // Close popup after 15 seconds
+          setTimeout(() => window.close(), 15000);
+        } else {
+          // Fallback if no Drive URL
+          showMinimalStatus("saved!", "success");
+          setTimeout(() => window.close(), 3000);
+        }
+      }
+    } else {
+      // Error
+      const errMsg = saveResponse?.error || "Save failed";
+      showMinimalStatus(errMsg, "error");
+      setTimeout(() => window.close(), 600000); // 10 minutes
+    }
+  } catch (error) {
+    logError("Auto save error", error);
+    showMinimalStatus(error.message || "Error", "error");
+    setTimeout(() => window.close(), 600000); // 10 minutes
+  }
+}
+
+/**
+ * Shows minimal status UI
+ */
+function showMinimalStatus(text, state = "loading") {
+  // Add minimal-mode class to body for compact height
+  document.body.classList.add("minimal-mode");
+
+  minimalStatusSection.style.display = "flex";
+  loginSection.style.display = "none";
+  mainSection.style.display = "none";
+
+  minimalStatusText.textContent = text;
+
+  // Update icon based on state
+  minimalStatusIcon.className = "minimal-status-icon";
+  if (state === "success") {
+    minimalStatusIcon.classList.add("success");
+  } else if (state === "error") {
+    minimalStatusIcon.classList.add("error");
+  }
+  // "loading" uses default spinning animation
+}
+
+/**
+ * Hides minimal status UI
+ */
+function hideMinimalStatus() {
+  // Remove minimal-mode class to restore full height
+  document.body.classList.remove("minimal-mode");
+
+  minimalStatusSection.style.display = "none";
+}
+
+/**
+ * Shows success message with Drive link
+ */
+function showSuccessWithLink(url) {
+  // Add minimal-mode class to body for compact height
+  document.body.classList.add("minimal-mode");
+
+  // Hide other sections
+  minimalStatusSection.style.display = "none";
+  loginSection.style.display = "none";
+  mainSection.style.display = "none";
+
+  // Set up and show success section
+  driveLink.href = url;
+  driveLink.onclick = (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: url });
+  };
+  successSection.style.display = "flex";
+}
+
+/**
+ * Ensures content script is ready
+ */
+async function ensureContentScriptReady(tabId) {
+  try {
+    await chrome.tabs.sendMessage(tabId, { type: "PING" });
+    return true;
+  } catch (_e) {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["content/content.js"],
+    });
+    return true;
   }
 }
 
@@ -103,7 +257,7 @@ function setupEventListeners() {
         currentWindow: true,
       });
       const activeTab = tabs[0];
-      console.log("activeTab", activeTab);
+      // removed log
 
       if (!activeTab) {
         throw new Error("Could not determine active tab");
@@ -113,8 +267,8 @@ function setupEventListeners() {
       try {
         // Try messaging first to see if content script is already loaded
         await chrome.tabs.sendMessage(activeTab.id, { type: "PING" });
-        console.log("Content script already loaded");
-      } catch (error) {
+        // removed log
+      } catch (_error) {
         // Only inject if messaging fails (script not loaded)
         await chrome.scripting.executeScript({
           target: { tabId: activeTab.id },
@@ -123,7 +277,6 @@ function setupEventListeners() {
       }
 
       // Extract recipe data using content script messaging
-      let recipeData;
       const extractResponse = await chrome.tabs.sendMessage(activeTab.id, {
         type: MESSAGE_TYPES.EXTRACT_RECIPE,
       });
@@ -132,7 +285,7 @@ function setupEventListeners() {
         throw new Error(extractResponse?.error || "Failed to extract recipe");
       }
 
-      recipeData = extractResponse.data;
+      const recipeData = extractResponse.data;
 
       // Update status
       showMessage(statusMessage, "Saving recipe...", "info");
@@ -142,14 +295,14 @@ function setupEventListeners() {
       const saveResponse = await sendMessageToBackground(MESSAGE_TYPES.SAVE_RECIPE, recipeData);
 
       if (saveResponse.success) {
-        console.log("recipe saved", saveResponse);
+        // removed log
 
         // Check if the page is actually a recipe
         if (saveResponse.isRecipe === false) {
           // Not a recipe - show appropriate message
           showMessage(statusMessage, "This page does not appear to be a recipe.", "info");
           toast.info("This page doesn't seem to contain a valid recipe.");
-          console.log("Not identified as a recipe");
+          // removed log
         } else {
           // It's a recipe (or isRecipe wasn't specified) - show success message
           // Create success message with Drive info
@@ -157,7 +310,7 @@ function setupEventListeners() {
           if (saveResponse.driveUrl) {
             successMsg += ` to "${saveResponse.driveUrl}"`;
           }
-          console.log("save msg: ", successMsg);
+          // removed log
           showMessage(statusMessage, successMsg, "success");
 
           // Show toast notification with link to Drive
@@ -171,7 +324,7 @@ function setupEventListeners() {
           }
         }
 
-        console.log("save msg / done");
+        // removed log
         // If we have a Drive URL, show a "View in Drive" button
         // if (saveResponse.driveUrl) {
         //   const viewButton = document.createElement('button');
@@ -251,11 +404,21 @@ function setupEventListeners() {
 
 // UI state management
 function showLoginView() {
+  // Remove minimal-mode for full height
+  document.body.classList.remove("minimal-mode");
+
+  minimalStatusSection.style.display = "none";
+  successSection.style.display = "none";
   loginSection.style.display = "flex";
   mainSection.style.display = "none";
 }
 
 function showLoggedInView(email) {
+  // Remove minimal-mode for full height
+  document.body.classList.remove("minimal-mode");
+
+  minimalStatusSection.style.display = "none";
+  successSection.style.display = "none";
   loginSection.style.display = "none";
   mainSection.style.display = "flex";
   userEmail.textContent = email || "Unknown user";
@@ -263,7 +426,7 @@ function showLoggedInView(email) {
 
 // Communication with background script
 function sendMessageToBackground(type, data) {
-  console.log("sendMessageToBackground", type);
+  // removed log
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({ type, data }, (response) => {
       if (chrome.runtime.lastError) {
