@@ -1,9 +1,24 @@
 // Storage keys
 export const STORAGE_KEYS = {
-  AUTH_TOKEN: "authToken",
+  // Firebase Auth
+  FIREBASE_TOKEN: "firebaseToken",
+  FIREBASE_REFRESH_TIME: "firebaseRefreshTime",
+
+  // User info
+  USER_ID: "userId",
   USER_EMAIL: "userEmail",
+  USER_DISPLAY_NAME: "userDisplayName",
+  USER_PHOTO_URL: "userPhotoURL",
+
+  // Provider-specific (for backward compatibility/fallback)
+  GOOGLE_TOKEN: "googleToken",
+
+  // Drive folder
   DRIVE_FOLDER: "driveFolder",
   DRIVE_FOLDER_NAME: "driveFolderName",
+
+  // DEPRECATED (kept for backward compatibility during migration)
+  AUTH_TOKEN: "authToken",
   AUTH_EXPIRY: "authExpiry",
   ID_TOKEN: "idToken",
   ID_TOKEN_EXPIRY: "idTokenExpiry",
@@ -16,6 +31,11 @@ export const MESSAGE_TYPES = {
   AUTH_CHECK: "AUTH_CHECK",
   AUTH_LOGOUT: "AUTH_LOGOUT",
   GET_ID_TOKEN: "GET_ID_TOKEN",
+
+  // Firebase Auth (new)
+  AUTH_PROVIDER_SIGNIN: "AUTH_PROVIDER_SIGNIN",
+  AUTH_GET_USER: "AUTH_GET_USER",
+  AUTH_REFRESH_TOKEN: "AUTH_REFRESH_TOKEN",
 
   // Recipe handling
   SAVE_RECIPE: "SAVE_RECIPE",
