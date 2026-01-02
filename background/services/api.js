@@ -17,7 +17,13 @@ export function setupApi() {
   // Listen for recipe save messages
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === MESSAGE_TYPES.SAVE_RECIPE) {
-      saveRecipe(message.data)
+      // Extract recipe data from message (spread into message object)
+      const recipeData = {
+        pageContent: message.pageContent,
+        pageUrl: message.pageUrl,
+        title: message.title,
+      };
+      saveRecipe(recipeData)
         .then((response) => sendResponse(response))
         .catch((error) => {
           logError("Recipe save error", error);

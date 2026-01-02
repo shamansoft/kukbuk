@@ -4,6 +4,7 @@ module.exports = {
   mode: process.env.NODE_ENV === "development" ? "development" : "production",
   entry: {
     background: "./background/background.js",
+    "offscreen/auth-offscreen": "./offscreen/auth-offscreen.js",
   },
   output: {
     path: path.resolve(__dirname, "dist"),

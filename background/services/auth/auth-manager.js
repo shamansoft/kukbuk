@@ -4,6 +4,7 @@
  */
 
 import { GoogleProvider } from "./google-provider.js";
+import { EmailPasswordProvider } from "./email-provider.js";
 import { STORAGE_KEYS, MESSAGE_TYPES } from "../../../common/constants.js";
 import { logError } from "../../../common/error-handler.js";
 
@@ -15,6 +16,7 @@ class AuthManager {
 
     // Register available providers
     this.registerProvider(new GoogleProvider());
+    this.registerProvider(new EmailPasswordProvider());
 
     // Set default provider to Google
     this.currentProvider = this.providers.get("google");
@@ -60,9 +62,10 @@ class AuthManager {
   /**
    * Sign in with specified provider
    * @param {string} [providerName='google'] - Provider to use for sign-in
+   * @param {Object} [credentials=null] - Credentials for authentication (e.g., {email, password} for email provider)
    * @returns {Promise<AuthResult>} Authentication result
    */
-  async signIn(providerName = "google") {
+  async signIn(providerName = "google", credentials = null) {
     try {
       const provider = this.providers.get(providerName);
 
@@ -72,7 +75,7 @@ class AuthManager {
 
       console.log(`Signing in with ${provider.displayName}...`);
 
-      const result = await provider.signIn();
+      const result = await provider.signIn(credentials);
 
       if (result.success) {
         // Store current provider name
@@ -230,34 +233,51 @@ class AuthManager {
   /**
    * Setup auth state listener
    * Monitors authentication state changes and updates storage
+   * Works with all providers (Google, Email/Password, etc.)
    */
-  setupAuthStateListener() {
-    // Use Google provider's auth state listener
-    // In future, we'll need to handle multiple providers
-    const googleProvider = this.providers.get("google");
-
-    if (!googleProvider) {
-      console.warn("Google provider not available for auth state listener");
-      return;
-    }
-
+  async setupAuthStateListener() {
     // Unsubscribe from previous listener if exists
     if (this.authStateUnsubscribe) {
       this.authStateUnsubscribe();
     }
 
-    // Setup new listener
-    this.authStateUnsubscribe = googleProvider.onAuthStateChanged(
-      async (user) => {
-        if (user) {
-          console.log("Auth state changed: User signed in", user.email);
-        } else {
-          console.log("Auth state changed: User signed out");
-        }
-      },
-    );
+    // Get the current provider from storage, or use Google as default
+    const storage = await chrome.storage.local.get(["currentAuthProvider"]);
+    const providerName = storage.currentAuthProvider || "google";
+    const provider = this.providers.get(providerName);
 
-    console.log("Auth state listener setup complete");
+    if (!provider) {
+      console.warn(`Provider ${providerName} not available for auth state listener, using Google as fallback`);
+      // Fallback to Google provider
+      const fallbackProvider = this.providers.get("google");
+      if (!fallbackProvider) {
+        console.error("No auth provider available for auth state listener");
+        return;
+      }
+
+      this.authStateUnsubscribe = fallbackProvider.onAuthStateChanged(
+        async (user) => {
+          if (user) {
+            console.log("Auth state changed: User signed in", user.email);
+          } else {
+            console.log("Auth state changed: User signed out");
+          }
+        },
+      );
+    } else {
+      // Setup listener for the current provider
+      this.authStateUnsubscribe = provider.onAuthStateChanged(
+        async (user) => {
+          if (user) {
+            console.log("Auth state changed: User signed in", user.email);
+          } else {
+            console.log("Auth state changed: User signed out");
+          }
+        },
+      );
+    }
+
+    console.log(`Auth state listener setup complete for ${providerName} provider`);
   }
 }
 
@@ -282,9 +302,10 @@ export function setupAuth() {
       message.type === MESSAGE_TYPES.AUTH_PROVIDER_SIGNIN
     ) {
       const providerName = message.provider || "google";
+      const credentials = message.credentials || null;
 
       authManager
-        .signIn(providerName)
+        .signIn(providerName, credentials)
         .then((response) => sendResponse(response))
         .catch((error) => {
           logError("Authentication error", error);

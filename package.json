@@ -1,6 +1,6 @@
 {
   "name": "mykukbuk-extension",
-  "version": "0.1.6",
+  "version": "0.1.33",
   "description": "Chrome extension to save recipes to Google Drive",
   "scripts": {
     "build": "node scripts/increment-version.js && node scripts/substitute-env.js && webpack --config webpack.config.js",
@@ -17,7 +17,8 @@
     "test": "jest --config jest.config.js",
     "test:background": "jest --config jest.config.js background/background.test.js",
     "test:auth": "jest --config jest.config.js background/services/auth.test.js",
-    "test:transform": "jest --config jest.config.js background/services/transformation.test.js"
+    "test:transform": "jest --config jest.config.js background/services/transformation.test.js",
+    "serve:auth": "node scripts/serve-auth.js"
   },
   "author": "",
   "license": "ISC",

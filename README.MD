@@ -4,11 +4,12 @@ A Chrome extension that allows users to save recipes from websites to their Goog
 
 ## Features
 
-- Google authentication for secure access to Google Drive
+- **Firebase Authentication** with Google Sign-In for secure access
 - Save recipes from any website with a single click
 - Automatic extraction and cleanup of recipe content
-- Customizable Google Drive folder selection for recipe storage
+- Secure token storage - OAuth tokens encrypted in backend
 - User-friendly interface with visual feedback
+- Cross-browser compatible authentication system
 
 ## Installation
 
@@ -25,11 +26,24 @@ cd kukbuk
 npm install
 ```
 
-3. Create a `.env` file at the root of the project with your Google OAuth credentials:
+3. Create a `.env` file at the root of the project with your Firebase and API credentials:
+```bash
+# API Configuration
+GOOGLE_CLIENT_ID=your_google_client_id_here
+COOKBOOK_API_URL=https://your-backend-url.run.app/recipe
+EXTENSION_ID=mkb-prod
+
+# Firebase Configuration
+# Get these from: https://console.firebase.google.com/project/your-project/settings/general
+FIREBASE_API_KEY=your_firebase_api_key_here
+FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+FIREBASE_MESSAGING_SENDER_ID=your_sender_id_here
+FIREBASE_APP_ID=your_app_id_here
 ```
-GOOGLE_CLIENT_ID=your_client_id_here
-EXTENSION_VERSION=1.0.0
-```
+
+See [docs/firebase-setup.md](docs/firebase-setup.md) for detailed Firebase configuration instructions.
 
 4. Build the extension:
 ```bash
@@ -82,10 +96,20 @@ This extension requires the following permissions:
 
 - `activeTab` - To interact with the current tab
 - `storage` - To store user preferences and extension data
-- `identity` - For Google OAuth authentication
 - `contextMenus` - For right-click menu functionality
 - `scripting` - For executing scripts on web pages
 - `tabs` - For tab management
+
+## Authentication
+
+MyKukBuk uses **Firebase Authentication** with Google Sign-In:
+- Users sign in via Firebase popup
+- Firebase ID tokens authenticate with backend
+- OAuth tokens stored encrypted in Firestore (backend)
+- Automatic token refresh handled by backend
+- Cross-browser compatible (Chrome, Firefox, Edge)
+
+For detailed authentication architecture, see [docs/firebase-setup.md](docs/firebase-setup.md)
 
 ## License
 

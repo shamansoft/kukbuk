@@ -1,11 +1,9 @@
 /**
- * Google Authentication Provider using Firebase
- * Handles Google Sign-In with OAuth and Firebase Authentication
+ * Email/Password Authentication Provider using Firebase
+ * Handles email/password sign-in with Firebase Authentication
  */
 
 import {
-  GoogleAuthProvider,
-  signOut as firebaseSignOut,
   onAuthStateChanged as firebaseOnAuthStateChanged,
 } from "firebase/auth/web-extension";
 import { auth } from "../../../common/firebase-config.js";
@@ -13,42 +11,10 @@ import { BaseAuthProvider } from "./base-provider.js";
 import { STORAGE_KEYS } from "../../../common/constants.js";
 import { logError } from "../../../common/error-handler.js";
 
-export class GoogleProvider extends BaseAuthProvider {
+export class EmailPasswordProvider extends BaseAuthProvider {
   constructor() {
-    super("google", "Google");
-
-    // Configure Google OAuth provider
-    this.provider = new GoogleAuthProvider();
-
-    // Request offline access to get refresh token
-    this.provider.setCustomParameters({
-      prompt: "consent",
-      access_type: "offline",
-    });
-
-    // Add required OAuth scopes
-    this.provider.addScope("https://www.googleapis.com/auth/drive.file");
-    this.provider.addScope("https://www.googleapis.com/auth/userinfo.email");
-    this.provider.addScope("https://www.googleapis.com/auth/userinfo.profile");
-
-    console.log("Google authentication provider initialized");
-  }
-
-  /**
-   * Get Google OAuth token using Chrome Identity API
-   * @private
-   * @returns {Promise<string>} OAuth access token
-   */
-  async getGoogleOAuthToken() {
-    return new Promise((resolve, reject) => {
-      chrome.identity.getAuthToken({ interactive: true }, (token) => {
-        if (chrome.runtime.lastError) {
-          reject(new Error(chrome.runtime.lastError.message));
-        } else {
-          resolve(token);
-        }
-      });
-    });
+    super("email", "Email/Password");
+    console.log("Email/Password authentication provider initialized");
   }
 
   /**
@@ -72,7 +38,7 @@ export class GoogleProvider extends BaseAuthProvider {
     await chrome.offscreen.createDocument({
       url: "offscreen/auth-offscreen.html",
       reasons: ["DOM_SCRAPING"], // Required reason for offscreen document
-      justification: "Firebase authentication requires DOM/window access for OAuth popup",
+      justification: "Firebase authentication requires DOM/window access for email/password auth",
     });
 
     console.log("Offscreen document created");
@@ -93,40 +59,39 @@ export class GoogleProvider extends BaseAuthProvider {
   }
 
   /**
-   * Sign in with Google using Chrome Identity API + Firebase credential
+   * Sign in with email and password using Firebase
+   * @param {Object} credentials - User credentials
+   * @param {string} credentials.email - User email address
+   * @param {string} credentials.password - User password
    * @returns {Promise<AuthResult>} Authentication result with tokens and user info
    */
-  async signIn() {
+  async signIn(credentials) {
     try {
-      console.log("Starting Google sign-in via Chrome Identity API...");
-
-      // Step 1: Get OAuth token from Google using Chrome Identity API
-      const googleAccessToken = await this.getGoogleOAuthToken();
-
-      if (!googleAccessToken) {
-        throw new Error("Failed to get Google OAuth token");
+      if (!credentials || !credentials.email || !credentials.password) {
+        throw new Error("Email and password are required");
       }
 
-      console.log("Got Google OAuth token");
+      const { email, password } = credentials;
 
-      // Step 2: Sign into Firebase using the Google credential
+      console.log("Starting email/password sign-in...");
+
+      // Ensure offscreen document is created
       await this.ensureOffscreenDocument();
 
+      // Sign in via offscreen document
       const result = await chrome.runtime.sendMessage({
-        type: "FIREBASE_SIGN_IN_WITH_CREDENTIAL",
-        accessToken: googleAccessToken,
+        type: "FIREBASE_SIGN_IN_WITH_EMAIL",
+        email: email,
+        password: password,
       });
 
       if (!result || !result.success) {
-        throw new Error(result?.error || "Firebase sign-in failed");
+        throw new Error(result?.error || "Email/password sign-in failed");
       }
 
       console.log("User authenticated:", result.email);
 
       const firebaseToken = result.firebaseToken;
-      const googleRefreshToken = result.refreshToken;
-
-      console.log("OAuth tokens obtained from Google");
 
       // Store Firebase token and user info locally
       await chrome.storage.local.set({
@@ -139,24 +104,6 @@ export class GoogleProvider extends BaseAuthProvider {
       });
 
       console.log("Firebase token and user info stored locally");
-
-      // Send OAuth tokens to backend for secure storage
-      try {
-        await this.sendTokensToBackend(
-          firebaseToken,
-          googleAccessToken,
-          googleRefreshToken || "",
-        );
-        console.log("OAuth tokens sent to backend successfully");
-      } catch (backendError) {
-        // Non-critical error - user can still authenticate
-        // Fallback: Store Google token locally
-        console.warn("Failed to send OAuth tokens to backend:", backendError);
-        await chrome.storage.local.set({
-          [STORAGE_KEYS.GOOGLE_TOKEN]: googleAccessToken,
-        });
-        console.log("OAuth token stored locally as fallback");
-      }
 
       // Trigger user profile creation by calling GET /api/user/profile
       try {
@@ -174,45 +121,20 @@ export class GoogleProvider extends BaseAuthProvider {
         displayName: result.displayName,
         photoURL: result.photoURL,
         firebaseToken: firebaseToken,
-        providerToken: googleAccessToken,
-        refreshToken: googleRefreshToken,
       };
     } catch (error) {
-      console.error("Google sign-in error:", error);
-      throw new Error(error.message || "Google sign-in failed");
+      console.error("Email/password sign-in error:", error);
+      throw new Error(error.message || "Email/password sign-in failed");
     }
   }
 
   /**
-   * Sign out from Google and clear all stored data
+   * Sign out from email/password and clear all stored data
    * @returns {Promise<void>}
    */
   async signOut() {
     try {
-      console.log("Signing out from Google...");
-
-      // Get stored Google token to revoke
-      const storage = await chrome.storage.local.get([STORAGE_KEYS.GOOGLE_TOKEN]);
-      const googleToken = storage[STORAGE_KEYS.GOOGLE_TOKEN];
-
-      // Revoke Chrome Identity API token
-      if (googleToken) {
-        console.log("Revoking Chrome Identity token...");
-        await new Promise((resolve) => {
-          chrome.identity.removeCachedAuthToken({ token: googleToken }, () => {
-            console.log("Chrome Identity token revoked");
-            resolve();
-          });
-        });
-      }
-
-      // Get all cached tokens and clear them
-      await new Promise((resolve) => {
-        chrome.identity.clearAllCachedAuthTokens(() => {
-          console.log("All cached auth tokens cleared");
-          resolve();
-        });
-      });
+      console.log("Signing out from email/password...");
 
       // Sign out from Firebase via offscreen document (if it exists)
       try {
@@ -250,13 +172,12 @@ export class GoogleProvider extends BaseAuthProvider {
         STORAGE_KEYS.USER_EMAIL,
         STORAGE_KEYS.USER_DISPLAY_NAME,
         STORAGE_KEYS.USER_PHOTO_URL,
-        STORAGE_KEYS.GOOGLE_TOKEN,
         "currentAuthProvider",
       ]);
 
       console.log("Signed out successfully, all data cleared");
     } catch (error) {
-      logError("Google sign out error", error);
+      logError("Email/password sign out error", error);
       throw new Error("Failed to sign out");
     }
   }
@@ -339,7 +260,7 @@ export class GoogleProvider extends BaseAuthProvider {
    * @returns {Function} Unsubscribe function to stop listening
    */
   onAuthStateChanged(callback) {
-    console.log("Setting up auth state listener for Google provider");
+    console.log("Setting up auth state listener for Email/Password provider");
 
     return firebaseOnAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -363,7 +284,6 @@ export class GoogleProvider extends BaseAuthProvider {
           STORAGE_KEYS.USER_EMAIL,
           STORAGE_KEYS.USER_DISPLAY_NAME,
           STORAGE_KEYS.USER_PHOTO_URL,
-          STORAGE_KEYS.GOOGLE_TOKEN,
         ]);
       }
 

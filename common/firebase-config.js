@@ -6,7 +6,7 @@
  */
 
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth } from "firebase/auth/web-extension";
 import { ENV } from "./env-config.js";
 
 // Firebase configuration from environment variables
