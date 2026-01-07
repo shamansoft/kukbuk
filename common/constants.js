@@ -62,4 +62,8 @@ export const ERROR_CODES = {
   NETWORK_ERROR: "network_error",
   PERMISSION_DENIED: "permission_denied",
   UNKNOWN_ERROR: "unknown_error",
+  SERVER_ERROR: "server_error", // 5xx errors
+  CLIENT_ERROR: "client_error", // 4xx errors (non-auth)
+  NOT_FOUND: "not_found", // 404 specifically
+  VALIDATION_ERROR: "validation_error", // 400/422
 };

@@ -7,6 +7,13 @@ import { authManager } from "./auth/auth-manager.js";
 // import { getCurrentFolder } from "./storage.js";
 import { ENV } from "../../common/env-config.js";
 import { notify } from "./notifications.js";
+import {
+  extractErrorMessage,
+  categorizeHttpError,
+  getUserFriendlyMessage,
+  mapCategoryToErrorCode,
+  formatErrorForLogging,
+} from "../../common/error-utils.js";
 
 /**
  * Sets up the API service
@@ -99,20 +106,60 @@ async function saveRecipe(recipeData) {
     //   }, 3000);
     // });
 
-    // Check for network errors
+    // Check for HTTP errors
     if (!response.ok) {
-      // Try to parse error response
+      let errorData = null;
+      let parseError = null;
+
+      // Try to parse JSON error response
       try {
-        const errorData = await response.json();
-        const error = new Error(errorData.error || `Server error: ${response.status}`);
-        error.code = errorData.errorCode || ERROR_CODES.UNKNOWN_ERROR;
-        throw error;
-      } catch (parseError) {
-        // If we can't parse the error, throw a generic one
-        const error = new Error(`Server error: ${response.status}`);
-        error.code = ERROR_CODES.NETWORK_ERROR;
-        throw error;
+        errorData = await response.json();
+      } catch (e) {
+        parseError = e;
+        // If JSON parsing fails, try to get text body for logging
+        try {
+          const textBody = await response.text();
+          errorData = { _rawBody: textBody.substring(0, 500) }; // Limit size
+        } catch (textError) {
+          errorData = { _rawBody: "Unable to read response body" };
+        }
       }
+
+      // Extract best error message using utility
+      const errorMessage = extractErrorMessage(response, errorData);
+
+      // Categorize error for appropriate error code
+      const category = categorizeHttpError(response.status);
+      const errorCode = mapCategoryToErrorCode(category, errorData);
+
+      // Log detailed error information for debugging
+      logError(
+        "API request failed",
+        null,
+        formatErrorForLogging({
+          request: {
+            method: "POST",
+            url: ENV.COOKBOOK_API_URL,
+            headers: request.headers, // Will be sanitized in formatting
+          },
+          response: {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorData,
+          },
+          parseError,
+          category,
+        })
+      );
+
+      // Create error with user-friendly message for UI
+      const userMessage = getUserFriendlyMessage(response.status, errorMessage, errorData);
+      const error = new Error(userMessage);
+      error.code = errorCode;
+      error.statusCode = response.status;
+      error.originalMessage = errorMessage; // Preserve for specific handling
+
+      throw error;
     }
 
     // Parse success response

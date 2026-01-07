@@ -10,6 +10,7 @@ import {
   signInWithCredential,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  onAuthStateChanged,
 } from "firebase/auth";
 import { ENV } from "../common/env-config.js";
 
@@ -27,11 +28,20 @@ const firebaseConfig = {
 
 let app;
 let auth;
+let isFirebaseReady = false;
 
 try {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   console.log("[Offscreen] Firebase initialized successfully");
+
+  // Listen for auth state restoration
+  onAuthStateChanged(auth, (user) => {
+    if (!isFirebaseReady) {
+      console.log("[Offscreen] Firebase auth state restored:", user ? user.email : "no user");
+      isFirebaseReady = true;
+    }
+  });
 } catch (error) {
   console.error("[Offscreen] Firebase initialization error:", error);
 }
@@ -90,6 +100,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: false, error: error.message });
       });
     return true; // Async response
+  }
+
+  if (message.type === "FIREBASE_CHECK_READY") {
+    sendResponse({
+      ready: isFirebaseReady,
+      hasUser: !!auth?.currentUser,
+    });
+    return true;
   }
 });
 

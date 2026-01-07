@@ -64,6 +64,8 @@ export class GoogleProvider extends BaseAuthProvider {
 
     if (existingContexts.length > 0) {
       console.log("Offscreen document already exists");
+      // Still wait for ready in case it just started
+      await this.waitForOffscreenReady();
       return;
     }
 
@@ -75,7 +77,12 @@ export class GoogleProvider extends BaseAuthProvider {
       justification: "Firebase authentication requires DOM/window access for OAuth popup",
     });
 
-    console.log("Offscreen document created");
+    console.log("Offscreen document created, waiting for Firebase auth initialization...");
+
+    // Wait for Firebase to restore auth state
+    await this.waitForOffscreenReady();
+
+    console.log("Offscreen document ready");
   }
 
   /**
@@ -90,6 +97,45 @@ export class GoogleProvider extends BaseAuthProvider {
       // Document might not exist, ignore error
       console.log("No offscreen document to close");
     }
+  }
+
+  /**
+   * Wait for offscreen document Firebase auth to be ready
+   * Polls until Firebase auth state is restored
+   * @param {number} timeout - Max wait time in ms (default 5000)
+   * @returns {Promise<void>}
+   * @throws {Error} If timeout reached before ready
+   * @private
+   */
+  async waitForOffscreenReady(timeout = 5000) {
+    const startTime = Date.now();
+    let delay = 50; // Start with 50ms
+    const maxDelay = 500;
+
+    while (Date.now() - startTime < timeout) {
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: "FIREBASE_CHECK_READY",
+        });
+
+        if (response?.ready) {
+          const elapsed = Date.now() - startTime;
+          console.log(`Offscreen document ready after ${elapsed}ms`);
+          return;
+        }
+
+        // Wait before next attempt
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
+        // Exponential backoff
+        delay = Math.min(delay * 1.5, maxDelay);
+      } catch (error) {
+        console.warn("Offscreen readiness check failed:", error);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+
+    throw new Error(`Offscreen document not ready after ${timeout}ms`);
   }
 
   /**
