@@ -1,10 +1,10 @@
 {
   "name": "mykukbuk-extension",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Chrome extension to save recipes to Google Drive",
   "scripts": {
-    "build": "node scripts/increment-version.js && node scripts/substitute-env.js",
-    "build:local": "node scripts/increment-version.js && node scripts/substitute-env.js --env=.env.local",
+    "build": "node scripts/increment-version.js && node scripts/substitute-env.js && webpack --config webpack.config.js",
+    "build:local": "node scripts/increment-version.js && node scripts/substitute-env.js --env=.env.local && cross-env NODE_ENV=development webpack --config webpack.config.js",
     "dev": "cross-env NODE_ENV=development node scripts/substitute-env.js && webpack --watch --config webpack.config.js",
     "dev:local": "cross-env NODE_ENV=development node scripts/substitute-env.js --env=.env.local && webpack --watch --config webpack.config.js",
     "zip": "npm run build && node scripts/zip-extension.js",
@@ -17,10 +17,14 @@
     "test": "jest --config jest.config.js",
     "test:background": "jest --config jest.config.js background/background.test.js",
     "test:auth": "jest --config jest.config.js background/services/auth.test.js",
-    "test:transform": "jest --config jest.config.js background/services/transformation.test.js"
+    "test:transform": "jest --config jest.config.js background/services/transformation.test.js",
+    "serve:auth": "node scripts/serve-auth.js"
   },
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "firebase": "^10.14.1"
+  },
   "devDependencies": {
     "@babel/core": "^7.22.5",
     "@babel/plugin-transform-modules-commonjs": "^7.22.5",
@@ -28,6 +32,7 @@
     "@eslint/js": "^9.27.0",
     "adm-zip": "^0.5.9",
     "babel-jest": "^29.5.0",
+    "babel-loader": "^10.0.0",
     "child_process": "^1.0.2",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.7",

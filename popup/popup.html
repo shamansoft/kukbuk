@@ -37,9 +37,35 @@
             <!-- Login Section (Hidden by default when logged in) -->
             <section id="login-section">
                 <p>Save recipes to your Google Drive</p>
-                <button id="login-button" class="btn primary">
-                    Login with Google
-                </button>
+
+                <!-- Email/Password Form (Primary) -->
+                <form id="email-login-form">
+                    <input
+                        type="email"
+                        id="email-input"
+                        placeholder="Email"
+                        autocomplete="email"
+                        required
+                    />
+                    <input
+                        type="password"
+                        id="password-input"
+                        placeholder="Password"
+                        autocomplete="current-password"
+                        required
+                    />
+                    <button type="submit" class="btn primary">Sign In</button>
+                </form>
+
+                <!-- Divider -->
+                <div class="divider"><span>OR</span></div>
+
+                <!-- OAuth Providers Container (Extensible) -->
+                <div class="oauth-providers">
+                    <button id="google-login-button" class="btn secondary oauth-btn">
+                        Sign in with Google
+                    </button>
+                </div>
             </section>
 
             <!-- Logged In Section (Hidden by default when logged out) -->

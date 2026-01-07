@@ -3,10 +3,17 @@
 import { logError } from "../../common/error-handler.js";
 import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from "../../common/constants.js";
 import { transformContent } from "./transformation.js";
-import { getAuthToken, getIdTokenForCloudRun } from "./auth.js";
+import { authManager } from "./auth/auth-manager.js";
 // import { getCurrentFolder } from "./storage.js";
 import { ENV } from "../../common/env-config.js";
 import { notify } from "./notifications.js";
+import {
+  extractErrorMessage,
+  categorizeHttpError,
+  getUserFriendlyMessage,
+  mapCategoryToErrorCode,
+  formatErrorForLogging,
+} from "../../common/error-utils.js";
 
 /**
  * Sets up the API service
@@ -17,7 +24,13 @@ export function setupApi() {
   // Listen for recipe save messages
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === MESSAGE_TYPES.SAVE_RECIPE) {
-      saveRecipe(message.data)
+      // Extract recipe data from message (spread into message object)
+      const recipeData = {
+        pageContent: message.pageContent,
+        pageUrl: message.pageUrl,
+        title: message.title,
+      };
+      saveRecipe(recipeData)
         .then((response) => sendResponse(response))
         .catch((error) => {
           logError("Recipe save error", error);
@@ -45,10 +58,8 @@ async function saveRecipe(recipeData) {
   }
 
   try {
-    // Check authentication status
-    //
-    const token = await getIdTokenForCloudRun();
-    const authToken = await getAuthToken();
+    // Get Firebase ID token for backend authentication
+    const firebaseToken = await authManager.getIdToken();
 
     // Check if Drive folder is selected
     // const folder = await getCurrentFolder();
@@ -62,13 +73,11 @@ async function saveRecipe(recipeData) {
     const content = contentObject.transformed;
 
     // Prepare data for sending to API
-
     const request = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        "X-S-AUTH-TOKEN": authToken,
+        Authorization: `Bearer ${firebaseToken}`,
         "X-Extension-ID": ENV.EXTENSION_ID,
         // "X-Request-ID": requestId,
       },
@@ -97,20 +106,60 @@ async function saveRecipe(recipeData) {
     //   }, 3000);
     // });
 
-    // Check for network errors
+    // Check for HTTP errors
     if (!response.ok) {
-      // Try to parse error response
+      let errorData = null;
+      let parseError = null;
+
+      // Try to parse JSON error response
       try {
-        const errorData = await response.json();
-        const error = new Error(errorData.error || `Server error: ${response.status}`);
-        error.code = errorData.errorCode || ERROR_CODES.UNKNOWN_ERROR;
-        throw error;
-      } catch (parseError) {
-        // If we can't parse the error, throw a generic one
-        const error = new Error(`Server error: ${response.status}`);
-        error.code = ERROR_CODES.NETWORK_ERROR;
-        throw error;
+        errorData = await response.json();
+      } catch (e) {
+        parseError = e;
+        // If JSON parsing fails, try to get text body for logging
+        try {
+          const textBody = await response.text();
+          errorData = { _rawBody: textBody.substring(0, 500) }; // Limit size
+        } catch (textError) {
+          errorData = { _rawBody: "Unable to read response body" };
+        }
       }
+
+      // Extract best error message using utility
+      const errorMessage = extractErrorMessage(response, errorData);
+
+      // Categorize error for appropriate error code
+      const category = categorizeHttpError(response.status);
+      const errorCode = mapCategoryToErrorCode(category, errorData);
+
+      // Log detailed error information for debugging
+      logError(
+        "API request failed",
+        null,
+        formatErrorForLogging({
+          request: {
+            method: "POST",
+            url: ENV.COOKBOOK_API_URL,
+            headers: request.headers, // Will be sanitized in formatting
+          },
+          response: {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorData,
+          },
+          parseError,
+          category,
+        })
+      );
+
+      // Create error with user-friendly message for UI
+      const userMessage = getUserFriendlyMessage(response.status, errorMessage, errorData);
+      const error = new Error(userMessage);
+      error.code = errorCode;
+      error.statusCode = response.status;
+      error.originalMessage = errorMessage; // Preserve for specific handling
+
+      throw error;
     }
 
     // Parse success response
@@ -134,16 +183,33 @@ async function saveRecipe(recipeData) {
     };
   } catch (error) {
     // Handle auth errors
-    if (error.message.includes("OAuth2 not granted or revoked")) {
-      // Clear auth data - user needs to re-authenticate
-      await chrome.storage.local.remove([
-        STORAGE_KEYS.AUTH_TOKEN,
-        STORAGE_KEYS.USER_EMAIL,
-        STORAGE_KEYS.AUTH_EXPIRY,
-      ]);
-
-      const authError = new Error("Authentication expired, please login again");
+    if (
+      error.message.includes("Not authenticated") ||
+      error.message.includes("Authentication expired") ||
+      error.message.includes("OAuth2 not granted or revoked")
+    ) {
+      const authError = new Error("Authentication required, please sign in");
       authError.code = ERROR_CODES.AUTH_REQUIRED;
+
+      // Notify user
+      notify.recipeSaved({
+        success: false,
+        error: "Please sign in to save recipes",
+      });
+
+      throw authError;
+    }
+
+    // Handle 401 Unauthorized from backend
+    if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+      const authError = new Error("Authentication expired, please sign in again");
+      authError.code = ERROR_CODES.AUTH_REQUIRED;
+
+      notify.recipeSaved({
+        success: false,
+        error: "Session expired, please sign in again",
+      });
+
       throw authError;
     }
 

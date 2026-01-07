@@ -1,5 +1,5 @@
 // Import services
-import { setupAuth } from "./services/auth.js";
+import { setupAuth } from "./services/auth/auth-manager.js";
 import { setupStorage } from "./services/storage.js";
 import { setupTransformation } from "./services/transformation.js";
 import { setupApi } from "./services/api.js";

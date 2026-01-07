@@ -240,6 +240,67 @@ section {
     color: #3367d6;
 }
 
+/* Email/Password Login Form */
+#email-login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#email-input,
+#password-input {
+    padding: 10px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+#email-input:focus,
+#password-input:focus {
+    outline: none;
+    border-color: #4285f4;
+}
+
+#email-input::placeholder,
+#password-input::placeholder {
+    color: #6c757d;
+}
+
+/* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 16px 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.divider span {
+    padding: 0 12px;
+    color: #6c757d;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+/* OAuth Providers Container */
+.oauth-providers {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.oauth-btn {
+    width: 100%;
+}
+
 /* Status Messages */
 #status-container {
   min-height: 20px;

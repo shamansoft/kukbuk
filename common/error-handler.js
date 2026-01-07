@@ -1,10 +1,27 @@
 /**
- * Log error to console
+ * Log error to console with optional context
  * @param {string} message - Error message
- * @param {Error} error - Error object
+ * @param {Error} error - Error object (optional if context provided)
+ * @param {Object} context - Additional context for structured logging (optional)
  */
-export function logError(message, error) {
-  console.error(`MyKukBuk Error: ${message}`, error);
+export function logError(message, error, context = null) {
+  const timestamp = new Date().toISOString();
+
+  // Basic error logging (backward compatible)
+  console.error(`MyKukBuk Error [${timestamp}]: ${message}`, error || "");
+
+  // If context is provided, log it as a structured object
+  if (context) {
+    console.error("Error Context:", context);
+  } else if (error) {
+    // Log error details if context not provided
+    console.error("Error Details:", {
+      message: error?.message,
+      code: error?.code,
+      statusCode: error?.statusCode,
+      stack: error?.stack,
+    });
+  }
 }
 
 /**

@@ -3,7 +3,7 @@
   "name": "MyKukBuk",
   "version": "${EXTENSION_VERSION}",
   "description": "Save recipes to your Google Drive",
-  "permissions": ["activeTab", "storage", "identity", "contextMenus", "scripting", "tabs"],
+  "permissions": ["activeTab", "storage", "identity", "contextMenus", "scripting", "tabs", "offscreen", "notifications"],
   "host_permissions": ["https://*/*"],
   "action": {
     "default_popup": "popup/popup.html",
@@ -14,8 +14,7 @@
     }
   },
   "background": {
-    "service_worker": "background/background.js",
-    "type": "module"
+    "service_worker": "dist/background.bundle.js"
   },
   "options_page": "options/options.html",
   "content_scripts": [
@@ -36,5 +35,8 @@
       "https://www.googleapis.com/auth/drive.file",
       "https://www.googleapis.com/auth/userinfo.email"
     ]
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src http://localhost:* https://*.firebaseapp.com https://*.web.app; connect-src 'self' http://localhost:* https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://*.cloudfunctions.net https://*.run.app;"
   }
 }
