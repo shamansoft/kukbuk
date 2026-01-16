@@ -28,3 +28,4 @@ yarn-error.log*
 *.sw?
 .aider*
 coverage/
+.DS_Store
