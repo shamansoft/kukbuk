@@ -151,15 +151,6 @@ export class EmailPasswordProvider extends BaseAuthProvider {
 
       console.log("Firebase token and user info stored locally");
 
-      // Trigger user profile creation by calling GET /api/user/profile
-      try {
-        await this.createUserProfile(firebaseToken);
-        console.log("User profile created/verified in backend");
-      } catch (profileError) {
-        console.warn("Failed to create user profile:", profileError);
-        // Non-critical - profile will be created on first recipe save
-      }
-
       return {
         success: true,
         userId: result.userId,

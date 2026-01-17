@@ -45,25 +45,27 @@ To create a new authentication provider:
    - `async getIdToken(forceRefresh)` - Get Firebase ID token
    - `onAuthStateChanged(callback)` - Listen to auth state changes
 
-4. **Use helper methods** (optional):
-   - `sendTokensToBackend(firebaseToken, accessToken, refreshToken)` - Store OAuth tokens in backend
-   - `createUserProfile(firebaseToken)` - Create/get user profile from backend
+4. **Helper methods** (available but not recommended):
+   - `sendTokensToBackend(firebaseToken, accessToken, refreshToken)` - **DEPRECATED**: Token storage handled by mobile app
+   - `createUserProfile(firebaseToken)` - **DEPRECATED**: Profile management handled by mobile app
 
-## Example: Google Provider
+   Note: These methods are kept in BaseAuthProvider for backward compatibility but are not used by GoogleProvider.
+
+## Example: Email/Password Provider
 
 ```javascript
 import { BaseAuthProvider } from './base-provider.js';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../../common/firebase-config.js';
 
-export class GoogleProvider extends BaseAuthProvider {
+export class EmailPasswordProvider extends BaseAuthProvider {
   constructor() {
-    super('google', 'Google');
-    this.provider = new GoogleAuthProvider();
+    super('email', 'Email/Password');
   }
 
-  async signIn() {
-    const result = await signInWithPopup(auth, this.provider);
+  async signIn(credentials) {
+    const { email, password } = credentials;
+    const result = await signInWithEmailAndPassword(auth, email, password);
     const firebaseToken = await result.user.getIdToken();
 
     return {
@@ -83,12 +85,12 @@ export class GoogleProvider extends BaseAuthProvider {
 Providers are registered in `auth-manager.js`:
 
 ```javascript
-import { GoogleProvider } from './google-provider.js';
+import { EmailPasswordProvider } from './email-provider.js';
 
 class AuthManager {
   constructor() {
     this.providers = new Map();
-    this.registerProvider(new GoogleProvider());
+    this.registerProvider(new EmailPasswordProvider());
   }
 
   registerProvider(provider) {
@@ -102,7 +104,7 @@ class AuthManager {
 Providers can use these backend endpoints:
 
 - **POST /api/user/oauth-tokens** - Store OAuth tokens (encrypted)
-- **GET /api/user/profile** - Get/create user profile
+- **GET /v1/user/profile** - Get/create user profile
 
 Both require `Authorization: Bearer {firebaseToken}` header.
 
@@ -110,9 +112,8 @@ Both require `Authorization: Bearer {firebaseToken}` header.
 
 - [x] BaseAuthProvider - Base class with interface ✅
 - [x] Type definitions (types.js) ✅
-- [x] GoogleProvider - Google Sign-In (Ticket 4) ✅
-- [x] AuthManager - Provider management (Ticket 5) ✅
-- [ ] EmailProvider - Email/Password (Future)
+- [x] EmailPasswordProvider - Email/Password authentication ✅
+- [x] AuthManager - Provider management ✅
 - [ ] GitHubProvider - GitHub OAuth (Future)
 
 ## Next Steps

@@ -4,7 +4,6 @@ import { logError } from "../../common/error-handler.js";
 import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from "../../common/constants.js";
 import { transformContent } from "./transformation.js";
 import { authManager } from "./auth/auth-manager.js";
-// import { getCurrentFolder } from "./storage.js";
 import { ENV } from "../../common/env-config.js";
 import { notify } from "./notifications.js";
 import {
@@ -89,9 +88,9 @@ async function saveRecipe(recipeData) {
         // folderName: folder.name
       }),
     };
-    console.log("fetch ", ENV.COOKBOOK_API_URL, request);
+    console.log("fetch ", ENV.API_BASE_URL, request);
     // Send to backend
-    const response = await fetch(ENV.COOKBOOK_API_URL, request);
+    const response = await fetch(`${ENV.API_BASE_URL}/v1/recipe`, request);
     //    or mock while debugging
     // const response = await new Promise((resolve) => {
     //   setTimeout(() => {
@@ -139,7 +138,7 @@ async function saveRecipe(recipeData) {
         formatErrorForLogging({
           request: {
             method: "POST",
-            url: ENV.COOKBOOK_API_URL,
+            url: ENV.API_BASE_URL,
             headers: request.headers, // Will be sanitized in formatting
           },
           response: {

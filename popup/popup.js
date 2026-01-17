@@ -16,7 +16,6 @@ const userEmail = document.getElementById("user-email");
 const emailLoginForm = document.getElementById("email-login-form");
 const emailInput = document.getElementById("email-input");
 const passwordInput = document.getElementById("password-input");
-const googleLoginButton = document.getElementById("google-login-button");
 const saveRecipeButton = document.getElementById("save-recipe-button");
 const settingsButton = document.getElementById("settings-button");
 const logoutButton = document.getElementById("logout-button");
@@ -242,36 +241,6 @@ function setupEventListeners() {
       }
     } catch (error) {
       logError("Email login error", error);
-      showMessage(statusMessage, error.message || "Login failed", "error");
-      toast.error(error.message || "We couldn't log you in. Please try again.");
-    }
-  });
-
-  // Google Login button
-  googleLoginButton.addEventListener("click", async () => {
-    try {
-      showMessage(statusMessage, "Authenticating...", "info");
-      toast.info("Authenticating with Google...");
-
-      // Request authentication with Google provider
-      const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_PROVIDER_SIGNIN, {
-        provider: "google",
-      });
-
-      if (authResponse.success) {
-        showLoggedInView({
-          email: authResponse.email,
-          displayName: authResponse.displayName,
-          photoURL: authResponse.photoURL,
-        });
-        showMessage(statusMessage, "Logged in successfully", "success");
-        toast.success(`Logged in as ${authResponse.email}`);
-      } else {
-        showMessage(statusMessage, authResponse.error || "Login failed", "error");
-        toast.error(authResponse.error || "We couldn't log you in. Please try again.");
-      }
-    } catch (error) {
-      logError("Google login error", error);
       showMessage(statusMessage, error.message || "Login failed", "error");
       toast.error(error.message || "We couldn't log you in. Please try again.");
     }

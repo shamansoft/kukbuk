@@ -29,7 +29,6 @@ npm install
 3. Create a `.env` file at the root of the project with your Firebase and API credentials:
 ```bash
 # API Configuration
-GOOGLE_CLIENT_ID=your_google_client_id_here
 COOKBOOK_API_URL=https://your-backend-url.run.app/recipe
 EXTENSION_ID=mkb-prod
 

@@ -9,19 +9,6 @@ export const STORAGE_KEYS = {
   USER_EMAIL: "userEmail",
   USER_DISPLAY_NAME: "userDisplayName",
   USER_PHOTO_URL: "userPhotoURL",
-
-  // Provider-specific (for backward compatibility/fallback)
-  GOOGLE_TOKEN: "googleToken",
-
-  // Drive folder
-  DRIVE_FOLDER: "driveFolder",
-  DRIVE_FOLDER_NAME: "driveFolderName",
-
-  // DEPRECATED (kept for backward compatibility during migration)
-  AUTH_TOKEN: "authToken",
-  AUTH_EXPIRY: "authExpiry",
-  ID_TOKEN: "idToken",
-  ID_TOKEN_EXPIRY: "idTokenExpiry",
 };
 
 // Message types
@@ -40,11 +27,6 @@ export const MESSAGE_TYPES = {
   // Recipe handling
   SAVE_RECIPE: "SAVE_RECIPE",
   EXTRACT_RECIPE: "EXTRACT_RECIPE",
-
-  // Folder management
-  FOLDER_SELECT: "FOLDER_SELECT",
-  FOLDER_CREATE: "FOLDER_CREATE",
-  FOLDER_LIST: "FOLDER_LIST",
 
   // Notifications
   NOTIFY_BACKGROUND_OPERATION: "NOTIFY_BACKGROUND_OPERATION",
