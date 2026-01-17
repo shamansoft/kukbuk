@@ -164,7 +164,7 @@ describe("API Service", () => {
 
       // Verify that fetch was called with the right parameters
       expect(fetchMock).toHaveBeenCalledWith(
-        "https://api.example.com/v1/recipe",
+        "https://api.example.com/v1/recipes",
         expect.objectContaining({
           method: "POST",
           headers: expect.objectContaining({

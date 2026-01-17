@@ -174,34 +174,50 @@ export class EmailPasswordProvider extends BaseAuthProvider {
       console.log("Signing out from email/password...");
 
       // Sign out from Firebase via offscreen document (if it exists)
+      // This is best-effort - if it fails, we still clear local data
       try {
-        await this.ensureOffscreenDocument();
-
-        // Send sign-out message with proper error handling
-        const result = await new Promise((resolve) => {
-          chrome.runtime.sendMessage({ type: "FIREBASE_SIGN_OUT" }, (response) => {
-            // Check for errors
-            if (chrome.runtime.lastError) {
-              console.log("Firebase signout message error:", chrome.runtime.lastError.message);
-              resolve(null);
-            } else {
-              resolve(response);
-            }
-          });
+        // Check if offscreen document exists before trying to create it
+        const existingContexts = await chrome.runtime.getContexts({
+          contextTypes: ["OFFSCREEN_DOCUMENT"],
+          documentUrls: [chrome.runtime.getURL("offscreen/auth-offscreen.html")],
         });
 
-        if (result) {
-          console.log("Signed out from Firebase");
+        if (existingContexts.length > 0) {
+          console.log("Offscreen document exists, sending sign-out message");
+
+          // Send sign-out message with proper error handling and timeout
+          const result = await Promise.race([
+            new Promise((resolve) => {
+              chrome.runtime.sendMessage({ type: "FIREBASE_SIGN_OUT" }, (response) => {
+                if (chrome.runtime.lastError) {
+                  console.log("Firebase signout message error:", chrome.runtime.lastError.message);
+                  resolve(null);
+                } else {
+                  resolve(response);
+                }
+              });
+            }),
+            // Timeout after 2 seconds
+            new Promise((resolve) => setTimeout(() => resolve(null), 2000)),
+          ]);
+
+          if (result?.success) {
+            console.log("Signed out from Firebase");
+          } else {
+            console.log("Firebase signout: no response or timed out");
+          }
+
+          // Close offscreen document after sign out
+          await this.closeOffscreenDocument();
         } else {
-          console.log("Firebase signout: no response (offscreen document may not be listening)");
+          console.log("No offscreen document to sign out from, skipping Firebase signout");
         }
       } catch (error) {
-        // Offscreen document might not exist or Firebase signout failed
-        // This is non-critical, continue with cleanup
-        console.log("Firebase signout skipped:", error.message);
+        // Offscreen document operations failed - this is non-critical
+        console.log("Firebase signout skipped due to error:", error.message);
       }
 
-      // Clear all stored authentication data
+      // Clear all stored authentication data - this is the critical part
       await chrome.storage.local.remove([
         STORAGE_KEYS.FIREBASE_TOKEN,
         STORAGE_KEYS.FIREBASE_REFRESH_TIME,
@@ -212,9 +228,24 @@ export class EmailPasswordProvider extends BaseAuthProvider {
         "currentAuthProvider",
       ]);
 
-      console.log("Signed out successfully, all data cleared");
+      console.log("Signed out successfully, all local data cleared");
     } catch (error) {
       logError("Email/password sign out error", error);
+      // Even if sign out fails, try to clear data
+      try {
+        await chrome.storage.local.remove([
+          STORAGE_KEYS.FIREBASE_TOKEN,
+          STORAGE_KEYS.FIREBASE_REFRESH_TIME,
+          STORAGE_KEYS.USER_ID,
+          STORAGE_KEYS.USER_EMAIL,
+          STORAGE_KEYS.USER_DISPLAY_NAME,
+          STORAGE_KEYS.USER_PHOTO_URL,
+          "currentAuthProvider",
+        ]);
+        console.log("Forced data clear after sign-out error");
+      } catch (clearError) {
+        console.error("Failed to clear data after sign-out error:", clearError);
+      }
       throw new Error("Failed to sign out");
     }
   }

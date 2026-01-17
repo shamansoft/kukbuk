@@ -1,8 +1,8 @@
 // Import services
-import { setupAuth } from "./services/auth/auth-manager.js";
+import { setupAuth, authManager } from "./services/auth/auth-manager.js";
 import { setupTransformation } from "./services/transformation.js";
 import { setupApi } from "./services/api.js";
-import { setupNotifications } from "./services/notifications.js";
+import { setupNotifications, createNotification } from "./services/notifications.js";
 import { logError } from "../common/error-handler.js";
 import { MESSAGE_TYPES } from "../common/constants.js";
 
@@ -49,19 +49,30 @@ function setupContextMenu() {
     contexts: ["action"],
   });
 
-  chrome.contextMenus.onClicked.addListener((info, tab) => {
+  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (info.menuItemId === "kukbuk-settings") {
       chrome.runtime.openOptionsPage();
     } else if (info.menuItemId === "kukbuk-logout") {
-      // Send logout message to self (handled by auth service)
-      chrome.runtime.sendMessage(
-        {
-          type: MESSAGE_TYPES.AUTH_LOGOUT,
-        },
-        (response) => {
-          console.log("Logout response:", response);
-        },
-      );
+      // Call logout directly instead of sending message to self
+      try {
+        await authManager.signOut();
+        console.log("Logout successful");
+
+        // Show success notification
+        createNotification({
+          title: "Logged Out",
+          message: "You have been successfully logged out",
+        });
+      } catch (error) {
+        console.error("Logout failed:", error.message);
+        logError("Context menu logout error", error);
+
+        // Show error notification
+        createNotification({
+          title: "Logout Failed",
+          message: error.message || "Failed to log out",
+        });
+      }
     }
   });
 }

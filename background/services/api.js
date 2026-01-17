@@ -90,7 +90,7 @@ async function saveRecipe(recipeData) {
     };
     console.log("fetch ", ENV.API_BASE_URL, request);
     // Send to backend
-    const response = await fetch(`${ENV.API_BASE_URL}/v1/recipe`, request);
+    const response = await fetch(`${ENV.API_BASE_URL}/v1/recipes`, request);
     //    or mock while debugging
     // const response = await new Promise((resolve) => {
     //   setTimeout(() => {
