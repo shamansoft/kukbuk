@@ -3,11 +3,8 @@
  */
 
 // Mock the imported modules
-jest.mock("./services/auth.js", () => ({
+jest.mock("./services/auth/auth-manager.js", () => ({
   setupAuth: jest.fn(),
-}));
-jest.mock("./services/storage.js", () => ({
-  setupStorage: jest.fn(),
 }));
 jest.mock("./services/transformation.js", () => ({
   setupTransformation: jest.fn(),

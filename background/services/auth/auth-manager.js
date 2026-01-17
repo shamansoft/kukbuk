@@ -3,7 +3,6 @@
  * Manages multiple auth providers and handles auth state
  */
 
-import { GoogleProvider } from "./google-provider.js";
 import { EmailPasswordProvider } from "./email-provider.js";
 import { STORAGE_KEYS, MESSAGE_TYPES } from "../../../common/constants.js";
 import { logError } from "../../../common/error-handler.js";
@@ -15,11 +14,10 @@ class AuthManager {
     this.authStateUnsubscribe = null;
 
     // Register available providers
-    this.registerProvider(new GoogleProvider());
     this.registerProvider(new EmailPasswordProvider());
 
-    // Set default provider to Google
-    this.currentProvider = this.providers.get("google");
+    // Set default provider to email
+    this.currentProvider = this.providers.get("email");
 
     console.log("AuthManager initialized with providers:", [
       ...this.providers.keys(),
@@ -41,7 +39,7 @@ class AuthManager {
 
   /**
    * Get provider by name
-   * @param {string} name - Provider name (e.g., 'google')
+   * @param {string} name - Provider name (e.g., 'email')
    * @returns {BaseAuthProvider|undefined} Provider instance
    */
   getProvider(name) {
@@ -65,7 +63,7 @@ class AuthManager {
    * @param {Object} [credentials=null] - Credentials for authentication (e.g., {email, password} for email provider)
    * @returns {Promise<AuthResult>} Authentication result
    */
-  async signIn(providerName = "google", credentials = null) {
+  async signIn(providerName = "email", credentials = null) {
     try {
       const provider = this.providers.get(providerName);
 
@@ -154,7 +152,7 @@ class AuthManager {
       }
 
       // Set current provider if stored
-      const providerName = authData.currentAuthProvider || "google";
+      const providerName = authData.currentAuthProvider || "email";
       this.currentProvider = this.providers.get(providerName);
 
       if (!this.currentProvider) {
@@ -223,7 +221,6 @@ class AuthManager {
       STORAGE_KEYS.USER_EMAIL,
       STORAGE_KEYS.USER_DISPLAY_NAME,
       STORAGE_KEYS.USER_PHOTO_URL,
-      STORAGE_KEYS.GOOGLE_TOKEN,
       "currentAuthProvider",
     ]);
 
@@ -233,7 +230,7 @@ class AuthManager {
   /**
    * Setup auth state listener
    * Monitors authentication state changes and updates storage
-   * Works with all providers (Google, Email/Password, etc.)
+   * Works with all providers (Email/Password, etc.)
    */
   async setupAuthStateListener() {
     // Unsubscribe from previous listener if exists
@@ -243,13 +240,13 @@ class AuthManager {
 
     // Get the current provider from storage, or use Google as default
     const storage = await chrome.storage.local.get(["currentAuthProvider"]);
-    const providerName = storage.currentAuthProvider || "google";
+    const providerName = storage.currentAuthProvider || "email";
     const provider = this.providers.get(providerName);
 
     if (!provider) {
-      console.warn(`Provider ${providerName} not available for auth state listener, using Google as fallback`);
-      // Fallback to Google provider
-      const fallbackProvider = this.providers.get("google");
+      console.warn(`Provider ${providerName} not available for auth state listener, using email as fallback`);
+      // Fallback to email provider
+      const fallbackProvider = this.providers.get("email");
       if (!fallbackProvider) {
         console.error("No auth provider available for auth state listener");
         return;
@@ -301,7 +298,7 @@ export function setupAuth() {
       message.type === MESSAGE_TYPES.AUTH_REQUEST ||
       message.type === MESSAGE_TYPES.AUTH_PROVIDER_SIGNIN
     ) {
-      const providerName = message.provider || "google";
+      const providerName = message.provider || "email";
       const credentials = message.credentials || null;
 
       authManager

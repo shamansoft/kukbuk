@@ -14,9 +14,9 @@ jest.mock("../../common/constants.js", () => ({
     SAVE_RECIPE: "SAVE_RECIPE",
   },
   STORAGE_KEYS: {
-    AUTH_TOKEN: "auth_token",
-    USER_EMAIL: "user_email",
-    AUTH_EXPIRY: "auth_expiry",
+    FIREBASE_TOKEN: "firebaseToken",
+    USER_EMAIL: "userEmail",
+    USER_ID: "userId",
   },
   ERROR_CODES: {
     UNKNOWN_ERROR: "unknown_error",
@@ -32,16 +32,39 @@ jest.mock("./transformation.js", () => ({
     .mockResolvedValue({ transformed: "<html>Transformed content</html>" }),
 }));
 
-jest.mock("./auth.js", () => ({
-  getAuthToken: jest.fn().mockResolvedValue("mock-auth-token"),
-  getIdTokenForCloudRun: jest.fn().mockResolvedValue("mock-id-token"),
+jest.mock("./auth/auth-manager.js", () => ({
+  authManager: {
+    getIdToken: jest.fn().mockResolvedValue("mock-firebase-token"),
+  },
+}));
+
+jest.mock("./notifications.js", () => ({
+  notify: {
+    recipeSaved: jest.fn(),
+  },
 }));
 
 jest.mock("../../common/env-config.js", () => ({
   ENV: {
-    COOKBOOK_API_URL: "https://api.example.com/recipes",
+    API_BASE_URL: "https://api.example.com",
     EXTENSION_ID: "mock-extension-id",
   },
+}));
+
+jest.mock("../../common/error-utils.js", () => ({
+  extractErrorMessage: jest.fn((response, errorData) =>
+    errorData?.error || `HTTP ${response?.status || "error"}`
+  ),
+  categorizeHttpError: jest.fn((status) => {
+    if (status >= 500) return "server";
+    if (status >= 400) return "client";
+    return "network";
+  }),
+  getUserFriendlyMessage: jest.fn((status, errorMessage, errorData) =>
+    `Server error: ${status}`
+  ),
+  mapCategoryToErrorCode: jest.fn(() => "network_error"),
+  formatErrorForLogging: jest.fn((error) => JSON.stringify(error)),
 }));
 
 // Import the module under test
@@ -59,11 +82,6 @@ describe("API Service", () => {
       runtime: {
         onMessage: {
           addListener: jest.fn(),
-        },
-      },
-      storage: {
-        local: {
-          remove: jest.fn().mockResolvedValue({}),
         },
       },
     };
@@ -118,11 +136,9 @@ describe("API Service", () => {
       // Create a mock message
       const message = {
         type: "SAVE_RECIPE",
-        data: {
-          pageContent: "<div>Recipe content</div>",
-          pageUrl: "https://example.com/recipe",
-          title: "Delicious Recipe",
-        },
+        pageContent: "<div>Recipe content</div>",
+        pageUrl: "https://example.com/recipe",
+        title: "Delicious Recipe",
       };
 
       // Create a mock sender and response callback
@@ -148,13 +164,12 @@ describe("API Service", () => {
 
       // Verify that fetch was called with the right parameters
       expect(fetchMock).toHaveBeenCalledWith(
-        "https://api.example.com/recipes",
+        "https://api.example.com/v1/recipes",
         expect.objectContaining({
           method: "POST",
           headers: expect.objectContaining({
             "Content-Type": "application/json",
-            Authorization: "Bearer mock-id-token",
-            "X-S-AUTH-TOKEN": "mock-auth-token",
+            Authorization: "Bearer mock-firebase-token",
             "X-Extension-ID": "mock-extension-id",
           }),
           body: expect.stringContaining("Transformed content"),
@@ -184,11 +199,9 @@ describe("API Service", () => {
       // Create a mock message
       const message = {
         type: "SAVE_RECIPE",
-        data: {
-          pageContent: "<div>Recipe content</div>",
-          pageUrl: "https://example.com/recipe",
-          title: "Delicious Recipe",
-        },
+        pageContent: "<div>Recipe content</div>",
+        pageUrl: "https://example.com/recipe",
+        title: "Delicious Recipe",
       };
 
       // Create a mock sender and response callback
@@ -227,11 +240,9 @@ describe("API Service", () => {
       // Create a mock message
       const message = {
         type: "SAVE_RECIPE",
-        data: {
-          pageContent: "<div>Recipe content</div>",
-          pageUrl: "https://example.com/recipe",
-          title: "Delicious Recipe",
-        },
+        pageContent: "<div>Recipe content</div>",
+        pageUrl: "https://example.com/recipe",
+        title: "Delicious Recipe",
       };
 
       // Create a mock sender and response callback
@@ -252,10 +263,10 @@ describe("API Service", () => {
       });
     });
 
-    it("should handle authentication revoked errors", async () => {
-      // Mock an OAuth error
-      const authError = new Error("OAuth2 not granted or revoked");
-      fetchMock.mockRejectedValueOnce(authError);
+    it("should handle authentication errors", async () => {
+      // Mock an auth error from authManager
+      const { authManager } = require("./auth/auth-manager.js");
+      authManager.getIdToken.mockRejectedValueOnce(new Error("Not authenticated"));
 
       // Call the setup function
       setupApi();
@@ -266,11 +277,9 @@ describe("API Service", () => {
       // Create a mock message
       const message = {
         type: "SAVE_RECIPE",
-        data: {
-          pageContent: "<div>Recipe content</div>",
-          pageUrl: "https://example.com/recipe",
-          title: "Delicious Recipe",
-        },
+        pageContent: "<div>Recipe content</div>",
+        pageUrl: "https://example.com/recipe",
+        title: "Delicious Recipe",
       };
 
       // Create a mock sender and response callback
@@ -283,17 +292,10 @@ describe("API Service", () => {
       // Wait for the async operation to complete
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      // Check if chrome.storage.local.remove was called to clear auth data
-      expect(chrome.storage.local.remove).toHaveBeenCalledWith([
-        "auth_token",
-        "user_email",
-        "auth_expiry",
-      ]);
-
       // Check if the response callback was called with the auth error
       expect(sendResponse).toHaveBeenCalledWith({
         success: false,
-        error: "Authentication expired, please login again",
+        error: "Authentication required, please sign in",
         errorCode: "auth_required",
       });
     });
@@ -308,10 +310,8 @@ describe("API Service", () => {
       // Create a mock message with invalid data (missing pageContent)
       const message = {
         type: "SAVE_RECIPE",
-        data: {
-          pageUrl: "https://example.com/recipe",
-          title: "Delicious Recipe",
-        },
+        pageUrl: "https://example.com/recipe",
+        title: "Delicious Recipe",
       };
 
       // Create a mock sender and response callback
