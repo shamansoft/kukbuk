@@ -122,13 +122,14 @@ class AuthManager {
 
   /**
    * Check authentication status
-   * Verifies if user is authenticated and token is valid
+   * Uses Chrome storage as the source of truth for auth state
+   * Token validation happens only when the token is actually used
    *
    * @returns {Promise<AuthStatus>} Authentication status
    */
   async checkAuthStatus() {
     try {
-      // Get stored auth data
+      // Get stored auth data - Chrome storage is our source of truth
       const authData = await chrome.storage.local.get([
         STORAGE_KEYS.FIREBASE_TOKEN,
         STORAGE_KEYS.USER_ID,
@@ -142,7 +143,7 @@ class AuthManager {
       const userId = authData[STORAGE_KEYS.USER_ID];
       const email = authData[STORAGE_KEYS.USER_EMAIL];
 
-      // Check if we have basic auth data
+      // Check if we have basic auth data in storage
       if (!token || !userId || !email) {
         return {
           success: true,
@@ -163,19 +164,8 @@ class AuthManager {
         };
       }
 
-      // Verify token is still valid by getting current user
-      const user = await this.currentProvider.getCurrentUser();
-
-      if (!user) {
-        // Token expired or invalid - clear auth data
-        await this.clearAuthData();
-        return {
-          success: true,
-          authenticated: false,
-          error: "Authentication expired",
-        };
-      }
-
+      // We have auth data in storage - trust it
+      // Token will be validated when actually used (in getIdToken)
       return {
         success: true,
         authenticated: true,
