@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Recipe</title>
+    <link rel="stylesheet" href="../popup/popup.css" />
+    <link rel="stylesheet" href="recipe-creator.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <img src="../icons/icon48.png" alt="MyKukBuk Logo" class="logo" />
+        <h1>Create Recipe</h1>
+      </header>
+
+      <section id="form-section">
+        <form id="description-form">
+          <textarea
+            id="description-input"
+            placeholder="Describe your recipe… e.g. Creamy chicken pasta with sun-dried tomatoes, serves 4, ready in 30 minutes."
+            rows="5"
+            required
+          ></textarea>
+          <button type="submit" id="submit-button" class="btn primary">Create Recipe</button>
+        </form>
+      </section>
+
+      <section id="result-section" style="display: none">
+        <div class="result-message">
+          <div id="result-icon" class="minimal-status-icon"></div>
+          <p id="result-text" class="result-text"></p>
+          <a id="drive-link" href="#" target="_blank" class="drive-link" style="display: none">
+            Open in Drive
+          </a>
+        </div>
+      </section>
+    </div>
+
+    <script src="recipe-creator.js" type="module"></script>
+  </body>
+</html>

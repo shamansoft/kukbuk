@@ -66,7 +66,7 @@ function substituteEnvVars(content) {
   return content.replace(/\${([^}]+)}/g, (match, varName) => {
     let value;
     if (varName === "EXTENSION_VERSION") {
-      value = extensionVersion; // Use version from package.json
+      value = extensionVersion + process.env["VERSION_SUFFIX"]; // Use version from package.json
     } else {
       value = process.env[varName];
     }

@@ -261,6 +261,7 @@ export class EmailPasswordProvider extends BaseAuthProvider {
   /**
    * Get Firebase ID token for current user
    * Token is automatically refreshed if older than 50 minutes
+   * If token refresh fails, auth data is cleared
    *
    * @param {boolean} [forceRefresh=false] - Force token refresh even if cached token is valid
    * @returns {Promise<string>} Firebase ID token
@@ -291,32 +292,50 @@ export class EmailPasswordProvider extends BaseAuthProvider {
       if (needsRefresh) {
         console.log("Firebase ID token needs refresh, requesting new token...");
 
-        // Request token refresh from offscreen document
-        await this.ensureOffscreenDocument();
+        try {
+          // Request token refresh from offscreen document
+          await this.ensureOffscreenDocument();
 
-        const result = await chrome.runtime.sendMessage({
-          type: "FIREBASE_REFRESH_TOKEN",
-        });
+          const result = await chrome.runtime.sendMessage({
+            type: "FIREBASE_REFRESH_TOKEN",
+          });
 
-        if (!result || !result.success) {
-          throw new Error(result?.error || "Failed to refresh token");
+          if (!result || !result.success) {
+            throw new Error(result?.error || "Failed to refresh token");
+          }
+
+          // Update stored token
+          await chrome.storage.local.set({
+            [STORAGE_KEYS.FIREBASE_TOKEN]: result.token,
+            [STORAGE_KEYS.FIREBASE_REFRESH_TIME]: Date.now(),
+          });
+
+          console.log("Firebase ID token refreshed successfully");
+          return result.token;
+        } catch (refreshError) {
+          // Token refresh failed - token is likely expired or invalid
+          console.error("Token refresh failed, clearing auth data:", refreshError);
+
+          // Clear all auth data since token is no longer valid
+          await chrome.storage.local.remove([
+            STORAGE_KEYS.FIREBASE_TOKEN,
+            STORAGE_KEYS.FIREBASE_REFRESH_TIME,
+            STORAGE_KEYS.USER_ID,
+            STORAGE_KEYS.USER_EMAIL,
+            STORAGE_KEYS.USER_DISPLAY_NAME,
+            STORAGE_KEYS.USER_PHOTO_URL,
+            "currentAuthProvider",
+          ]);
+
+          throw new Error("Authentication expired - please sign in again");
         }
-
-        // Update stored token
-        await chrome.storage.local.set({
-          [STORAGE_KEYS.FIREBASE_TOKEN]: result.token,
-          [STORAGE_KEYS.FIREBASE_REFRESH_TIME]: Date.now(),
-        });
-
-        console.log("Firebase ID token refreshed successfully");
-        return result.token;
       }
 
       // Return cached token
       return storedToken;
     } catch (error) {
       logError("Failed to get ID token", error);
-      throw new Error("Failed to get authentication token");
+      throw error;
     }
   }
 

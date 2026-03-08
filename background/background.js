@@ -49,9 +49,22 @@ function setupContextMenu() {
     contexts: ["action"],
   });
 
+  chrome.contextMenus.create({
+    id: "kukbuk-create-from-description",
+    title: "Create Recipe from Description",
+    contexts: ["action"],
+  });
+
   chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (info.menuItemId === "kukbuk-settings") {
       chrome.runtime.openOptionsPage();
+    } else if (info.menuItemId === "kukbuk-create-from-description") {
+      chrome.windows.create({
+        url: chrome.runtime.getURL("recipe-creator/recipe-creator.html"),
+        type: "popup",
+        width: 440,
+        height: 340,
+      });
     } else if (info.menuItemId === "kukbuk-logout") {
       // Call logout directly instead of sending message to self
       try {

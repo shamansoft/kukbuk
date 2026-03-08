@@ -30,43 +30,51 @@ export const setupMockStorage = (initialData = {}) => {
   const storage = { ...initialData };
 
   return {
-    get: jest.fn((keys, callback) => {
-      if (typeof keys === "string") {
-        callback({ [keys]: storage[keys] });
-      } else if (Array.isArray(keys)) {
-        const result = {};
-        keys.forEach((key) => {
-          result[key] = storage[key];
-        });
-        callback(result);
-      } else if (typeof keys === "object") {
-        const result = {};
-        Object.keys(keys).forEach((key) => {
-          result[key] = storage[key] !== undefined ? storage[key] : keys[key];
-        });
-        callback(result);
-      } else {
-        callback(storage);
-      }
+    get: jest.fn((keys) => {
+      return new Promise((resolve) => {
+        if (typeof keys === "string") {
+          resolve({ [keys]: storage[keys] });
+        } else if (Array.isArray(keys)) {
+          const result = {};
+          keys.forEach((key) => {
+            result[key] = storage[key];
+          });
+          resolve(result);
+        } else if (typeof keys === "object") {
+          const result = {};
+          Object.keys(keys).forEach((key) => {
+            result[key] = storage[key] !== undefined ? storage[key] : keys[key];
+          });
+          resolve(result);
+        } else {
+          resolve(storage);
+        }
+      });
     }),
 
-    set: jest.fn((items, callback) => {
-      Object.assign(storage, items);
-      if (callback) callback();
+    set: jest.fn((items) => {
+      return new Promise((resolve) => {
+        Object.assign(storage, items);
+        resolve();
+      });
     }),
 
-    remove: jest.fn((keys, callback) => {
-      if (typeof keys === "string") {
-        delete storage[keys];
-      } else if (Array.isArray(keys)) {
-        keys.forEach((key) => delete storage[key]);
-      }
-      if (callback) callback();
+    remove: jest.fn((keys) => {
+      return new Promise((resolve) => {
+        if (typeof keys === "string") {
+          delete storage[keys];
+        } else if (Array.isArray(keys)) {
+          keys.forEach((key) => delete storage[key]);
+        }
+        resolve();
+      });
     }),
 
-    clear: jest.fn((callback) => {
-      Object.keys(storage).forEach((key) => delete storage[key]);
-      if (callback) callback();
+    clear: jest.fn(() => {
+      return new Promise((resolve) => {
+        Object.keys(storage).forEach((key) => delete storage[key]);
+        resolve();
+      });
     }),
 
     // Expose storage for tests
