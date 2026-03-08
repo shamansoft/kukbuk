@@ -43,7 +43,137 @@ export function setupApi() {
       // Return true to indicate we'll respond asynchronously
       return true;
     }
+
+    if (message.type === MESSAGE_TYPES.CREATE_RECIPE_FROM_DESCRIPTION) {
+      saveCustomRecipe({
+        description: message.description || "",
+        title: message.title,
+      })
+        .then((response) => sendResponse(response))
+        .catch((error) => {
+          logError("Create recipe from description error", error);
+          sendResponse({
+            success: false,
+            error: error.message,
+            errorCode: error.code || ERROR_CODES.UNKNOWN_ERROR,
+          });
+        });
+
+      return true;
+    }
   });
+}
+
+/**
+ * Creates a recipe from a plain-text description via POST /v1/recipes/custom.
+ * The description is compressed the same way as HTML in the main flow.
+ * @param {Object} params
+ * @param {string} params.description - User-authored recipe description
+ * @param {string} [params.title] - Optional recipe title
+ * @returns {Promise<Object>} Save result
+ */
+async function saveCustomRecipe({ description, title }) {
+  if (!description) {
+    throw new Error("Description is required");
+  }
+
+  try {
+    const firebaseToken = await authManager.getIdToken();
+
+    const contentObject = await transformContent(description);
+    const compressedDescription = contentObject.transformed;
+
+    const request = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${firebaseToken}`,
+        "X-Extension-ID": ENV.EXTENSION_ID,
+      },
+      body: JSON.stringify({
+        description: compressedDescription,
+        title: title || description.split("\n")[0].slice(0, 80) || undefined,
+      }),
+    };
+
+    console.log("fetch custom recipe", ENV.API_BASE_URL, request);
+    const response = await fetch(`${ENV.API_BASE_URL}/v1/recipes/custom?compression=gzip`, request);
+
+    if (!response.ok) {
+      let errorData = null;
+      let parseError = null;
+
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        parseError = e;
+        try {
+          const textBody = await response.text();
+          errorData = { _rawBody: textBody.substring(0, 500) };
+        } catch {
+          errorData = { _rawBody: "Unable to read response body" };
+        }
+      }
+
+      const errorMessage = extractErrorMessage(response, errorData);
+      const category = categorizeHttpError(response.status);
+      const errorCode = mapCategoryToErrorCode(category, errorData);
+
+      logError(
+        "Custom recipe API request failed",
+        null,
+        formatErrorForLogging({
+          request: { method: "POST", url: ENV.API_BASE_URL, headers: request.headers },
+          response: { status: response.status, statusText: response.statusText, body: errorData },
+          parseError,
+          category,
+        }),
+      );
+
+      const userMessage = getUserFriendlyMessage(response.status, errorMessage, errorData);
+      const error = new Error(userMessage);
+      error.code = errorCode;
+      error.statusCode = response.status;
+      error.originalMessage = errorMessage;
+      throw error;
+    }
+
+    const result = await response.json();
+
+    notify.recipeSaved({
+      recipeName: result.title,
+      driveUrl: result.driveFileUrl || null,
+      isRecipe: result.isRecipe,
+    });
+
+    return {
+      success: true,
+      recipeName: result.title,
+      message: result.message || "Recipe saved to Google Drive successfully",
+      driveUrl: result.driveFileUrl || null,
+      isRecipe: result.isRecipe,
+    };
+  } catch (error) {
+    if (
+      error.message.includes("Not authenticated") ||
+      error.message.includes("Authentication expired") ||
+      error.message.includes("OAuth2 not granted or revoked")
+    ) {
+      const authError = new Error("Authentication required, please sign in");
+      authError.code = ERROR_CODES.AUTH_REQUIRED;
+      notify.recipeSaved({ success: false, error: "Please sign in to save recipes" });
+      throw authError;
+    }
+
+    if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+      const authError = new Error("Authentication expired, please sign in again");
+      authError.code = ERROR_CODES.AUTH_REQUIRED;
+      notify.recipeSaved({ success: false, error: "Session expired, please sign in again" });
+      throw authError;
+    }
+
+    throw error;
+  }
 }
 
 /**

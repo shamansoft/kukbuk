@@ -43,9 +43,13 @@ const mockChrome = {
       addListener: jest.fn(),
     },
     openOptionsPage: jest.fn(),
+    getURL: jest.fn((path) => `chrome-extension://mock-id/${path}`),
     sendMessage: jest.fn((msg, callback) => {
       if (callback) callback({ success: true });
     }),
+  },
+  windows: {
+    create: jest.fn(),
   },
 };
 
@@ -82,7 +86,7 @@ describe("Background Script", () => {
 
     // Verify that context menu was set up properly
     expect(chrome.contextMenus.removeAll).toHaveBeenCalled();
-    expect(chrome.contextMenus.create).toHaveBeenCalledTimes(2);
+    expect(chrome.contextMenus.create).toHaveBeenCalledTimes(3);
     expect(chrome.contextMenus.onClicked.addListener).toHaveBeenCalled();
 
     // Verify that runtime.onInstalled listener was added
@@ -136,6 +140,26 @@ describe("Background Script", () => {
       title: "Logged Out",
       message: "You have been successfully logged out",
     });
+  });
+
+  test("should handle context menu click for create recipe from description", () => {
+    // Load the background script
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+
+    // Grab the onClicked callback from the chrome.contextMenus mock
+    const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
+
+    // Simulate a click event for "kukbuk-create-from-description"
+    onClickedCallback({ menuItemId: "kukbuk-create-from-description" }, {});
+
+    expect(chrome.runtime.getURL).toHaveBeenCalledWith(
+      "recipe-creator/recipe-creator.html",
+    );
+    expect(chrome.windows.create).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "popup", width: 440, height: 340 }),
+    );
   });
 
   test("should handle context menu logout failure", async () => {

@@ -12,6 +12,7 @@ jest.mock("../../common/error-handler.js", () => ({
 jest.mock("../../common/constants.js", () => ({
   MESSAGE_TYPES: {
     SAVE_RECIPE: "SAVE_RECIPE",
+    CREATE_RECIPE_FROM_DESCRIPTION: "CREATE_RECIPE_FROM_DESCRIPTION",
   },
   STORAGE_KEYS: {
     FIREBASE_TOKEN: "firebaseToken",
@@ -328,6 +329,195 @@ describe("API Service", () => {
       expect(sendResponse).toHaveBeenCalledWith({
         success: false,
         error: "Invalid recipe data",
+        errorCode: "unknown_error",
+      });
+    });
+
+    it("should handle CREATE_RECIPE_FROM_DESCRIPTION and post to /v1/recipes/custom", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValueOnce({
+          title: "Chicken Pasta",
+          message: "Recipe saved successfully",
+          driveFileUrl: "https://drive.google.com/file/456",
+        }),
+      });
+
+      setupApi();
+
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const message = {
+        type: "CREATE_RECIPE_FROM_DESCRIPTION",
+        description: "Chicken pasta with tomato sauce\nServes 4, ready in 30 minutes",
+      };
+      const sendResponse = jest.fn();
+
+      const returnValue = messageListener(message, {}, sendResponse);
+
+      expect(returnValue).toBe(true);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        recipeName: "Chicken Pasta",
+        message: "Recipe saved successfully",
+        driveUrl: "https://drive.google.com/file/456",
+      });
+
+      // Verify it posts to the custom endpoint with compression query param
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://api.example.com/v1/recipes/custom?compression=gzip",
+        expect.objectContaining({ method: "POST" }),
+      );
+
+      // Verify the body has description (compressed) not html/url
+      const fetchBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(fetchBody.description).toBeDefined();
+      expect(fetchBody.url).toBeUndefined();
+    });
+
+    it("should compress description the same way as html in the main flow", async () => {
+      const { transformContent } = require("./transformation.js");
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValueOnce({ title: "My Recipe", driveFileUrl: null }),
+      });
+
+      setupApi();
+
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      messageListener(
+        { type: "CREATE_RECIPE_FROM_DESCRIPTION", description: "Spicy tacos\nServes 2" },
+        {},
+        jest.fn(),
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      // transformContent should be called with the raw description text
+      expect(transformContent).toHaveBeenCalledWith("Spicy tacos\nServes 2");
+
+      // The compressed result should appear in the request body as `description`
+      const fetchBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(fetchBody.description).toBe("<html>Transformed content</html>");
+    });
+
+    it("should use first line of description as title when no title provided", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValueOnce({ title: "My Recipe", driveFileUrl: null }),
+      });
+
+      setupApi();
+
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      messageListener(
+        { type: "CREATE_RECIPE_FROM_DESCRIPTION", description: "Spicy tacos with salsa\nServes 2" },
+        {},
+        jest.fn(),
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const fetchBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(fetchBody.title).toBe("Spicy tacos with salsa");
+    });
+
+    it("should use explicit title over auto-derived title when provided", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValueOnce({ title: "My Recipe", driveFileUrl: null }),
+      });
+
+      setupApi();
+
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      messageListener(
+        {
+          type: "CREATE_RECIPE_FROM_DESCRIPTION",
+          description: "Some description\nmore text",
+          title: "My Custom Title",
+        },
+        {},
+        jest.fn(),
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      const fetchBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(fetchBody.title).toBe("My Custom Title");
+    });
+
+    it("should handle CREATE_RECIPE_FROM_DESCRIPTION API error", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: jest.fn().mockRejectedValueOnce(new Error("Invalid JSON")),
+      });
+
+      setupApi();
+
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      messageListener(
+        { type: "CREATE_RECIPE_FROM_DESCRIPTION", description: "Some recipe description" },
+        {},
+        sendResponse,
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+    });
+
+    it("should handle CREATE_RECIPE_FROM_DESCRIPTION auth error", async () => {
+      const { authManager } = require("./auth/auth-manager.js");
+      authManager.getIdToken.mockRejectedValueOnce(new Error("Not authenticated"));
+
+      setupApi();
+
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      messageListener(
+        { type: "CREATE_RECIPE_FROM_DESCRIPTION", description: "Some recipe description" },
+        {},
+        sendResponse,
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        error: "Authentication required, please sign in",
+        errorCode: "auth_required",
+      });
+    });
+
+    it("should reject CREATE_RECIPE_FROM_DESCRIPTION if description is empty", async () => {
+      setupApi();
+
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      messageListener(
+        { type: "CREATE_RECIPE_FROM_DESCRIPTION", description: "" },
+        {},
+        sendResponse,
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        error: "Description is required",
         errorCode: "unknown_error",
       });
     });
