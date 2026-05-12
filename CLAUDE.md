@@ -82,6 +82,7 @@ Required environment variables:
 - `node_modules/.bin/cross-env` may become a plain file instead of a symlink after some npm operations, breaking `build:local`. Fix: `rm node_modules/.bin/cross-env && ln -s ../cross-env/src/bin/cross-env.js node_modules/.bin/cross-env`
 - `checkAuthStatus()` trusts Chrome storage as source of truth; token validity is checked lazily on first use via `getIdToken()`
 - New extension pages (e.g. `recipe-creator/`) do not need webpack entries — load JS as `type="module"` directly and Chrome resolves ES imports natively
+- Google Sign-In (`GoogleProvider`) requires a **Chrome Extension** type OAuth 2.0 client ID in `manifest.json` → `oauth2.client_id`. Create it in Google Cloud Console → APIs & Services → Credentials → Create OAuth Client ID → Chrome Extension. Do not reuse the web/server client ID — it will not work with `chrome.identity.getAuthToken()`.
 
 ### Code Style
 

@@ -159,8 +159,8 @@ Implement `GoogleProvider extends BaseAuthProvider` following the exact same str
 
 ### Task 6: Update documentation
 
-- [ ] Update `background/services/auth/README.md` to list `GoogleProvider` as an available provider and document the `chrome.identity` requirement
-- [ ] Add a note in `CLAUDE.md` under Known Issues / Gotchas about the Chrome Extension OAuth 2.0 client ID requirement
+- [x] Update `background/services/auth/README.md` to list `GoogleProvider` as an available provider and document the `chrome.identity` requirement
+- [x] Add a note in `CLAUDE.md` under Known Issues / Gotchas about the Chrome Extension OAuth 2.0 client ID requirement
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`*
 
