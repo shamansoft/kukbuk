@@ -16,6 +16,7 @@ const userEmail = document.getElementById("user-email");
 const emailLoginForm = document.getElementById("email-login-form");
 const emailInput = document.getElementById("email-input");
 const passwordInput = document.getElementById("password-input");
+const googleSignInBtn = document.getElementById("google-signin-btn");
 const saveRecipeButton = document.getElementById("save-recipe-button");
 const settingsButton = document.getElementById("settings-button");
 const logoutButton = document.getElementById("logout-button");
@@ -245,6 +246,38 @@ function setupEventListeners() {
       toast.error(error.message || "We couldn't log you in. Please try again.");
     }
   });
+
+  // Google Sign-In button
+  if (googleSignInBtn) {
+    googleSignInBtn.addEventListener("click", async () => {
+      try {
+        showMessage(statusMessage, "Signing in with Google…", "info");
+        toast.info("Signing in with Google…");
+
+        const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_PROVIDER_SIGNIN, {
+          provider: "google",
+          credentials: null,
+        });
+
+        if (authResponse.success) {
+          showLoggedInView({
+            email: authResponse.email,
+            displayName: authResponse.displayName,
+            photoURL: authResponse.photoURL,
+          });
+          showMessage(statusMessage, "Signed in with Google", "success");
+          toast.success(`Signed in as ${authResponse.email}`);
+        } else {
+          showMessage(statusMessage, authResponse.error || "Google sign-in failed", "error");
+          toast.error(authResponse.error || "Google sign-in failed. Please try again.");
+        }
+      } catch (error) {
+        logError("Google sign-in error", error);
+        showMessage(statusMessage, error.message || "Google sign-in failed", "error");
+        toast.error(error.message || "Google sign-in failed. Please try again.");
+      }
+    });
+  }
 
   // Save recipe button
   saveRecipeButton.addEventListener("click", async () => {

@@ -104,7 +104,7 @@ Implement `GoogleProvider extends BaseAuthProvider` following the exact same str
 
 ### Task 4: Popup UI — add Google Sign-In button
 
-- [ ] In `popup.html`, after the closing `</form>` tag of `#email-login-form`, add:
+- [x] In `popup.html`, after the closing `</form>` tag of `#email-login-form`, add:
   ```html
   <div class="divider"><span>or</span></div>
   <div class="oauth-providers">
@@ -119,7 +119,7 @@ Implement `GoogleProvider extends BaseAuthProvider` following the exact same str
     </button>
   </div>
   ```
-- [ ] In `popup.css`, add layout rule for the Google button's icon+text (flex row, centered, gap):
+- [x] In `popup.css`, add layout rule for the Google button's icon+text (flex row, centered, gap):
   ```css
   .oauth-btn {
     display: flex;
@@ -129,18 +129,18 @@ Implement `GoogleProvider extends BaseAuthProvider` following the exact same str
   }
   ```
   (The `.oauth-btn` rule already exists but may not set flex — extend it rather than duplicate)
-- [ ] In `popup.js`, add click handler for `#google-signin-btn`:
+- [x] In `popup.js`, add click handler for `#google-signin-btn`:
   - Show status "Signing in with Google…"
   - Send `{ type: MESSAGE_TYPES.AUTH_PROVIDER_SIGNIN, provider: "google", credentials: null }` via `chrome.runtime.sendMessage`
   - On success, call existing `updateUIForLoggedInState()` (or equivalent function already used by the email form's success path)
   - On failure, display error in status message
-- [ ] Verify the button animates in with the existing `fadeInUp` + `animation-delay: 0.5s` via `.oauth-btn` CSS rule (already defined)
+- [x] Verify the button animates in with the existing `fadeInUp` + `animation-delay: 0.5s` via `.oauth-btn` CSS rule (already defined)
 - [ ] Manual smoke test: load extension locally (`npm run deploy`), confirm button renders correctly and triggers the Chrome account picker
-- [ ] Write tests in a new `popup/popup.test.js` (or add to existing if one exists):
+- [x] Write tests in a new `popup/popup.test.js` (or add to existing if one exists):
   - Google button click sends correct message to background
   - On success response, UI transitions to logged-in state  
   - On error response, status message shows error text
-- [ ] Run `npm run test` — all tests pass
+- [x] Run `npm run test` — all tests pass
 
 ---
 
