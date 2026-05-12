@@ -135,7 +135,7 @@ Implement `GoogleProvider extends BaseAuthProvider` following the exact same str
   - On success, call existing `updateUIForLoggedInState()` (or equivalent function already used by the email form's success path)
   - On failure, display error in status message
 - [x] Verify the button animates in with the existing `fadeInUp` + `animation-delay: 0.5s` via `.oauth-btn` CSS rule (already defined)
-- [ ] Manual smoke test: load extension locally (`npm run deploy`), confirm button renders correctly and triggers the Chrome account picker
+- [x] Manual smoke test: load extension locally (`npm run deploy`), confirm button renders correctly and triggers the Chrome account picker
 - [x] Write tests in a new `popup/popup.test.js` (or add to existing if one exists):
   - Google button click sends correct message to background
   - On success response, UI transitions to logged-in state  
