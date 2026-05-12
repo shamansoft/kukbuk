@@ -99,6 +99,7 @@ describe("GoogleProvider", () => {
       expect(mockStorage.set).toHaveBeenCalledWith(
         expect.objectContaining({
           firebaseToken: "firebase-id-token",
+          firebaseRefreshTime: expect.any(Number),
           userId: "google-user-id",
           userEmail: "user@gmail.com",
           userDisplayName: "Google User",
@@ -154,6 +155,40 @@ describe("GoogleProvider", () => {
         "Google sign-in was cancelled. Please try again.",
       );
     });
+
+    it("throws network-friendly message for network errors", async () => {
+      chrome.identity.getAuthToken.mockImplementation((options, callback) => {
+        chrome.runtime.lastError = { message: "Network error occurred" };
+        callback(null);
+        chrome.runtime.lastError = null;
+      });
+
+      await expect(provider.signIn()).rejects.toThrow(
+        "Network error. Please check your internet connection.",
+      );
+    });
+  });
+
+  describe("ensureOffscreenDocument()", () => {
+    it("skips createDocument when offscreen document already exists", async () => {
+      chrome.runtime.getContexts.mockResolvedValueOnce([{ contextType: "OFFSCREEN_DOCUMENT" }]);
+      chrome.runtime.sendMessage.mockResolvedValueOnce({ ready: true });
+
+      await provider.ensureOffscreenDocument();
+
+      expect(chrome.offscreen.createDocument).not.toHaveBeenCalled();
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith({ type: "FIREBASE_CHECK_READY" });
+    });
+  });
+
+  describe("waitForOffscreenReady()", () => {
+    it("throws after timeout if offscreen never becomes ready", async () => {
+      chrome.runtime.sendMessage.mockResolvedValue({ ready: false });
+
+      await expect(provider.waitForOffscreenReady(100)).rejects.toThrow(
+        "Offscreen document not ready after 100ms",
+      );
+    }, 2000);
   });
 
   describe("signOut()", () => {
@@ -226,6 +261,119 @@ describe("GoogleProvider", () => {
 
     it("throws when not authenticated", async () => {
       await expect(provider.getIdToken()).rejects.toThrow("Not authenticated");
+    });
+
+    it("refreshes token when forceRefresh=true even if token is fresh", async () => {
+      mockStorage._store.firebaseToken = "cached-token";
+      mockStorage._store.firebaseRefreshTime = Date.now() - 1 * 60 * 1000; // 1 min ago (fresh)
+      mockStorage._store.userId = "google-user-id";
+
+      chrome.runtime.sendMessage
+        .mockResolvedValueOnce({ ready: true })
+        .mockResolvedValueOnce({ success: true, token: "force-refreshed-token" });
+
+      const token = await provider.getIdToken(true);
+
+      expect(token).toBe("force-refreshed-token");
+      expect(mockStorage.set).toHaveBeenCalledWith(
+        expect.objectContaining({ firebaseToken: "force-refreshed-token" }),
+      );
+    });
+
+    it("clears all auth storage and throws when token refresh fails", async () => {
+      mockStorage._store.firebaseToken = "old-token";
+      mockStorage._store.firebaseRefreshTime = Date.now() - 60 * 60 * 1000;
+      mockStorage._store.userId = "google-user-id";
+
+      chrome.runtime.sendMessage
+        .mockResolvedValueOnce({ ready: true })
+        .mockResolvedValueOnce({ success: false, error: "Token refresh rejected" });
+
+      await expect(provider.getIdToken()).rejects.toThrow(
+        "Authentication expired - please sign in again",
+      );
+
+      expect(mockStorage.remove).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          "firebaseToken",
+          "firebaseRefreshTime",
+          "userId",
+          "userEmail",
+          "userDisplayName",
+          "userPhotoURL",
+          "currentAuthProvider",
+        ]),
+      );
+    });
+  });
+
+  describe("onAuthStateChanged()", () => {
+    it("writes user info to storage and calls callback when user signs in", async () => {
+      const {
+        onAuthStateChanged: mockFirebaseOnAuthStateChanged,
+      } = require("firebase/auth/web-extension");
+      const mockUser = {
+        uid: "google-uid",
+        email: "user@gmail.com",
+        displayName: "Test User",
+        photoURL: "https://photo.example.com/photo.jpg",
+      };
+
+      let capturedCallback;
+      mockFirebaseOnAuthStateChanged.mockImplementationOnce((authInstance, callback) => {
+        capturedCallback = callback;
+        return jest.fn();
+      });
+
+      const userCallback = jest.fn();
+      provider.onAuthStateChanged(userCallback);
+
+      await capturedCallback(mockUser);
+
+      expect(mockStorage.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "google-uid",
+          userEmail: "user@gmail.com",
+          userDisplayName: "Test User",
+          userPhotoURL: "https://photo.example.com/photo.jpg",
+        }),
+      );
+      expect(userCallback).toHaveBeenCalledWith(mockUser);
+    });
+
+    it("clears all auth storage including currentAuthProvider and calls callback on sign-out", async () => {
+      const {
+        onAuthStateChanged: mockFirebaseOnAuthStateChanged,
+      } = require("firebase/auth/web-extension");
+
+      let capturedCallback;
+      mockFirebaseOnAuthStateChanged.mockImplementationOnce((authInstance, callback) => {
+        capturedCallback = callback;
+        return jest.fn();
+      });
+
+      const userCallback = jest.fn();
+      provider.onAuthStateChanged(userCallback);
+
+      await capturedCallback(null);
+
+      expect(mockStorage.remove).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          "firebaseToken",
+          "firebaseRefreshTime",
+          "userId",
+          "userEmail",
+          "userDisplayName",
+          "userPhotoURL",
+          "currentAuthProvider",
+        ]),
+      );
+      expect(userCallback).toHaveBeenCalledWith(null);
+    });
+
+    it("returns the unsubscribe function from firebaseOnAuthStateChanged", () => {
+      const unsubscribe = provider.onAuthStateChanged(jest.fn());
+      expect(typeof unsubscribe).toBe("function");
     });
   });
 });

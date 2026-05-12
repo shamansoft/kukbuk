@@ -20,8 +20,7 @@ describe("manifest.json", () => {
 
   it("has oauth2 block with client_id and required scopes", () => {
     expect(manifest.oauth2).toBeDefined();
-    expect(typeof manifest.oauth2.client_id).toBe("string");
-    expect(manifest.oauth2.client_id.length).toBeGreaterThan(0);
-    expect(manifest.oauth2.scopes).toEqual(expect.arrayContaining(["openid", "email", "profile"]));
+    expect(manifest.oauth2.client_id).toMatch(/\.apps\.googleusercontent\.com$/);
+    expect(manifest.oauth2.scopes).toEqual(["openid", "email", "profile"]);
   });
 });

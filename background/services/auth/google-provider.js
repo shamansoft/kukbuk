@@ -304,6 +304,7 @@ export class GoogleProvider extends BaseAuthProvider {
           STORAGE_KEYS.USER_EMAIL,
           STORAGE_KEYS.USER_DISPLAY_NAME,
           STORAGE_KEYS.USER_PHOTO_URL,
+          "currentAuthProvider",
         ]);
       }
 
