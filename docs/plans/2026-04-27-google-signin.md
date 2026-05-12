@@ -48,11 +48,11 @@ Add Google Sign-In as a second authentication option alongside the existing emai
 
 ### Task 1: Manifest — add `identity` permission and `oauth2` block
 
-- [ ] Open `manifest.json`, add `"identity"` to the `"permissions"` array
-- [ ] Add `"oauth2"` block with the Chrome Extension client ID and scopes `["openid", "email", "profile"]`
-- [ ] Verify the client ID is the Chrome Extension type from Google Cloud Console (distinct from the web/server client ID `124893666852-...` — create one if it doesn't exist)
-- [ ] Run `npm run build:local` — confirm no build errors
-- [ ] Write test: verify manifest contains `identity` permission and `oauth2` key (simple JSON read in a test or manual check — note in test file that this is a build-artifact test)
+- [x] Open `manifest.json`, add `"identity"` to the `"permissions"` array
+- [x] Add `"oauth2"` block with the Chrome Extension client ID and scopes `["openid", "email", "profile"]`
+- [x] Verify the client ID is the Chrome Extension type from Google Cloud Console (distinct from the web/server client ID `124893666852-...` — create one if it doesn't exist)
+- [x] Run `npm run build:local` — confirm no build errors
+- [x] Write test: verify manifest contains `identity` permission and `oauth2` key (simple JSON read in a test or manual check — note in test file that this is a build-artifact test)
 
 > **Note on client ID:** The `oauth2.client_id` in `manifest.json` must be a Chrome Extension OAuth 2.0 client from Google Cloud Console → APIs & Services → Credentials. The existing `124893666852-0qqknfuqtd2ers4ghoiapobd0ieaven3.apps.googleusercontent.com` is the server-side web client — do not reuse it here.
 
