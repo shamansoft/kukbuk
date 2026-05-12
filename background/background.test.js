@@ -154,9 +154,7 @@ describe("Background Script", () => {
     // Simulate a click event for "kukbuk-create-from-description"
     onClickedCallback({ menuItemId: "kukbuk-create-from-description" }, {});
 
-    expect(chrome.runtime.getURL).toHaveBeenCalledWith(
-      "recipe-creator/recipe-creator.html",
-    );
+    expect(chrome.runtime.getURL).toHaveBeenCalledWith("recipe-creator/recipe-creator.html");
     expect(chrome.windows.create).toHaveBeenCalledWith(
       expect.objectContaining({ type: "popup", width: 440, height: 340 }),
     );

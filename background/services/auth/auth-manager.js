@@ -21,9 +21,7 @@ class AuthManager {
     // Set default provider to email
     this.currentProvider = this.providers.get("email");
 
-    console.log("AuthManager initialized with providers:", [
-      ...this.providers.keys(),
-    ]);
+    console.log("AuthManager initialized with providers:", [...this.providers.keys()]);
   }
 
   /**
@@ -85,9 +83,7 @@ class AuthManager {
 
         this.currentProvider = provider;
 
-        console.log(
-          `Successfully signed in as ${result.email} using ${provider.displayName}`,
-        );
+        console.log(`Successfully signed in as ${result.email} using ${provider.displayName}`);
       }
 
       return result;
@@ -236,7 +232,9 @@ class AuthManager {
     const provider = this.providers.get(providerName);
 
     if (!provider) {
-      console.warn(`Provider ${providerName} not available for auth state listener, using email as fallback`);
+      console.warn(
+        `Provider ${providerName} not available for auth state listener, using email as fallback`,
+      );
       // Fallback to email provider
       const fallbackProvider = this.providers.get("email");
       if (!fallbackProvider) {
@@ -244,26 +242,22 @@ class AuthManager {
         return;
       }
 
-      this.authStateUnsubscribe = fallbackProvider.onAuthStateChanged(
-        async (user) => {
-          if (user) {
-            console.log("Auth state changed: User signed in", user.email);
-          } else {
-            console.log("Auth state changed: User signed out");
-          }
-        },
-      );
+      this.authStateUnsubscribe = fallbackProvider.onAuthStateChanged(async (user) => {
+        if (user) {
+          console.log("Auth state changed: User signed in", user.email);
+        } else {
+          console.log("Auth state changed: User signed out");
+        }
+      });
     } else {
       // Setup listener for the current provider
-      this.authStateUnsubscribe = provider.onAuthStateChanged(
-        async (user) => {
-          if (user) {
-            console.log("Auth state changed: User signed in", user.email);
-          } else {
-            console.log("Auth state changed: User signed out");
-          }
-        },
-      );
+      this.authStateUnsubscribe = provider.onAuthStateChanged(async (user) => {
+        if (user) {
+          console.log("Auth state changed: User signed in", user.email);
+        } else {
+          console.log("Auth state changed: User signed out");
+        }
+      });
     }
 
     console.log(`Auth state listener setup complete for ${providerName} provider`);
@@ -321,9 +315,7 @@ export function setupAuth() {
     if (message.type === MESSAGE_TYPES.AUTH_LOGOUT) {
       authManager
         .signOut()
-        .then(() =>
-          sendResponse({ success: true, message: "Signed out successfully" }),
-        )
+        .then(() => sendResponse({ success: true, message: "Signed out successfully" }))
         .catch((error) => {
           logError("Logout error", error);
           sendResponse({ success: false, error: error.message });

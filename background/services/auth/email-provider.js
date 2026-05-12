@@ -3,9 +3,7 @@
  * Handles email/password sign-in with Firebase Authentication
  */
 
-import {
-  onAuthStateChanged as firebaseOnAuthStateChanged,
-} from "firebase/auth/web-extension";
+import { onAuthStateChanged as firebaseOnAuthStateChanged } from "firebase/auth/web-extension";
 import { auth } from "../../../common/firebase-config.js";
 import { BaseAuthProvider } from "./base-provider.js";
 import { STORAGE_KEYS } from "../../../common/constants.js";

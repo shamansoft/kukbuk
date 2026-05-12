@@ -130,10 +130,10 @@ describe("AuthManager", () => {
 
   describe("AuthManager Constructor", () => {
     it("should initialize with email and google providers", () => {
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        "AuthManager initialized with providers:",
-        ["email", "google"],
-      );
+      expect(consoleLogSpy).toHaveBeenCalledWith("AuthManager initialized with providers:", [
+        "email",
+        "google",
+      ]);
     });
 
     it("should set email as default provider", () => {
@@ -237,17 +237,13 @@ describe("AuthManager", () => {
       expect(provider.signOut).toHaveBeenCalled();
 
       // Check that provider was removed from storage
-      expect(mockStorage.remove).toHaveBeenCalledWith(
-        ["currentAuthProvider"],
-      );
+      expect(mockStorage.remove).toHaveBeenCalledWith(["currentAuthProvider"]);
     });
 
     it("should throw error if no active authentication", async () => {
       authManager.currentProvider = null;
 
-      await expect(authManager.signOut()).rejects.toThrow(
-        "No active authentication",
-      );
+      await expect(authManager.signOut()).rejects.toThrow("No active authentication");
     });
 
     it("should handle sign out failure", async () => {
@@ -333,9 +329,7 @@ describe("AuthManager", () => {
     it("should throw error when not authenticated", async () => {
       authManager.currentProvider = null;
 
-      await expect(authManager.getIdToken()).rejects.toThrow(
-        "Not authenticated",
-      );
+      await expect(authManager.getIdToken()).rejects.toThrow("Not authenticated");
     });
   });
 
@@ -347,9 +341,7 @@ describe("AuthManager", () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(chrome.runtime.onMessage.addListener).toHaveBeenCalled();
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        "Setting up authentication service",
-      );
+      expect(consoleLogSpy).toHaveBeenCalledWith("Setting up authentication service");
     });
 
     it("should handle AUTH_REQUEST message", async () => {
@@ -358,8 +350,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = {
@@ -394,8 +385,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = { type: "AUTH_CHECK" };
@@ -424,8 +414,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = { type: "AUTH_LOGOUT" };
@@ -453,8 +442,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = { type: "GET_ID_TOKEN", forceRefresh: false };
@@ -482,8 +470,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = { type: "AUTH_GET_USER" };
@@ -509,8 +496,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = { type: "GET_AUTH_PROVIDERS" };

@@ -278,7 +278,7 @@ async function saveRecipe(recipeData) {
           },
           parseError,
           category,
-        })
+        }),
       );
 
       // Create error with user-friendly message for UI

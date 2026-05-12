@@ -146,14 +146,14 @@ Implement `GoogleProvider extends BaseAuthProvider` following the exact same str
 
 ### Task 5: Verify acceptance criteria
 
-- [ ] `npm run lint` — zero errors or warnings
-- [ ] `npm run test` — full suite passes
-- [ ] Build succeeds: `npm run build:local`
-- [ ] `auth-manager.getAvailableProviders()` returns `["email", "google"]`
-- [ ] Signing in with Google stores `currentAuthProvider = "google"` in chrome.storage
-- [ ] After Google sign-in, token refresh (50-min path) works via `FIREBASE_REFRESH_TOKEN` offscreen message
-- [ ] Signing out as Google user clears all storage keys and calls `clearAllCachedAuthTokens`
-- [ ] Email/password sign-in still works — existing flow unchanged
+- [x] `npm run lint` — zero errors or warnings
+- [x] `npm run test` — full suite passes
+- [x] Build succeeds: `npm run build:local`
+- [x] `auth-manager.getAvailableProviders()` returns `["email", "google"]`
+- [x] Signing in with Google stores `currentAuthProvider = "google"` in chrome.storage
+- [x] After Google sign-in, token refresh (50-min path) works via `FIREBASE_REFRESH_TOKEN` offscreen message
+- [x] Signing out as Google user clears all storage keys and calls `clearAllCachedAuthTokens`
+- [x] Email/password sign-in still works — existing flow unchanged
 
 ---
 

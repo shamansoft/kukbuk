@@ -53,17 +53,15 @@ jest.mock("../../common/env-config.js", () => ({
 }));
 
 jest.mock("../../common/error-utils.js", () => ({
-  extractErrorMessage: jest.fn((response, errorData) =>
-    errorData?.error || `HTTP ${response?.status || "error"}`
+  extractErrorMessage: jest.fn(
+    (response, errorData) => errorData?.error || `HTTP ${response?.status || "error"}`,
   ),
   categorizeHttpError: jest.fn((status) => {
     if (status >= 500) return "server";
     if (status >= 400) return "client";
     return "network";
   }),
-  getUserFriendlyMessage: jest.fn((status, errorMessage, errorData) =>
-    `Server error: ${status}`
-  ),
+  getUserFriendlyMessage: jest.fn((status, errorMessage, errorData) => `Server error: ${status}`),
   mapCategoryToErrorCode: jest.fn(() => "network_error"),
   formatErrorForLogging: jest.fn((error) => JSON.stringify(error)),
 }));

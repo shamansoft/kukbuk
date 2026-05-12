@@ -1,7 +1,4 @@
 module.exports = {
-  transform: {
-    "^.+\\.js$": ["babel-jest", { configFile: "./babel.config.js" }],
-  },
   testEnvironment: "jsdom",
   setupFiles: ["<rootDir>/jest.setup.js"],
   moduleNameMapper: {
