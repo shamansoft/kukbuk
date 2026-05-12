@@ -62,30 +62,30 @@ Add Google Sign-In as a second authentication option alongside the existing emai
 
 Implement `GoogleProvider extends BaseAuthProvider` following the exact same structure as `email-provider.js`.
 
-- [ ] Create `background/services/auth/google-provider.js`
-- [ ] Constructor: `super("google", "Google")` 
-- [ ] Copy `ensureOffscreenDocument()`, `closeOffscreenDocument()`, `waitForOffscreenReady()` from `EmailPasswordProvider` — duplication is intentional, no abstraction needed yet
-- [ ] Implement `signIn()`:
+- [x] Create `background/services/auth/google-provider.js`
+- [x] Constructor: `super("google", "Google")` 
+- [x] Copy `ensureOffscreenDocument()`, `closeOffscreenDocument()`, `waitForOffscreenReady()` from `EmailPasswordProvider` — duplication is intentional, no abstraction needed yet
+- [x] Implement `signIn()`:
   1. Call `chrome.identity.getAuthToken({ interactive: true })` wrapped in a Promise
   2. Call `ensureOffscreenDocument()`
   3. Send `{ type: "FIREBASE_SIGN_IN_WITH_CREDENTIAL", accessToken }` to offscreen
   4. On success, `chrome.storage.local.set()` with all `STORAGE_KEYS` fields (token, refreshTime, userId, email, displayName, photoURL)
   5. Return `{ success, userId, email, displayName, photoURL, firebaseToken }`
-- [ ] Implement `signOut()`:
+- [x] Implement `signOut()`:
   1. Send `FIREBASE_SIGN_OUT` to offscreen (if document exists) — same try/catch pattern as `EmailPasswordProvider`
   2. Call `chrome.identity.clearAllCachedAuthTokens()` to revoke cached Google tokens
   3. `chrome.storage.local.remove()` all `STORAGE_KEYS` + `"currentAuthProvider"`
-- [ ] Implement `getCurrentUser()`: return `auth.currentUser` (import `auth` from `common/firebase-config.js`)
-- [ ] Implement `getIdToken(forceRefresh = false)`: copy implementation verbatim from `EmailPasswordProvider.getIdToken()` — same 50-min refresh logic via `FIREBASE_REFRESH_TOKEN` message
-- [ ] Implement `onAuthStateChanged(callback)`: copy from `EmailPasswordProvider.onAuthStateChanged()` — same `firebaseOnAuthStateChanged(auth, ...)` pattern
-- [ ] Write unit tests in `background/services/auth/google-provider.test.js`:
+- [x] Implement `getCurrentUser()`: return `auth.currentUser` (import `auth` from `common/firebase-config.js`)
+- [x] Implement `getIdToken(forceRefresh = false)`: copy implementation verbatim from `EmailPasswordProvider.getIdToken()` — same 50-min refresh logic via `FIREBASE_REFRESH_TOKEN` message
+- [x] Implement `onAuthStateChanged(callback)`: copy from `EmailPasswordProvider.onAuthStateChanged()` — same `firebaseOnAuthStateChanged(auth, ...)` pattern
+- [x] Write unit tests in `background/services/auth/google-provider.test.js`:
   - `signIn()` success: mock `chrome.identity.getAuthToken`, mock `chrome.runtime.sendMessage` returning `{ success: true, ... }`, assert storage is set correctly
   - `signIn()` failure — identity API error: assert error thrown with clear message
   - `signIn()` failure — offscreen returns `{ success: false }`: assert error thrown
   - `signOut()` calls `clearAllCachedAuthTokens` and clears storage
   - `getIdToken()` returns cached token when fresh (age < 50 min)
   - `getIdToken()` refreshes via offscreen when stale (age > 50 min)
-- [ ] Run `npm run test:auth` — all tests pass
+- [x] Run `npm run test:auth` — all tests pass
 
 ---
 
