@@ -91,14 +91,14 @@ Implement `GoogleProvider extends BaseAuthProvider` following the exact same str
 
 ### Task 3: Register Google provider in `auth-manager.js`
 
-- [ ] Import `GoogleProvider` in `auth-manager.js`
-- [ ] In `AuthManager` constructor, call `this.registerProvider(new GoogleProvider())` after email provider registration
-- [ ] Verify `setupAuthStateListener()` fallback logic handles `"google"` provider correctly (it already does — it reads `currentAuthProvider` from storage and calls `provider.onAuthStateChanged()`)
-- [ ] Write tests in `auth-manager.test.js`:
+- [x] Import `GoogleProvider` in `auth-manager.js`
+- [x] In `AuthManager` constructor, call `this.registerProvider(new GoogleProvider())` after email provider registration
+- [x] Verify `setupAuthStateListener()` fallback logic handles `"google"` provider correctly (it already does — it reads `currentAuthProvider` from storage and calls `provider.onAuthStateChanged()`)
+- [x] Write tests in `auth-manager.test.js`:
   - `getAvailableProviders()` returns both `"email"` and `"google"` providers
   - `signIn("google", null)` delegates to Google provider's `signIn(null)` 
   - `checkAuthStatus()` with `currentAuthProvider = "google"` returns authenticated state (mock Google provider registered)
-- [ ] Run `npm run test:auth` — all tests pass
+- [x] Run `npm run test:auth` — all tests pass
 
 ---
 

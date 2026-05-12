@@ -4,6 +4,7 @@
  */
 
 import { EmailPasswordProvider } from "./email-provider.js";
+import { GoogleProvider } from "./google-provider.js";
 import { STORAGE_KEYS, MESSAGE_TYPES } from "../../../common/constants.js";
 import { logError } from "../../../common/error-handler.js";
 
@@ -15,6 +16,7 @@ class AuthManager {
 
     // Register available providers
     this.registerProvider(new EmailPasswordProvider());
+    this.registerProvider(new GoogleProvider());
 
     // Set default provider to email
     this.currentProvider = this.providers.get("email");
