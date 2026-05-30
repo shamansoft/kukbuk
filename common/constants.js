@@ -49,4 +49,5 @@ export const ERROR_CODES = {
   CLIENT_ERROR: "client_error", // 4xx errors (non-auth)
   NOT_FOUND: "not_found", // 404 specifically
   VALIDATION_ERROR: "validation_error", // 400/422
+  QUOTA_EXCEEDED: "quota_exceeded", // 429 daily limit reached
 };

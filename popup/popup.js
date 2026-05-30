@@ -398,6 +398,13 @@ function setupEventListeners() {
             "error",
           );
           toast.error("Please choose a folder in your settings.");
+        } else if (saveResponse.errorCode === ERROR_CODES.QUOTA_EXCEEDED) {
+          showMessage(
+            statusMessage,
+            "You've reached your daily recipe limit. Try again tomorrow.",
+            "error",
+          );
+          toast.error("Daily limit reached. Try again tomorrow.");
         } else {
           toast.error(saveResponse.error || "Unable to save your recipe. Please try again.");
         }

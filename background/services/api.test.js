@@ -366,7 +366,7 @@ describe("API Service", () => {
 
       // Verify it posts to the custom endpoint with compression query param
       expect(fetchMock).toHaveBeenCalledWith(
-        "https://api.example.com/v1/recipes/custom?compression=gzip",
+        "https://api.example.com/v1/recipes/custom?compression=BASE64_GZIP",
         expect.objectContaining({ method: "POST" }),
       );
 

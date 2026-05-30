@@ -11,6 +11,7 @@ export const ERROR_CATEGORIES = {
   AUTH_ERROR: "AUTH_ERROR", // 401, 403
   CLIENT_ERROR: "CLIENT_ERROR", // 400, 422, etc.
   NOT_FOUND: "NOT_FOUND", // 404
+  RATE_LIMITED: "RATE_LIMITED", // 429
   SERVER_ERROR: "SERVER_ERROR", // 5xx
   NETWORK_ERROR: "NETWORK_ERROR", // No response
   UNKNOWN_ERROR: "UNKNOWN_ERROR", // Other
@@ -75,6 +76,11 @@ export function categorizeHttpError(statusCode) {
     return ERROR_CATEGORIES.NOT_FOUND;
   }
 
+  // Rate limited
+  if (statusCode === 429) {
+    return ERROR_CATEGORIES.RATE_LIMITED;
+  }
+
   // Client errors (4xx)
   if (statusCode >= 400 && statusCode < 500) {
     return ERROR_CATEGORIES.CLIENT_ERROR;
@@ -111,6 +117,9 @@ export function getUserFriendlyMessage(statusCode, errorMessage, errorData) {
 
     case ERROR_CATEGORIES.NOT_FOUND:
       return "The requested resource was not found.";
+
+    case ERROR_CATEGORIES.RATE_LIMITED:
+      return "You've reached your daily recipe limit. Try again tomorrow.";
 
     case ERROR_CATEGORIES.CLIENT_ERROR:
       // For validation errors, use the actual message if it's helpful
@@ -151,6 +160,8 @@ export function mapCategoryToErrorCode(category, errorData) {
   switch (category) {
     case ERROR_CATEGORIES.AUTH_ERROR:
       return ERROR_CODES.AUTH_REQUIRED;
+    case ERROR_CATEGORIES.RATE_LIMITED:
+      return ERROR_CODES.QUOTA_EXCEEDED;
     case ERROR_CATEGORIES.SERVER_ERROR:
       return ERROR_CODES.SERVER_ERROR || ERROR_CODES.UNKNOWN_ERROR;
     case ERROR_CATEGORIES.CLIENT_ERROR:
