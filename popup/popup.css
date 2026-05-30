@@ -1,4 +1,4 @@
-/* popup.css — login-only popup, migrated to shared design tokens (Task 2) */
+/* popup.css — login-only popup, §4.2 redesign */
 
 * {
   margin: 0;
@@ -11,7 +11,6 @@ body {
   width: 360px;
   background: var(--paper);
   color: var(--ink);
-  position: relative;
 }
 
 .container {
@@ -27,255 +26,62 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Header */
+/* Header — compact mark + wordmark */
 header {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm);
   padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line);
 }
 
 .logo {
-  width: 40px;
-  height: 40px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--radius);
 }
 
 h1 {
-  font: var(--t-title);
+  font: var(--t-label);
+  font-weight: 600;
   color: var(--ink);
+  letter-spacing: 0.2px;
 }
 
-/* Sections */
+/* Login section */
 section {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
 
-section p {
+.welcome-text {
   font: var(--t-body);
   color: var(--ink-soft);
 }
 
-.welcome-text {
+.login-error {
   font: var(--t-label);
-  color: var(--ink);
-  text-align: center;
-  margin-bottom: var(--space-sm);
-}
-
-/* User Info (kept for potential future use) */
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-md);
-  background: var(--surface);
+  color: var(--err);
+  background: var(--err-wash);
+  padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius);
-  border: 1px solid var(--line);
+  border: 1px solid var(--err);
 }
 
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid var(--line-strong);
-}
-
-#user-email {
-  font: var(--t-body);
-  font-weight: 500;
-  color: var(--ink);
-  flex: 1;
-}
-
-/* Buttons */
-.btn {
-  padding: 12px 20px;
-  border: none;
-  border-radius: var(--radius);
-  font: var(--t-label);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
-  text-align: center;
-}
-
-.primary {
-  background: var(--accent);
-  color: #fff;
-  border: 1px solid transparent;
-}
-
-.primary:hover {
-  background: var(--accent-hover);
-}
-
-.primary:active {
-  background: var(--accent-hover);
-}
-
-.secondary {
-  background: var(--surface);
-  color: var(--ink);
-  border: 1px solid var(--line-strong);
-}
-
-.secondary:hover {
-  border-color: var(--accent);
-}
-
-.action-buttons {
-  display: flex;
-  gap: var(--space-sm);
-}
-
-/* Minimal Status Section */
-#minimal-status-section {
-  min-height: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-lg) 0;
-}
-
-.minimal-status {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.minimal-status-icon {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--accent);
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-.minimal-status-icon.success {
-  border: none;
-  width: 40px;
-  height: 40px;
-  background: var(--ok);
-  border-radius: 50%;
-  position: relative;
-}
-
-.minimal-status-icon.success::after {
-  content: '✓';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #fff;
-  font-size: 22px;
-  font-weight: bold;
-}
-
-.minimal-status-icon.error {
-  border: none;
-  width: 40px;
-  height: 40px;
-  background: var(--err);
-  border-radius: 50%;
-  position: relative;
-}
-
-.minimal-status-icon.error::after {
-  content: '✕';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #fff;
-  font-size: 22px;
-  font-weight: bold;
-}
-
-@keyframes spin {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-#minimal-status-text {
-  font: var(--t-body);
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--ink);
-  text-align: center;
-}
-
-/* Success Section with Drive Link */
-#success-section {
-  min-height: 100px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-lg) 0;
-}
-
-.success-message {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.success-icon {
-  width: 48px;
-  height: 48px;
-  background: var(--ok);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.success-text {
-  font: var(--t-body);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--ink);
-  margin: 0;
-}
-
-.drive-link {
-  font: var(--t-label);
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--accent);
-  text-decoration: underline;
-  cursor: pointer;
-  transition: color var(--dur) var(--ease);
-}
-
-.drive-link:hover {
-  color: var(--accent-hover);
-}
-
-/* Email/Password Login Form */
+/* Form */
 #email-login-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-sm);
 }
 
 #email-input,
 #password-input {
-  padding: 12px 16px;
-  border: 1px solid var(--line-strong);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   font: var(--t-body);
-  font-size: 15px;
   background: var(--surface);
   color: var(--ink);
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
@@ -293,12 +99,41 @@ section p {
   color: var(--ink-faint);
 }
 
+/* Buttons */
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--radius);
+  font: var(--t-label);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+
+.primary {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid transparent;
+}
+
+.primary:hover {
+  background: var(--accent-hover);
+}
+
+.secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+}
+
+.secondary:hover {
+  border-color: var(--accent);
+}
+
 /* Divider */
 .divider {
   display: flex;
   align-items: center;
-  text-align: center;
-  margin: var(--space-md) 0;
 }
 
 .divider::before,
@@ -306,18 +141,18 @@ section p {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--line-strong);
+  background: var(--line);
 }
 
 .divider span {
-  padding: 0 var(--space-md);
+  padding: 0 var(--space-sm);
   color: var(--ink-faint);
   font: var(--t-meta);
   text-transform: uppercase;
   letter-spacing: 0.8px;
 }
 
-/* OAuth Providers Container */
+/* OAuth */
 .oauth-providers {
   display: flex;
   flex-direction: column;
@@ -330,51 +165,4 @@ section p {
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
-}
-
-/* Status Messages */
-#status-container {
-  min-height: 24px;
-  margin-top: var(--space-md);
-}
-
-#status-message {
-  font: var(--t-label);
-  font-size: 14px;
-  text-align: center;
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius);
-}
-
-.success {
-  color: var(--ok);
-  background: var(--ok-wash);
-}
-
-.error {
-  color: var(--err);
-  background: var(--err-wash);
-}
-
-.warning {
-  color: var(--accent);
-  background: var(--accent-wash);
-}
-
-.info {
-  color: var(--ink-soft);
-  background: var(--ok-wash);
-}
-
-/* Loading animation */
-.loading::after {
-  content: '';
-  animation: dots 1.5s steps(5, end) infinite;
-}
-
-@keyframes dots {
-  0%, 20% { content: '.'; }
-  40%      { content: '..'; }
-  60%      { content: '...'; }
-  80%, 100%{ content: ''; }
 }

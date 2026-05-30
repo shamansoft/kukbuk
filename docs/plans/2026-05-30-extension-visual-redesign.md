@@ -201,15 +201,15 @@ toolbar for a one-click action.
 - [x] run `npm run lint` + `npm run test` — must pass before next task
 
 ### Task 7: Restyle login popup (§4.2)
-- [ ] `popup.css`/`popup.html`: left-aligned layout, small mark + sans wordmark,
+- [x] `popup.css`/`popup.html`: left-aligned layout, small mark + sans wordmark,
   8px inputs with `1px --line`, focus = `--accent` border + `--accent-wash` ring
   and **no transform**, flat accent "Sign in", hairline "or" divider (no
   gradient), `--surface` Google button with 1px border
-- [ ] single entrance fade for the form; remove per-field stagger
-- [ ] width ~320–360px; ensure no leftover minimal-mode styles
-- [ ] add/extend a DOM/string assertion test (e.g. login section present,
+- [x] single entrance fade for the form; remove per-field stagger
+- [x] width ~320–360px; ensure no leftover minimal-mode styles
+- [x] add/extend a DOM/string assertion test (e.g. login section present,
   removed sections absent) in `popup/popup.test.js`
-- [ ] run `npm run lint` + `npm run test`; manual visual check — must pass before next task
+- [x] run `npm run lint` + `npm run test`; manual visual check — must pass before next task
 
 ### Task 8: Restyle settings page & remove Notifications card (§4.5)
 - [ ] `options.html`: remove the entire Notifications `<section>` (toggles); keep

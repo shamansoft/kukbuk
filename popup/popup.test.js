@@ -89,6 +89,23 @@ describe("popup.js - login-only popup", () => {
     expect(document.getElementById("success-section")).toBeNull();
   });
 
+  it("contains email and password inputs", () => {
+    expect(document.getElementById("email-input")).not.toBeNull();
+    expect(document.getElementById("password-input")).not.toBeNull();
+  });
+
+  it("contains a Sign In submit button", () => {
+    const btn = document.querySelector("#email-login-form button[type='submit']");
+    expect(btn).not.toBeNull();
+    expect(btn.textContent.trim()).toContain("Sign In");
+  });
+
+  it("contains an or divider", () => {
+    const divider = document.querySelector(".divider");
+    expect(divider).not.toBeNull();
+    expect(divider.textContent.trim().toLowerCase()).toContain("or");
+  });
+
   it("sends AUTH_PROVIDER_SIGNIN with google provider when Google button is clicked", async () => {
     sendMessageMock.mockImplementationOnce((msg, callback) => {
       callback({ success: true, email: "user@gmail.com" });
