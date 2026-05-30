@@ -170,19 +170,19 @@ toolbar for a one-click action.
 - [x] run `npm run lint` + `npm run test` — must pass before next task
 
 ### Task 5: Strip popup to login-only
-- [ ] `popup/popup.html`: remove `#minimal-status-section`, `#success-section`,
+- [x] `popup/popup.html`: remove `#minimal-status-section`, `#success-section`,
   and `#main-section` (logged-in view); keep only `#login-section`
-- [ ] `popup/popup.js`: remove `handleAuthenticatedFlow`, `showMinimalStatus`,
+- [x] `popup/popup.js`: remove `handleAuthenticatedFlow`, `showMinimalStatus`,
   `hideMinimalStatus`, `showSuccessWithLink`, `ensureContentScriptReady`,
   save-recipe orchestration, and all `toast`/`#status-message` save feedback;
   keep email + Google sign-in and inline login error display
-- [ ] on successful login, request the background to set the windowless popup
+- [x] on successful login, request the background to set the windowless popup
   state (Task 4) and close the window
-- [ ] remove the now-unused `toast`/`#status-message` usage from the login path
+- [x] remove the now-unused `toast`/`#status-message` usage from the login path
   (decide: keep a minimal inline error line for login failures only)
-- [ ] update `popup/popup.test.js`: drop auto-save/minimal-status tests; keep/extend
+- [x] update `popup/popup.test.js`: drop auto-save/minimal-status tests; keep/extend
   login success + failure (email + Google) tests
-- [ ] run `npm run lint` + `npm run test` — must pass before next task
+- [x] run `npm run lint` + `npm run test` — must pass before next task
 
 ### Task 6: Remove OS notifications
 - [ ] remove `notify.recipeSaved(...)` calls from `background/services/api.js`
