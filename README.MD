@@ -80,7 +80,7 @@ This will launch Chrome with a dedicated profile and the extension pre-loaded.
 ```
 mykukbuk-extension/
 ├── background/         # Background service worker scripts
-├── common/             # Shared assets: theme.css design tokens, fonts/
+├── common/             # Shared assets: theme.css design tokens
 ├── content/            # Content scripts for webpage interaction
 ├── docs/               # Documentation files
 ├── icons/              # Extension icons

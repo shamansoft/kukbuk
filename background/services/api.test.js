@@ -543,7 +543,8 @@ describe("API Service", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
-      // notifications.js is not mocked here — if notify.recipeSaved were still called it would throw
+      // api.js no longer imports notifications.js (the module was removed in the redesign),
+      // so a successful save completes without any OS-notification side effect.
     });
   });
 });

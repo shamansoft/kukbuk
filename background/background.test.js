@@ -17,7 +17,6 @@ jest.mock("./services/api.js", () => ({
   setupApi: jest.fn(),
   saveRecipe: jest.fn(),
 }));
-jest.mock("./services/notifications.js", () => ({}));
 jest.mock("../common/error-handler.js", () => ({
   logError: jest.fn(),
 }));
@@ -139,18 +138,22 @@ describe("Background Script", () => {
 
   test("should handle context menu click for logout successfully", async () => {
     const { authManager } = require("./services/auth/auth-manager.js");
+    // After sign-out, applyPopupState should restore the login popup
+    authManager.checkAuthStatus.mockResolvedValue({ authenticated: false });
 
     jest.isolateModules(() => {
       require("./background.js");
     });
 
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
+    chrome.action.setPopup.mockClear();
     await onClickedCallback({ menuItemId: "kukbuk-logout" }, {});
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(authManager.signOut).toHaveBeenCalled();
-    // No OS notification on logout — removed in Task 6
+    // Logout restores the login popup (windowless save is disabled) — no OS notification
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "popup/popup.html" });
   });
 
   test("should handle context menu click for create recipe from description", () => {
@@ -238,6 +241,77 @@ describe("Background Script", () => {
     });
 
     expect(chrome.storage.onChanged.addListener).toHaveBeenCalled();
+  });
+
+  test("storage.onChanged re-applies popup state when the auth token changes", async () => {
+    const { authManager } = require("./services/auth/auth-manager.js");
+    authManager.checkAuthStatus.mockResolvedValue({ authenticated: true });
+
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const storageCallback = chrome.storage.onChanged.addListener.mock.calls[0][0];
+    chrome.action.setPopup.mockClear();
+
+    // Matching change in the local area triggers applyPopupState
+    storageCallback({ firebaseToken: { newValue: "abc" } }, "local");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "" });
+  });
+
+  test("storage.onChanged ignores changes in other areas or unrelated keys", async () => {
+    const { authManager } = require("./services/auth/auth-manager.js");
+    authManager.checkAuthStatus.mockResolvedValue({ authenticated: true });
+
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const storageCallback = chrome.storage.onChanged.addListener.mock.calls[0][0];
+    chrome.action.setPopup.mockClear();
+
+    // Wrong area
+    storageCallback({ firebaseToken: { newValue: "abc" } }, "sync");
+    // Right area, unrelated key
+    storageCallback({ somethingElse: { newValue: 1 } }, "local");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(chrome.action.setPopup).not.toHaveBeenCalled();
+  });
+
+  test("onClicked sends a 'Save timed out' error bubble when the save never resolves", async () => {
+    jest.useFakeTimers();
+    try {
+      const { saveRecipe } = require("./services/api.js");
+      // saveRecipe never resolves — the 90s timeout should win the race
+      saveRecipe.mockReturnValue(new Promise(() => {}));
+
+      chrome.tabs.sendMessage
+        .mockResolvedValueOnce({ success: true }) // PING
+        .mockResolvedValueOnce({ success: true }) // SHOW_BUBBLE loading
+        .mockResolvedValueOnce({
+          success: true,
+          data: { pageContent: "<html></html>", pageUrl: "https://example.com", title: "Test" },
+        }) // EXTRACT_RECIPE
+        .mockResolvedValueOnce({ success: true }); // SHOW_BUBBLE timeout error
+
+      const handler = await loadAndGetActionHandler();
+      const done = handler({ id: 42 });
+
+      // Advance past the 90s timeout, flushing the awaits along the way
+      await jest.advanceTimersByTimeAsync(90000);
+      await done;
+
+      const bubbleCalls = chrome.tabs.sendMessage.mock.calls.filter(
+        (c) => c[1].type === "SHOW_BUBBLE",
+      );
+      const lastBubble = bubbleCalls[bubbleCalls.length - 1][1];
+      expect(lastBubble.data).toMatchObject({ variant: "error", text: "Save timed out" });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test("action.onClicked listener is registered on init", () => {

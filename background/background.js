@@ -105,10 +105,11 @@ async function handleActionClick(tab) {
   inFlightSaves.set(tabId, true);
 
   let result;
+  let timeoutId;
   try {
-    const timeoutPromise = new Promise((resolve) =>
-      setTimeout(() => resolve({ timedOut: true }), SAVE_TIMEOUT_MS),
-    );
+    const timeoutPromise = new Promise((resolve) => {
+      timeoutId = setTimeout(() => resolve({ timedOut: true }), SAVE_TIMEOUT_MS);
+    });
 
     const saveWork = async () => {
       const ready = await ensureContentScript(tabId);
@@ -145,6 +146,7 @@ async function handleActionClick(tab) {
   } catch (e) {
     result = { error: e.message || "Save failed" };
   } finally {
+    clearTimeout(timeoutId);
     inFlightSaves.delete(tabId);
   }
 

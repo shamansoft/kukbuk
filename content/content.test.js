@@ -179,4 +179,34 @@ describe("content script bubble", () => {
     listener({ type: "PING" }, {}, sendResponse);
     expect(sendResponse).toHaveBeenCalledWith({ success: true });
   });
+
+  test("EXTRACT_RECIPE responds with page content, url and title", async () => {
+    document.title = "Test Recipe Page";
+    document.body.innerHTML = "<h1>Pasta</h1>";
+    const listener = getOnMessageListener();
+    const sendResponse = jest.fn();
+    const returned = listener({ type: "EXTRACT_RECIPE" }, {}, sendResponse);
+    // Async response: handler must return true to keep the channel open
+    expect(returned).toBe(true);
+    // Flush the extractRecipeData promise
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(sendResponse).toHaveBeenCalledTimes(1);
+    const response = sendResponse.mock.calls[0][0];
+    expect(response.success).toBe(true);
+    expect(response.data.title).toBe("Test Recipe Page");
+    expect(response.data.pageUrl).toBe(window.location.href);
+    expect(typeof response.data.pageContent).toBe("string");
+    expect(response.data.pageContent).toContain("Pasta");
+  });
+
+  test("unknown message type responds with success:false", () => {
+    const listener = getOnMessageListener();
+    const sendResponse = jest.fn();
+    listener({ type: "NOPE" }, {}, sendResponse);
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "Unknown message type",
+    });
+  });
 });
