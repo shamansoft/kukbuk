@@ -225,14 +225,14 @@ toolbar for a one-click action.
 - [x] run `npm run lint` + `npm run test`; manual visual check — must pass before next task
 
 ### Task 9: Restyle recipe-creator window (§4.6)
-- [ ] `recipe-creator.css`/`.html`: flat 8px accent "Create recipe" button, 8px
+- [x] `recipe-creator.css`/`.html`: flat 8px accent "Create recipe" button, 8px
   `1px --line` textarea, calm result row reusing the redesigned success/error
   treatment (dot + text + "Open in Drive ↗"), no bounce/spin
-- [ ] ensure it inherits `common/theme.css`; remove dependence on removed
+- [x] ensure it inherits `common/theme.css`; remove dependence on removed
   `.minimal-status-icon` bounce styles
-- [ ] add/extend a DOM/string assertion test if a `recipe-creator` test is
+- [x] add/extend a DOM/string assertion test if a `recipe-creator` test is
   feasible (else manual-only, noted in Post-Completion)
-- [ ] run `npm run lint` + `npm run test`; manual visual check — must pass before next task
+- [x] run `npm run lint` + `npm run test`; manual visual check — must pass before next task
 
 ### Task 10: Verify acceptance criteria & remove token aliases
 - [ ] remove the legacy token aliases added in Task 1 (all screens migrated)

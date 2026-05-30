@@ -53,6 +53,37 @@ describe("options.html structure", () => {
   });
 });
 
+describe("recipe-creator.html structure", () => {
+  let html;
+
+  beforeAll(() => {
+    html = fs.readFileSync(
+      path.resolve(__dirname, "../recipe-creator/recipe-creator.html"),
+      "utf8",
+    );
+  });
+
+  it("contains form section", () => {
+    expect(html).toMatch(/id="form-section"/);
+  });
+
+  it("contains result section", () => {
+    expect(html).toMatch(/id="result-section"/);
+  });
+
+  it("does not contain minimal-status-icon (removed in redesign)", () => {
+    expect(html).not.toMatch(/minimal-status-icon/);
+  });
+
+  it("contains result-dot element", () => {
+    expect(html).toMatch(/class="result-dot"/);
+  });
+
+  it("contains drive link with Open in Drive text", () => {
+    expect(html).toMatch(/Open in Drive/);
+  });
+});
+
 describe("HTML pages reference common/theme.css", () => {
   const pages = [
     ["popup/popup.html", "../popup/popup.html"],
