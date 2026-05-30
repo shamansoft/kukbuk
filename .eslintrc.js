@@ -25,7 +25,6 @@ module.exports = {
     "no-console": "off", // Allow console.log for chrome extension debugging
     "no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
     "no-multiple-empty-lines": ["error", { max: 1, maxEOF: 1 }],
-    quotes: ["error", "double"],
     semi: ["error", "always"],
     "comma-dangle": ["error", "always-multiline"],
     "arrow-parens": ["error", "always"],
@@ -37,4 +36,13 @@ module.exports = {
     "no-use-before-define": "off",
   },
   ignorePatterns: ["node_modules/", "dist/", "*.min.js", "webpack.config.js"],
+  overrides: [
+    {
+      files: ["**/*.test.js", "test/**/*.js", "jest.setup.js"],
+      env: {
+        jest: true,
+        node: true,
+      },
+    },
+  ],
 };

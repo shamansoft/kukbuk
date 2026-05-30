@@ -40,9 +40,7 @@ export class BaseAuthProvider {
    * @throws {Error} If not implemented by subclass
    */
   async signIn() {
-    throw new Error(
-      `signIn() must be implemented by ${this.displayName} provider`,
-    );
+    throw new Error(`signIn() must be implemented by ${this.displayName} provider`);
   }
 
   /**
@@ -52,9 +50,7 @@ export class BaseAuthProvider {
    * @throws {Error} If not implemented by subclass
    */
   async signOut() {
-    throw new Error(
-      `signOut() must be implemented by ${this.displayName} provider`,
-    );
+    throw new Error(`signOut() must be implemented by ${this.displayName} provider`);
   }
 
   /**
@@ -64,9 +60,7 @@ export class BaseAuthProvider {
    * @throws {Error} If not implemented by subclass
    */
   async getCurrentUser() {
-    throw new Error(
-      `getCurrentUser() must be implemented by ${this.displayName} provider`,
-    );
+    throw new Error(`getCurrentUser() must be implemented by ${this.displayName} provider`);
   }
 
   /**
@@ -77,9 +71,7 @@ export class BaseAuthProvider {
    * @throws {Error} If not implemented by subclass
    */
   async getIdToken(forceRefresh = false) {
-    throw new Error(
-      `getIdToken() must be implemented by ${this.displayName} provider`,
-    );
+    throw new Error(`getIdToken() must be implemented by ${this.displayName} provider`);
   }
 
   /**
@@ -90,8 +82,6 @@ export class BaseAuthProvider {
    * @throws {Error} If not implemented by subclass
    */
   onAuthStateChanged(callback) {
-    throw new Error(
-      `onAuthStateChanged() must be implemented by ${this.displayName} provider`,
-    );
+    throw new Error(`onAuthStateChanged() must be implemented by ${this.displayName} provider`);
   }
 }

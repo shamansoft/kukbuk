@@ -76,9 +76,7 @@ describe("Notifications Service", () => {
     it("should setup notification service with message listeners", () => {
       setupNotifications();
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        "Setting up notifications service",
-      );
+      expect(consoleLogSpy).toHaveBeenCalledWith("Setting up notifications service");
       expect(chrome.runtime.onMessage.addListener).toHaveBeenCalled();
     });
 
@@ -86,8 +84,7 @@ describe("Notifications Service", () => {
       setupNotifications();
 
       // Get the first message listener (from setupMessageListeners)
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = {
@@ -171,10 +168,8 @@ describe("Notifications Service", () => {
       // Get the click listener
       expect(chrome.notifications.onClicked.addListener).toHaveBeenCalled();
 
-      const clickListener =
-        chrome.notifications.onClicked.addListener.mock.calls[0][0];
-      const notificationId =
-        chrome.notifications.create.mock.calls[0][0];
+      const clickListener = chrome.notifications.onClicked.addListener.mock.calls[0][0];
+      const notificationId = chrome.notifications.create.mock.calls[0][0];
 
       // Simulate click
       clickListener(notificationId);
@@ -196,10 +191,7 @@ describe("Notifications Service", () => {
         message: "Test Message",
       });
 
-      expect(logError).toHaveBeenCalledWith(
-        "Error creating notification",
-        expect.any(Error),
-      );
+      expect(logError).toHaveBeenCalledWith("Error creating notification", expect.any(Error));
     });
   });
 
@@ -532,8 +524,7 @@ describe("Notifications Service", () => {
       setupNotifications();
 
       // Get the second message listener (for GET/UPDATE preferences)
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[1][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[1][0];
       const sendResponse = jest.fn();
 
       await mockStorage.set({
@@ -569,8 +560,7 @@ describe("Notifications Service", () => {
 
       setupNotifications();
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[1][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[1][0];
       const sendResponse = jest.fn();
 
       mockStorage.get.mockRejectedValueOnce(new Error("Storage error"));
@@ -596,8 +586,7 @@ describe("Notifications Service", () => {
     it.skip("should handle UPDATE_NOTIFICATION_PREFERENCES message", async () => {
       setupNotifications();
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[1][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[1][0];
       const sendResponse = jest.fn();
 
       const message = {
@@ -621,8 +610,7 @@ describe("Notifications Service", () => {
 
       setupNotifications();
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[1][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[1][0];
       const sendResponse = jest.fn();
 
       mockStorage.set.mockRejectedValueOnce(new Error("Storage error"));

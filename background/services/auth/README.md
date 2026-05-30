@@ -80,17 +80,36 @@ export class EmailPasswordProvider extends BaseAuthProvider {
 }
 ```
 
+## Available Providers
+
+### EmailPasswordProvider (`email-provider.js`)
+
+Provider name: `"email"`. Authenticates via Firebase email/password. Uses the offscreen document for token operations.
+
+### GoogleProvider (`google-provider.js`)
+
+Provider name: `"google"`. Authenticates via `chrome.identity.getAuthToken()` — silently uses the account already signed into Chrome. Requires:
+
+- `"identity"` in the `permissions` array in `manifest.json`
+- `"oauth2"` block in `manifest.json` with a Chrome Extension type OAuth 2.0 client ID (from Google Cloud Console → APIs & Services → Credentials → Create OAuth Client ID → Chrome Extension). This is distinct from the web/server client ID.
+- Google sign-in enabled in Firebase Console → Authentication → Sign-in method
+- The extension's `chrome-extension://<id>` added to Firebase authorized domains
+
+The provider calls `chrome.identity.clearAllCachedAuthTokens()` on sign-out to revoke cached Google tokens.
+
 ## Provider Registration
 
 Providers are registered in `auth-manager.js`:
 
 ```javascript
 import { EmailPasswordProvider } from './email-provider.js';
+import { GoogleProvider } from './google-provider.js';
 
 class AuthManager {
   constructor() {
     this.providers = new Map();
     this.registerProvider(new EmailPasswordProvider());
+    this.registerProvider(new GoogleProvider());
   }
 
   registerProvider(provider) {
@@ -113,12 +132,6 @@ Both require `Authorization: Bearer {firebaseToken}` header.
 - [x] BaseAuthProvider - Base class with interface ✅
 - [x] Type definitions (types.js) ✅
 - [x] EmailPasswordProvider - Email/Password authentication ✅
+- [x] GoogleProvider - Google Sign-In via chrome.identity ✅
 - [x] AuthManager - Provider management ✅
 - [ ] GitHubProvider - GitHub OAuth (Future)
-
-## Next Steps
-
-1. **Ticket 6**: Update API service to use new auth (authManager.getIdToken())
-2. **Ticket 7**: Update popup UI for new auth flow
-3. **Ticket 8**: Migration and testing
-4. **Ticket 9**: Documentation and cleanup

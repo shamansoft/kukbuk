@@ -51,7 +51,35 @@ jest.mock("./email-provider.js", () => {
         photoURL: "https://example.com/photo.jpg",
       }),
       onAuthStateChanged: jest.fn((callback) => {
-        // Return unsubscribe function
+        return jest.fn();
+      }),
+    })),
+  };
+});
+
+// Mock google provider
+jest.mock("./google-provider.js", () => {
+  return {
+    GoogleProvider: jest.fn().mockImplementation(() => ({
+      name: "google",
+      displayName: "Google",
+      signIn: jest.fn().mockResolvedValue({
+        success: true,
+        userId: "google-user-id",
+        email: "google@example.com",
+        displayName: "Google User",
+        photoURL: "https://example.com/google-photo.jpg",
+        firebaseToken: "google-firebase-token",
+      }),
+      signOut: jest.fn().mockResolvedValue(undefined),
+      getIdToken: jest.fn().mockResolvedValue("google-test-token"),
+      getCurrentUser: jest.fn().mockResolvedValue({
+        uid: "google-user-id",
+        email: "google@example.com",
+        displayName: "Google User",
+        photoURL: "https://example.com/google-photo.jpg",
+      }),
+      onAuthStateChanged: jest.fn((callback) => {
         return jest.fn();
       }),
     })),
@@ -101,11 +129,11 @@ describe("AuthManager", () => {
   });
 
   describe("AuthManager Constructor", () => {
-    it("should initialize with email provider", () => {
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        "AuthManager initialized with providers:",
-        ["email"],
-      );
+    it("should initialize with email and google providers", () => {
+      expect(consoleLogSpy).toHaveBeenCalledWith("AuthManager initialized with providers:", [
+        "email",
+        "google",
+      ]);
     });
 
     it("should set email as default provider", () => {
@@ -146,10 +174,11 @@ describe("AuthManager", () => {
   });
 
   describe("getAvailableProviders", () => {
-    it("should return list of available providers", () => {
+    it("should return both email and google providers", () => {
       const providers = authManager.getAvailableProviders();
       expect(providers).toEqual([
         { name: "email", displayName: "Email/Password" },
+        { name: "google", displayName: "Google" },
       ]);
     });
   });
@@ -208,17 +237,13 @@ describe("AuthManager", () => {
       expect(provider.signOut).toHaveBeenCalled();
 
       // Check that provider was removed from storage
-      expect(mockStorage.remove).toHaveBeenCalledWith(
-        ["currentAuthProvider"],
-      );
+      expect(mockStorage.remove).toHaveBeenCalledWith(["currentAuthProvider"]);
     });
 
     it("should throw error if no active authentication", async () => {
       authManager.currentProvider = null;
 
-      await expect(authManager.signOut()).rejects.toThrow(
-        "No active authentication",
-      );
+      await expect(authManager.signOut()).rejects.toThrow("No active authentication");
     });
 
     it("should handle sign out failure", async () => {
@@ -304,9 +329,7 @@ describe("AuthManager", () => {
     it("should throw error when not authenticated", async () => {
       authManager.currentProvider = null;
 
-      await expect(authManager.getIdToken()).rejects.toThrow(
-        "Not authenticated",
-      );
+      await expect(authManager.getIdToken()).rejects.toThrow("Not authenticated");
     });
   });
 
@@ -318,9 +341,7 @@ describe("AuthManager", () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(chrome.runtime.onMessage.addListener).toHaveBeenCalled();
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        "Setting up authentication service",
-      );
+      expect(consoleLogSpy).toHaveBeenCalledWith("Setting up authentication service");
     });
 
     it("should handle AUTH_REQUEST message", async () => {
@@ -329,8 +350,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = {
@@ -365,8 +385,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = { type: "AUTH_CHECK" };
@@ -395,8 +414,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = { type: "AUTH_LOGOUT" };
@@ -424,8 +442,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = { type: "GET_ID_TOKEN", forceRefresh: false };
@@ -453,8 +470,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = { type: "AUTH_GET_USER" };
@@ -480,8 +496,7 @@ describe("AuthManager", () => {
       // Wait for async initialization
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      const messageListener =
-        chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
       const sendResponse = jest.fn();
 
       const message = { type: "GET_AUTH_PROVIDERS" };
@@ -491,8 +506,47 @@ describe("AuthManager", () => {
       expect(returnValue).toBe(true);
       expect(sendResponse).toHaveBeenCalledWith({
         success: true,
-        providers: [{ name: "email", displayName: "Email/Password" }],
+        providers: [
+          { name: "email", displayName: "Email/Password" },
+          { name: "google", displayName: "Google" },
+        ],
       });
+    });
+  });
+
+  describe("Google provider integration", () => {
+    it("signIn('google', null) delegates to GoogleProvider.signIn(null)", async () => {
+      const result = await authManager.signIn("google", null);
+
+      expect(result.success).toBe(true);
+      expect(result.userId).toBe("google-user-id");
+      expect(result.email).toBe("google@example.com");
+
+      const googleProvider = authManager.getProvider("google");
+      expect(googleProvider.signIn).toHaveBeenCalledWith(null);
+
+      expect(mockStorage.set).toHaveBeenCalledWith(
+        expect.objectContaining({ currentAuthProvider: "google" }),
+      );
+    });
+
+    it("checkAuthStatus() with currentAuthProvider='google' returns authenticated state", async () => {
+      await mockStorage.set({
+        firebaseToken: "google-token",
+        userId: "google-user-id",
+        userEmail: "google@example.com",
+        userDisplayName: "Google User",
+        userPhotoURL: "https://example.com/google-photo.jpg",
+        currentAuthProvider: "google",
+      });
+
+      const status = await authManager.checkAuthStatus();
+
+      expect(status.authenticated).toBe(true);
+      expect(status.userId).toBe("google-user-id");
+      expect(status.email).toBe("google@example.com");
+      expect(status.provider).toBe("google");
+      expect(authManager.currentProvider.name).toBe("google");
     });
   });
 });

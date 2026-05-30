@@ -3,7 +3,11 @@
   "name": "MyKukBuk",
   "version": "${EXTENSION_VERSION}",
   "description": "Save recipes to your Google Drive",
-  "permissions": ["activeTab", "storage", "contextMenus", "scripting", "tabs", "offscreen", "notifications"],
+  "permissions": ["activeTab", "storage", "contextMenus", "scripting", "tabs", "offscreen", "notifications", "identity"],
+  "oauth2": {
+    "client_id": "${CHROME_EXTENSION_CLIENT_ID}",
+    "scopes": ["openid", "email", "profile"]
+  },
   "host_permissions": ["https://*/*"],
   "action": {
     "default_popup": "popup/popup.html",

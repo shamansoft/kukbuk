@@ -16,6 +16,7 @@ const userEmail = document.getElementById("user-email");
 const emailLoginForm = document.getElementById("email-login-form");
 const emailInput = document.getElementById("email-input");
 const passwordInput = document.getElementById("password-input");
+const googleSignInBtn = document.getElementById("google-signin-btn");
 const saveRecipeButton = document.getElementById("save-recipe-button");
 const settingsButton = document.getElementById("settings-button");
 const logoutButton = document.getElementById("logout-button");
@@ -246,6 +247,38 @@ function setupEventListeners() {
     }
   });
 
+  // Google Sign-In button
+  if (googleSignInBtn) {
+    googleSignInBtn.addEventListener("click", async () => {
+      try {
+        showMessage(statusMessage, "Signing in with Google…", "info");
+        toast.info("Signing in with Google…");
+
+        const authResponse = await sendMessageToBackground(MESSAGE_TYPES.AUTH_PROVIDER_SIGNIN, {
+          provider: "google",
+          credentials: null,
+        });
+
+        if (authResponse.success) {
+          showLoggedInView({
+            email: authResponse.email,
+            displayName: authResponse.displayName,
+            photoURL: authResponse.photoURL,
+          });
+          showMessage(statusMessage, "Signed in with Google", "success");
+          toast.success(`Signed in as ${authResponse.email}`);
+        } else {
+          showMessage(statusMessage, authResponse.error || "Google sign-in failed", "error");
+          toast.error(authResponse.error || "Google sign-in failed. Please try again.");
+        }
+      } catch (error) {
+        logError("Google sign-in error", error);
+        showMessage(statusMessage, error.message || "Google sign-in failed", "error");
+        toast.error(error.message || "Google sign-in failed. Please try again.");
+      }
+    });
+  }
+
   // Save recipe button
   saveRecipeButton.addEventListener("click", async () => {
     // Remove any previous "View in Drive" button if it exists
@@ -365,6 +398,13 @@ function setupEventListeners() {
             "error",
           );
           toast.error("Please choose a folder in your settings.");
+        } else if (saveResponse.errorCode === ERROR_CODES.QUOTA_EXCEEDED) {
+          showMessage(
+            statusMessage,
+            "You've reached your daily recipe limit. Try again tomorrow.",
+            "error",
+          );
+          toast.error("Daily limit reached. Try again tomorrow.");
         } else {
           toast.error(saveResponse.error || "Unable to save your recipe. Please try again.");
         }

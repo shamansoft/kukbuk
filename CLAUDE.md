@@ -30,7 +30,7 @@ This is a Chrome Extension (Manifest V3) that saves recipes from websites to Goo
 - Coordinates between content scripts and popup
 
 **Services Architecture** (`background/services/`)
-- `auth/auth-manager.js` - Firebase email/password authentication flow
+- `auth/auth-manager.js` - Multi-provider authentication manager (email/password and Google Sign-In)
 - `api.js` - Backend API interactions (save recipe from page, create from description)
 - `notifications.js` - User notification system
 - `transformation.js` - Recipe content GZIP compression (Base64 output)
@@ -62,6 +62,7 @@ The extension uses environment variable substitution during build:
 Required environment variables:
 - `EXTENSION_VERSION` - Extension version number (supports `VERSION_SUFFIX` env var appended at build time)
 - `FIREBASE_API_KEY` - Firebase API key for authentication
+- `CHROME_EXTENSION_CLIENT_ID` - OAuth 2.0 client ID of type "Chrome Extension" (not web/server type). Create at Google Cloud Console → APIs & Services → Credentials → Create OAuth Client ID → Chrome Extension. Required for `chrome.identity.getAuthToken()` / Google Sign-In.
 
 ### Testing
 
@@ -82,6 +83,7 @@ Required environment variables:
 - `node_modules/.bin/cross-env` may become a plain file instead of a symlink after some npm operations, breaking `build:local`. Fix: `rm node_modules/.bin/cross-env && ln -s ../cross-env/src/bin/cross-env.js node_modules/.bin/cross-env`
 - `checkAuthStatus()` trusts Chrome storage as source of truth; token validity is checked lazily on first use via `getIdToken()`
 - New extension pages (e.g. `recipe-creator/`) do not need webpack entries — load JS as `type="module"` directly and Chrome resolves ES imports natively
+- Google Sign-In (`GoogleProvider`) requires a **Chrome Extension** type OAuth 2.0 client ID in `manifest.json` → `oauth2.client_id`. Create it in Google Cloud Console → APIs & Services → Credentials → Create OAuth Client ID → Chrome Extension. Do not reuse the web/server client ID — it will not work with `chrome.identity.getAuthToken()`.
 
 ### Code Style
 

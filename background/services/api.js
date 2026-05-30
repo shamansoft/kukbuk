@@ -220,7 +220,7 @@ async function saveRecipe(recipeData) {
     };
     console.log("fetch ", ENV.API_BASE_URL, request);
     // Send to backend
-    const response = await fetch(`${ENV.API_BASE_URL}/v1/recipes`, request);
+    const response = await fetch(`${ENV.API_BASE_URL}/v1/recipes?compression=gzip`, request);
     //    or mock while debugging
     // const response = await new Promise((resolve) => {
     //   setTimeout(() => {
@@ -278,7 +278,7 @@ async function saveRecipe(recipeData) {
           },
           parseError,
           category,
-        })
+        }),
       );
 
       // Create error with user-friendly message for UI

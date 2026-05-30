@@ -609,6 +609,10 @@ section p {
 
 .oauth-btn {
     width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
     animation: fadeInUp var(--transition-base) ease-out 0.5s backwards;
 }
 

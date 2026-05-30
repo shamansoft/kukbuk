@@ -1,26 +1,16 @@
-/**
- * Email/Password Authentication Provider using Firebase
- * Handles email/password sign-in with Firebase Authentication
- */
-
 import { onAuthStateChanged as firebaseOnAuthStateChanged } from "firebase/auth/web-extension";
 import { auth } from "../../../common/firebase-config.js";
 import { BaseAuthProvider } from "./base-provider.js";
 import { STORAGE_KEYS } from "../../../common/constants.js";
 import { logError } from "../../../common/error-handler.js";
 
-export class EmailPasswordProvider extends BaseAuthProvider {
+export class GoogleProvider extends BaseAuthProvider {
   constructor() {
-    super("email", "Email/Password");
-    console.log("Email/Password authentication provider initialized");
+    super("google", "Google");
+    console.log("Google authentication provider initialized");
   }
 
-  /**
-   * Ensure offscreen document is created for Firebase auth
-   * @private
-   */
   async ensureOffscreenDocument() {
-    // Check if offscreen document already exists
     const existingContexts = await chrome.runtime.getContexts({
       contextTypes: ["OFFSCREEN_DOCUMENT"],
       documentUrls: [chrome.runtime.getURL("offscreen/auth-offscreen.html")],
@@ -28,52 +18,34 @@ export class EmailPasswordProvider extends BaseAuthProvider {
 
     if (existingContexts.length > 0) {
       console.log("Offscreen document already exists");
-      // Still wait for ready in case it just started
       await this.waitForOffscreenReady();
       return;
     }
 
-    // Create offscreen document
     console.log("Creating offscreen document for Firebase auth");
     await chrome.offscreen.createDocument({
       url: "offscreen/auth-offscreen.html",
-      reasons: ["DOM_SCRAPING"], // Required reason for offscreen document
-      justification: "Firebase authentication requires DOM/window access for email/password auth",
+      reasons: ["DOM_SCRAPING"],
+      justification: "Firebase authentication requires DOM/window access for Google auth",
     });
 
     console.log("Offscreen document created, waiting for Firebase auth initialization...");
-
-    // Wait for Firebase to restore auth state
     await this.waitForOffscreenReady();
-
     console.log("Offscreen document ready");
   }
 
-  /**
-   * Close the offscreen document
-   * @private
-   */
   async closeOffscreenDocument() {
     try {
       await chrome.offscreen.closeDocument();
       console.log("Offscreen document closed");
     } catch (error) {
-      // Document might not exist, ignore error
       console.log("No offscreen document to close");
     }
   }
 
-  /**
-   * Wait for offscreen document Firebase auth to be ready
-   * Polls until Firebase auth state is restored
-   * @param {number} timeout - Max wait time in ms (default 5000)
-   * @returns {Promise<void>}
-   * @throws {Error} If timeout reached before ready
-   * @private
-   */
   async waitForOffscreenReady(timeout = 5000) {
     const startTime = Date.now();
-    let delay = 50; // Start with 50ms
+    let delay = 50;
     const maxDelay = 500;
 
     while (Date.now() - startTime < timeout) {
@@ -88,10 +60,7 @@ export class EmailPasswordProvider extends BaseAuthProvider {
           return;
         }
 
-        // Wait before next attempt
         await new Promise((resolve) => setTimeout(resolve, delay));
-
-        // Exponential backoff
         delay = Math.min(delay * 1.5, maxDelay);
       } catch (error) {
         console.warn("Offscreen readiness check failed:", error);
@@ -102,44 +71,37 @@ export class EmailPasswordProvider extends BaseAuthProvider {
     throw new Error(`Offscreen document not ready after ${timeout}ms`);
   }
 
-  /**
-   * Sign in with email and password using Firebase
-   * @param {Object} credentials - User credentials
-   * @param {string} credentials.email - User email address
-   * @param {string} credentials.password - User password
-   * @returns {Promise<AuthResult>} Authentication result with tokens and user info
-   */
-  async signIn(credentials) {
+  async signIn() {
     try {
-      if (!credentials || !credentials.email || !credentials.password) {
-        throw new Error("Email and password are required");
-      }
+      console.log("Starting Google sign-in...");
 
-      const { email, password } = credentials;
+      const accessToken = await new Promise((resolve, reject) => {
+        chrome.identity.getAuthToken({ interactive: true }, (token) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else if (!token) {
+            reject(new Error("Google sign-in was cancelled. Please try again."));
+          } else {
+            resolve(token);
+          }
+        });
+      });
 
-      console.log("Starting email/password sign-in...");
-
-      // Ensure offscreen document is created
       await this.ensureOffscreenDocument();
 
-      // Sign in via offscreen document
       const result = await chrome.runtime.sendMessage({
-        type: "FIREBASE_SIGN_IN_WITH_EMAIL",
-        email: email,
-        password: password,
+        type: "FIREBASE_SIGN_IN_WITH_CREDENTIAL",
+        accessToken,
       });
 
       if (!result || !result.success) {
-        throw new Error(result?.error || "Email/password sign-in failed");
+        throw new Error(result?.error || "Google sign-in failed");
       }
 
-      console.log("User authenticated:", result.email);
+      console.log("User authenticated with Google:", result.email);
 
-      const firebaseToken = result.firebaseToken;
-
-      // Store Firebase token and user info locally
       await chrome.storage.local.set({
-        [STORAGE_KEYS.FIREBASE_TOKEN]: firebaseToken,
+        [STORAGE_KEYS.FIREBASE_TOKEN]: result.firebaseToken,
         [STORAGE_KEYS.FIREBASE_REFRESH_TIME]: Date.now(),
         [STORAGE_KEYS.USER_ID]: result.userId,
         [STORAGE_KEYS.USER_EMAIL]: result.email,
@@ -155,35 +117,41 @@ export class EmailPasswordProvider extends BaseAuthProvider {
         email: result.email,
         displayName: result.displayName,
         photoURL: result.photoURL,
-        firebaseToken: firebaseToken,
+        firebaseToken: result.firebaseToken,
       };
     } catch (error) {
-      console.error("Email/password sign-in error:", error);
-      throw new Error(error.message || "Email/password sign-in failed");
+      console.error("Google sign-in error:", error);
+      const message = this._userFacingError(error.message);
+      throw new Error(message);
     }
   }
 
-  /**
-   * Sign out from email/password and clear all stored data
-   * @returns {Promise<void>}
-   */
+  _userFacingError(message) {
+    if (!message) return "Google sign-in failed";
+    if (
+      message.includes("OAuth2 not granted or revoked") ||
+      message.includes("did not approve access") ||
+      message.includes("cancelled")
+    ) {
+      return "Google sign-in was cancelled. Please try again.";
+    }
+    if (message.includes("Network") || message.includes("network")) {
+      return "Network error. Please check your internet connection.";
+    }
+    return message || "Google sign-in failed";
+  }
+
   async signOut() {
     try {
-      console.log("Signing out from email/password...");
+      console.log("Signing out from Google...");
 
-      // Sign out from Firebase via offscreen document (if it exists)
-      // This is best-effort - if it fails, we still clear local data
       try {
-        // Check if offscreen document exists before trying to create it
         const existingContexts = await chrome.runtime.getContexts({
           contextTypes: ["OFFSCREEN_DOCUMENT"],
           documentUrls: [chrome.runtime.getURL("offscreen/auth-offscreen.html")],
         });
 
         if (existingContexts.length > 0) {
-          console.log("Offscreen document exists, sending sign-out message");
-
-          // Send sign-out message with proper error handling and timeout
           const result = await Promise.race([
             new Promise((resolve) => {
               chrome.runtime.sendMessage({ type: "FIREBASE_SIGN_OUT" }, (response) => {
@@ -195,7 +163,6 @@ export class EmailPasswordProvider extends BaseAuthProvider {
                 }
               });
             }),
-            // Timeout after 2 seconds
             new Promise((resolve) => setTimeout(() => resolve(null), 2000)),
           ]);
 
@@ -205,17 +172,16 @@ export class EmailPasswordProvider extends BaseAuthProvider {
             console.log("Firebase signout: no response or timed out");
           }
 
-          // Close offscreen document after sign out
           await this.closeOffscreenDocument();
         } else {
           console.log("No offscreen document to sign out from, skipping Firebase signout");
         }
       } catch (error) {
-        // Offscreen document operations failed - this is non-critical
         console.log("Firebase signout skipped due to error:", error.message);
       }
 
-      // Clear all stored authentication data - this is the critical part
+      await new Promise((resolve) => chrome.identity.clearAllCachedAuthTokens(resolve));
+
       await chrome.storage.local.remove([
         STORAGE_KEYS.FIREBASE_TOKEN,
         STORAGE_KEYS.FIREBASE_REFRESH_TIME,
@@ -226,10 +192,9 @@ export class EmailPasswordProvider extends BaseAuthProvider {
         "currentAuthProvider",
       ]);
 
-      console.log("Signed out successfully, all local data cleared");
+      console.log("Signed out from Google successfully, all local data cleared");
     } catch (error) {
-      logError("Email/password sign out error", error);
-      // Even if sign out fails, try to clear data
+      logError("Google sign out error", error);
       try {
         await chrome.storage.local.remove([
           STORAGE_KEYS.FIREBASE_TOKEN,
@@ -248,26 +213,12 @@ export class EmailPasswordProvider extends BaseAuthProvider {
     }
   }
 
-  /**
-   * Get current Firebase user
-   * @returns {Promise<Object|null>} Current user object or null
-   */
   async getCurrentUser() {
     return auth.currentUser;
   }
 
-  /**
-   * Get Firebase ID token for current user
-   * Token is automatically refreshed if older than 50 minutes
-   * If token refresh fails, auth data is cleared
-   *
-   * @param {boolean} [forceRefresh=false] - Force token refresh even if cached token is valid
-   * @returns {Promise<string>} Firebase ID token
-   * @throws {Error} If user is not authenticated
-   */
   async getIdToken(forceRefresh = false) {
     try {
-      // Get stored token and refresh time from storage
       const storage = await chrome.storage.local.get([
         STORAGE_KEYS.FIREBASE_TOKEN,
         STORAGE_KEYS.FIREBASE_REFRESH_TIME,
@@ -277,21 +228,18 @@ export class EmailPasswordProvider extends BaseAuthProvider {
       const storedToken = storage[STORAGE_KEYS.FIREBASE_TOKEN];
       const userId = storage[STORAGE_KEYS.USER_ID];
 
-      // Check if user is authenticated
       if (!userId || !storedToken) {
         throw new Error("Not authenticated");
       }
 
-      // Check if token needs refresh (older than 50 minutes)
       const lastRefresh = storage[STORAGE_KEYS.FIREBASE_REFRESH_TIME] || 0;
       const age = Date.now() - lastRefresh;
-      const needsRefresh = forceRefresh || age > 50 * 60 * 1000; // 50 minutes
+      const needsRefresh = forceRefresh || age > 50 * 60 * 1000;
 
       if (needsRefresh) {
         console.log("Firebase ID token needs refresh, requesting new token...");
 
         try {
-          // Request token refresh from offscreen document
           await this.ensureOffscreenDocument();
 
           const result = await chrome.runtime.sendMessage({
@@ -302,7 +250,6 @@ export class EmailPasswordProvider extends BaseAuthProvider {
             throw new Error(result?.error || "Failed to refresh token");
           }
 
-          // Update stored token
           await chrome.storage.local.set({
             [STORAGE_KEYS.FIREBASE_TOKEN]: result.token,
             [STORAGE_KEYS.FIREBASE_REFRESH_TIME]: Date.now(),
@@ -311,10 +258,8 @@ export class EmailPasswordProvider extends BaseAuthProvider {
           console.log("Firebase ID token refreshed successfully");
           return result.token;
         } catch (refreshError) {
-          // Token refresh failed - token is likely expired or invalid
           console.error("Token refresh failed, clearing auth data:", refreshError);
 
-          // Clear all auth data since token is no longer valid
           await chrome.storage.local.remove([
             STORAGE_KEYS.FIREBASE_TOKEN,
             STORAGE_KEYS.FIREBASE_REFRESH_TIME,
@@ -329,7 +274,6 @@ export class EmailPasswordProvider extends BaseAuthProvider {
         }
       }
 
-      // Return cached token
       return storedToken;
     } catch (error) {
       logError("Failed to get ID token", error);
@@ -337,21 +281,13 @@ export class EmailPasswordProvider extends BaseAuthProvider {
     }
   }
 
-  /**
-   * Listen to Firebase authentication state changes
-   * Automatically updates stored user data when auth state changes
-   *
-   * @param {Function} callback - Called with user object when auth state changes
-   * @returns {Function} Unsubscribe function to stop listening
-   */
   onAuthStateChanged(callback) {
-    console.log("Setting up auth state listener for Email/Password provider");
+    console.log("Setting up auth state listener for Google provider");
 
     return firebaseOnAuthStateChanged(auth, async (user) => {
       if (user) {
         console.log("Auth state: User signed in", user.email);
 
-        // Update stored user data
         await chrome.storage.local.set({
           [STORAGE_KEYS.USER_ID]: user.uid,
           [STORAGE_KEYS.USER_EMAIL]: user.email,
@@ -361,7 +297,6 @@ export class EmailPasswordProvider extends BaseAuthProvider {
       } else {
         console.log("Auth state: User signed out");
 
-        // Clear stored user data
         await chrome.storage.local.remove([
           STORAGE_KEYS.FIREBASE_TOKEN,
           STORAGE_KEYS.FIREBASE_REFRESH_TIME,
@@ -373,7 +308,6 @@ export class EmailPasswordProvider extends BaseAuthProvider {
         ]);
       }
 
-      // Call the provided callback
       callback(user);
     });
   }
