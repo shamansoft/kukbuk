@@ -131,21 +131,21 @@ toolbar for a one-click action.
   Post-Completion) — lint must pass before next task
 
 ### Task 3: Redesign the in-page bubble (single feedback surface)
-- [ ] restyle `showLightBubble` in `content/content.js`: light card
+- [x] restyle `showLightBubble` in `content/content.js`: light card
   (`--surface` + `1px --line` + `--radius` + `--shadow-pop`), colored **dot**
   (not full saturated background) for loading(spinner)/ok/error, calm palette
   (drop `#2196f3/#4caf50/#f44336`)
-- [ ] extend the bubble API to support an inline **link** (`{url, label}`, e.g.
+- [x] extend the bubble API to support an inline **link** (`{url, label}`, e.g.
   "Open ↗") rendered as `<a target="_blank">`, and an explicit **dismiss**
   (close button + click-to-dismiss)
-- [ ] enforce single-instance with in-place **state swap** (cross-fade
+- [x] enforce single-instance with in-place **state swap** (cross-fade
   icon+text) instead of remove+add; loading has no auto-dismiss; success
   auto-dismisses (~4s); error persists until dismissed
-- [ ] keep `pointer-events: none` on container / `auto` on bubble, `position: fixed`
-- [ ] add `content/content.test.js`: bubble renders, single-instance (second call
+- [x] keep `pointer-events: none` on container / `auto` on bubble, `position: fixed`
+- [x] add `content/content.test.js`: bubble renders, single-instance (second call
   replaces first), state transition loading→ok / loading→error, link rendered on
   success, dismiss removes it (success + error cases)
-- [ ] run `npm run lint` + `npm run test` — must pass before next task
+- [x] run `npm run lint` + `npm run test` — must pass before next task
 
 ### Task 4: Windowless save orchestration (background)
 - [ ] add `chrome.action.onClicked` listener in `background/background.js`:

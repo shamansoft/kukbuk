@@ -35,10 +35,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const {
         text = "Saving...",
         variant = "info",
-        duration = 5000,
+        duration = 0,
+        link,
+        dismissible,
         closePrevious = true,
       } = message.data || {};
-      showLightBubble({ text, variant, duration, closePrevious });
+      showLightBubble({ text, variant, duration, link, dismissible, closePrevious });
       sendResponse({ success: true });
       return false;
     }
@@ -115,7 +117,7 @@ function performBasicCleanup() {
   }
 }
 
-// Light bubble UI - small status pills near the top-right (under extensions bar)
+// Light bubble UI - small status card near the top-right (under extensions bar)
 function ensureLightBubbleStyles() {
   if (document.getElementById("kukbuk-light-bubble-styles")) return;
   const style = document.createElement("style");
@@ -123,30 +125,35 @@ function ensureLightBubbleStyles() {
   style.textContent = `
     #kukbuk-light-bubble-container {
       position: fixed;
-      top: 10px;
-      right: 10px;
+      top: 12px;
+      right: 12px;
       z-index: 2147483647;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
       pointer-events: none;
     }
     .kukbuk-light-bubble {
       pointer-events: auto;
-      color: #fff;
-      background: #2196f3;
-      border-radius: 9999px;
-      padding: 6px 12px;
+      background: #fafaf9;
+      border: 1px solid #d4d0ca;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: system-ui, -apple-system, sans-serif;
       font-size: 13px;
-      line-height: 1;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      line-height: 1.4;
+      color: #1c1917;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 180px;
+      max-width: 320px;
       opacity: 0;
-      transform: translateY(-10px);
-      transition: opacity 0.2s ease, transform 0.2s ease;
-      white-space: nowrap;
-      max-width: 60vw;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      transform: translateY(-4px);
+      transition: opacity 0.12s ease, transform 0.12s ease;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .kukbuk-light-bubble {
+        transition: none;
+      }
     }
     .kukbuk-light-bubble.show {
       opacity: 1;
@@ -154,22 +161,71 @@ function ensureLightBubbleStyles() {
     }
     .kukbuk-light-bubble.hide {
       opacity: 0;
-      transform: translateY(-10px);
+      transform: translateY(-4px);
     }
-    .kukbuk-light-bubble.info {
-      background: #2196f3;
+    .kukbuk-bubble-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
-    .kukbuk-light-bubble.success {
-      background: #4caf50;
+    .kukbuk-bubble-dot.loading {
+      background: #3b82f6;
+      animation: kukbuk-pulse 1s ease-in-out infinite;
     }
-    .kukbuk-light-bubble.error {
-      background: #f44336;
+    @media (prefers-reduced-motion: reduce) {
+      .kukbuk-bubble-dot.loading {
+        animation: none;
+      }
     }
-    .kukbuk-light-bubble.timeout {
-      background: #ff9800;
+    @keyframes kukbuk-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
-    .kukbuk-light-bubble.loading {
-      background: #2196f3;
+    .kukbuk-bubble-dot.success {
+      background: #16a34a;
+    }
+    .kukbuk-bubble-dot.error {
+      background: #dc2626;
+    }
+    .kukbuk-bubble-dot.info {
+      background: #3b82f6;
+    }
+    .kukbuk-bubble-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .kukbuk-bubble-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .kukbuk-bubble-link {
+      display: block;
+      color: #2563eb;
+      text-decoration: none;
+      font-size: 12px;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .kukbuk-bubble-link:hover {
+      text-decoration: underline;
+    }
+    .kukbuk-bubble-dismiss {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      color: #78716c;
+      font-size: 14px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+    .kukbuk-bubble-dismiss:hover {
+      opacity: 1;
     }
   `;
   document.head.appendChild(style);
@@ -184,75 +240,165 @@ function ensureLightBubbleContainer() {
   return container;
 }
 
-// Store reference to current bubble for cleanup
+// Single bubble instance — state is swapped in-place
 let currentBubble = null;
 let currentBubbleTimeout = null;
 
 /**
- * Show a lightweight bubble near the extensions area
+ * Show (or update) the single in-page status bubble.
  * @param {Object} opts
  * @param {string} opts.text - Bubble text
- * @param {"info"|"success"|"error"|"timeout"|"loading"} [opts.variant="info"] - Bubble style
- * @param {number} [opts.duration] - How long to show (ms). 0 or null means don't auto-close
- * @param {boolean} [opts.closePrevious=true] - Whether to close previous bubble
+ * @param {"loading"|"success"|"error"|"info"} [opts.variant="info"] - Visual state
+ * @param {number} [opts.duration] - Auto-dismiss ms. 0/omitted = persist.
+ * @param {{url: string, label: string}} [opts.link] - Optional inline link
+ * @param {boolean} [opts.dismissible] - Show close button (always true for error)
+ * @param {boolean} [opts.closePrevious=true] - Replace existing bubble
  */
-function showLightBubble({ text, variant = "info", duration = 5000, closePrevious = true }) {
+function showLightBubble({
+  text,
+  variant = "info",
+  duration = 0,
+  link,
+  dismissible,
+  closePrevious = true,
+}) {
   try {
-    // Close previous bubble if requested
-    if (closePrevious && currentBubble) {
-      closeBubble(currentBubble);
-      if (currentBubbleTimeout) {
-        clearTimeout(currentBubbleTimeout);
-        currentBubbleTimeout = null;
-      }
+    // Clear any pending auto-dismiss
+    if (currentBubbleTimeout) {
+      clearTimeout(currentBubbleTimeout);
+      currentBubbleTimeout = null;
     }
 
     ensureLightBubbleStyles();
     const container = ensureLightBubbleContainer();
-    const bubble = document.createElement("div");
-    bubble.className = `kukbuk-light-bubble ${variant}`;
-    bubble.textContent = text || "";
-    container.appendChild(bubble);
 
-    // Store reference to current bubble
-    currentBubble = bubble;
+    const showDismiss = dismissible || variant === "error";
 
-    // show with animation
-    window.requestAnimationFrame(() => bubble.classList.add("show"));
-
-    // auto hide only if duration is specified and > 0
-    if (duration && duration > 0) {
-      const delay = Math.max(0, duration);
-      currentBubbleTimeout = window.setTimeout(() => {
-        closeBubble(bubble);
-      }, delay);
+    if (currentBubble && closePrevious) {
+      // Update existing bubble in place (state swap cross-fade)
+      _updateBubbleContent(currentBubble, { text, variant, link, showDismiss });
+    } else {
+      // Create a new bubble element
+      if (currentBubble) {
+        _removeBubble(currentBubble);
+      }
+      const bubble = _createBubble({ text, variant, link, showDismiss });
+      container.appendChild(bubble);
+      currentBubble = bubble;
+      window.requestAnimationFrame(() => bubble.classList.add("show"));
     }
 
-    return bubble;
+    // Auto-dismiss for success (duration > 0)
+    if (duration && duration > 0) {
+      currentBubbleTimeout = window.setTimeout(() => {
+        dismissBubble();
+      }, duration);
+    }
+
+    return currentBubble;
   } catch (_e) {
-    // error suppressed
     return null;
   }
 }
 
-/**
- * Close a specific bubble
- * @param {HTMLElement} bubble - The bubble element to close
- */
-function closeBubble(bubble) {
-  if (!bubble || !bubble.parentNode) return;
+function _createBubble({ text, variant, link, showDismiss }) {
+  const bubble = document.createElement("div");
+  bubble.className = "kukbuk-light-bubble";
 
+  const dot = document.createElement("span");
+  dot.className = `kukbuk-bubble-dot ${variant}`;
+  bubble.appendChild(dot);
+
+  const body = document.createElement("span");
+  body.className = "kukbuk-bubble-body";
+
+  const textEl = document.createElement("span");
+  textEl.className = "kukbuk-bubble-text";
+  textEl.textContent = text || "";
+  body.appendChild(textEl);
+
+  if (link && link.url && link.label) {
+    const linkEl = document.createElement("a");
+    linkEl.className = "kukbuk-bubble-link";
+    linkEl.href = link.url;
+    linkEl.target = "_blank";
+    linkEl.rel = "noopener noreferrer";
+    linkEl.textContent = link.label;
+    body.appendChild(linkEl);
+  }
+
+  bubble.appendChild(body);
+
+  if (showDismiss) {
+    const btn = document.createElement("button");
+    btn.className = "kukbuk-bubble-dismiss";
+    btn.setAttribute("aria-label", "Dismiss");
+    btn.textContent = "×";
+    btn.addEventListener("click", () => dismissBubble());
+    bubble.appendChild(btn);
+  }
+
+  return bubble;
+}
+
+function _updateBubbleContent(bubble, { text, variant, link, showDismiss }) {
+  // Swap dot class
+  const dot = bubble.querySelector(".kukbuk-bubble-dot");
+  if (dot) dot.className = `kukbuk-bubble-dot ${variant}`;
+
+  // Swap text
+  const textEl = bubble.querySelector(".kukbuk-bubble-text");
+  if (textEl) textEl.textContent = text || "";
+
+  // Swap link
+  const existingLink = bubble.querySelector(".kukbuk-bubble-link");
+  if (existingLink) existingLink.remove();
+  if (link && link.url && link.label) {
+    const body = bubble.querySelector(".kukbuk-bubble-body");
+    if (body) {
+      const linkEl = document.createElement("a");
+      linkEl.className = "kukbuk-bubble-link";
+      linkEl.href = link.url;
+      linkEl.target = "_blank";
+      linkEl.rel = "noopener noreferrer";
+      linkEl.textContent = link.label;
+      body.appendChild(linkEl);
+    }
+  }
+
+  // Swap dismiss button
+  const existingDismiss = bubble.querySelector(".kukbuk-bubble-dismiss");
+  if (showDismiss && !existingDismiss) {
+    const btn = document.createElement("button");
+    btn.className = "kukbuk-bubble-dismiss";
+    btn.setAttribute("aria-label", "Dismiss");
+    btn.textContent = "×";
+    btn.addEventListener("click", () => dismissBubble());
+    bubble.appendChild(btn);
+  } else if (!showDismiss && existingDismiss) {
+    existingDismiss.remove();
+  }
+}
+
+function _removeBubble(bubble) {
+  if (!bubble || !bubble.parentNode) return;
   bubble.classList.add("hide");
   window.setTimeout(() => {
     bubble.remove();
-    if (currentBubble === bubble) {
-      currentBubble = null;
-    }
+    if (currentBubble === bubble) currentBubble = null;
     const container = document.getElementById("kukbuk-light-bubble-container");
-    if (container && container.childElementCount === 0) {
-      container.remove();
-    }
-  }, 250);
+    if (container && container.childElementCount === 0) container.remove();
+  }, 150);
+}
+
+function dismissBubble() {
+  if (!currentBubble) return;
+  if (currentBubbleTimeout) {
+    clearTimeout(currentBubbleTimeout);
+    currentBubbleTimeout = null;
+  }
+  _removeBubble(currentBubble);
+  currentBubble = null;
 }
 
 // Initialize content script
