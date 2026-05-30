@@ -117,17 +117,17 @@ toolbar for a one-click action.
 - [x] run `npm run lint` + `npm run test` — must pass before next task
 
 ### Task 2: Apply tokens, kill motion, de-gradient/de-pill (global)
-- [ ] in `popup.css` + `options.css` + `recipe-creator.css`: remove all gradient
+- [x] in `popup.css` + `options.css` + `recipe-creator.css`: remove all gradient
   fills (body, buttons, toggles, icons) in favor of flat `--accent`/`--surface`
-- [ ] replace pill radius (`--radius-full`) on buttons/inputs/cards with
+- [x] replace pill radius (`--radius-full`) on buttons/inputs/cards with
   `--radius` (8px); keep round only for avatar/status dot
-- [ ] remove decorative motion: `float` blobs, `subtlePulse`, `successBounce`,
+- [x] remove decorative motion: `float` blobs, `subtlePulse`, `successBounce`,
   `errorShake`, per-child entrance stagger, header underline `slideIn`/`::after`,
   hover-lift `translateY`, button ripple `::before`
-- [ ] replace colored shadows with `1px var(--line)` borders; reserve
+- [x] replace colored shadows with `1px var(--line)` borders; reserve
   `--shadow-pop` for the bubble only
-- [ ] reduce entrances to a single quiet fade (≤120ms, ≤4px rise)
-- [ ] run `npm run lint`; manual visual check of popup/options/creator (note in
+- [x] reduce entrances to a single quiet fade (≤120ms, ≤4px rise)
+- [x] run `npm run lint`; manual visual check of popup/options/creator (note in
   Post-Completion) — lint must pass before next task
 
 ### Task 3: Redesign the in-page bubble (single feedback surface)

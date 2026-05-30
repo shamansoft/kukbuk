@@ -1,6 +1,11 @@
+/* recipe-creator.css — migrated to shared design tokens (Task 2) */
+
 body {
   width: 440px;
   min-height: 300px;
+  font-family: var(--font);
+  background: var(--paper);
+  color: var(--ink);
 }
 
 #description-form {
@@ -10,29 +15,27 @@ body {
 }
 
 #description-input {
-  padding: 14px 18px;
-  border: 2px solid rgba(138, 154, 121, 0.2);
-  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  font: var(--t-body);
   font-size: 15px;
-  font-family: var(--font-body);
-  background: rgba(255, 255, 255, 0.8);
-  color: var(--color-charcoal);
+  background: var(--surface);
+  color: var(--ink);
   resize: vertical;
   min-height: 110px;
-  transition: all var(--transition-base);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   line-height: 1.6;
 }
 
 #description-input:focus {
   outline: none;
-  border-color: var(--color-terracotta);
-  background: white;
-  box-shadow: 0 0 0 4px rgba(212, 114, 77, 0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-wash);
 }
 
 #description-input::placeholder {
-  color: var(--color-charcoal-light);
-  opacity: 0.6;
+  color: var(--ink-faint);
 }
 
 #result-section {
@@ -46,14 +49,18 @@ body {
   flex-direction: column;
   align-items: center;
   gap: var(--space-md);
-  animation: fadeInScale 0.4s ease-out;
+  animation: resultIn var(--dur) var(--ease) both;
+}
+
+@keyframes resultIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .result-text {
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--color-charcoal);
+  font: var(--t-body);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
   text-align: center;
-  letter-spacing: -0.3px;
 }
