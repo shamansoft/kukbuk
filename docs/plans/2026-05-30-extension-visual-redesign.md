@@ -246,11 +246,11 @@ toolbar for a one-click action.
 - [x] build check: `npm run build:local` succeeds
 
 ### Task 11: Update documentation
-- [ ] update `CLAUDE.md` (remove `notifications` permission mention; note the
+- [x] update `CLAUDE.md` (remove `notifications` permission mention; note the
   windowless-save/`setPopup` behavior, single-bubble feedback, theme.css location,
   Hanken Grotesk)
-- [ ] update `README.MD` if it references notifications/popup behavior
-- [ ] note the shared `common/theme.css` token system for future pages
+- [x] update `README.MD` if it references notifications/popup behavior
+- [x] note the shared `common/theme.css` token system for future pages
 
 *Note: ralphex automatically moves completed plans to `docs/plans/completed/`*
 

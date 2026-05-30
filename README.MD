@@ -80,11 +80,13 @@ This will launch Chrome with a dedicated profile and the extension pre-loaded.
 ```
 mykukbuk-extension/
 ├── background/         # Background service worker scripts
+├── common/             # Shared assets: theme.css design tokens, fonts/
 ├── content/            # Content scripts for webpage interaction
 ├── docs/               # Documentation files
 ├── icons/              # Extension icons
-├── popup/              # Extension popup UI
+├── popup/              # Login popup UI
 ├── options/            # Extension options page
+├── recipe-creator/     # Standalone recipe-from-description window
 ├── scripts/            # Build and utility scripts
 └── templates/          # Template files for build process
 ```
@@ -98,6 +100,14 @@ This extension requires the following permissions:
 - `contextMenus` - For right-click menu functionality
 - `scripting` - For executing scripts on web pages
 - `tabs` - For tab management
+
+## Save Behavior
+
+When signed in, clicking the toolbar icon saves the current page directly — no popup window appears. Visual feedback is shown via an in-page bubble (loading → saved/error). The popup only appears when signed out (for login).
+
+## Design System
+
+Shared visual tokens live in `common/theme.css` (warm-neutral palette, 8px radius, Hanken Grotesk font). All extension pages link this stylesheet before their page-specific CSS.
 
 ## Authentication
 
