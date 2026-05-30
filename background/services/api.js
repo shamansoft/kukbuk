@@ -181,7 +181,7 @@ async function saveCustomRecipe({ description, title }) {
  * @param {Object} recipeData - Recipe data from content script
  * @returns {Promise<Object>} Save result
  */
-async function saveRecipe(recipeData) {
+export async function saveRecipe(recipeData) {
   if (!recipeData || !recipeData.pageContent) {
     throw new Error("Invalid recipe data");
   }

@@ -148,26 +148,26 @@ toolbar for a one-click action.
 - [x] run `npm run lint` + `npm run test` — must pass before next task
 
 ### Task 4: Windowless save orchestration (background)
-- [ ] add `chrome.action.onClicked` listener in `background/background.js`:
+- [x] add `chrome.action.onClicked` listener in `background/background.js`:
   immediately send `SHOW_BUBBLE` "Saving recipe…" (loading) to the active tab,
   then run extract→save reusing the existing flow, then send `SHOW_BUBBLE`
   success (with `driveUrl` link) or error/"not a recipe"
-- [ ] add `setPopup` logic: `setPopup("")` when authenticated (click →
+- [x] add `setPopup` logic: `setPopup("")` when authenticated (click →
   `onClicked`), `setPopup("popup/popup.html")` when logged out; apply on
   `initBackground` (after auth check), after sign-in success, and after logout
-- [ ] reuse content-script readiness (PING + `scripting.executeScript` fallback);
+- [x] reuse content-script readiness (PING + `scripting.executeScript` fallback);
   on tabs with no content script (`chrome://`, New Tab, PDF) skip the bubble
   silently (no error surfaced)
-- [ ] add a **double-click guard** (ignore a click while a save for that tab is
+- [x] add a **double-click guard** (ignore a click while a save for that tab is
   in flight) and a **~90s timeout** that resolves a hung request to an error
   bubble
-- [ ] on resolution, attempt to message the originating tab and **swallow failure
+- [x] on resolution, attempt to message the originating tab and **swallow failure
   silently** if the tab is gone (case c — no tracking, no retry)
-- [ ] add tests in `background/background.test.js`: `onClicked` sends loading
+- [x] add tests in `background/background.test.js`: `onClicked` sends loading
   then success/error bubble (mock `chrome.action`, `chrome.tabs`, `chrome.scripting`);
   `setPopup` set correctly per auth state; double-click guard prevents a second
   in-flight save; timeout produces an error bubble
-- [ ] run `npm run lint` + `npm run test` — must pass before next task
+- [x] run `npm run lint` + `npm run test` — must pass before next task
 
 ### Task 5: Strip popup to login-only
 - [ ] `popup/popup.html`: remove `#minimal-status-section`, `#success-section`,
