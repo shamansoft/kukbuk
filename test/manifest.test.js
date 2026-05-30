@@ -18,6 +18,10 @@ describe("manifest.json", () => {
     expect(manifest.permissions).toContain("identity");
   });
 
+  it("does not include notifications permission (OS notifications removed)", () => {
+    expect(manifest.permissions).not.toContain("notifications");
+  });
+
   it("has oauth2 block with client_id and required scopes", () => {
     expect(manifest.oauth2).toBeDefined();
     expect(manifest.oauth2.client_id).toMatch(/\.apps\.googleusercontent\.com$/);

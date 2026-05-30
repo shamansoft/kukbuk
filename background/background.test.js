@@ -17,10 +17,7 @@ jest.mock("./services/api.js", () => ({
   setupApi: jest.fn(),
   saveRecipe: jest.fn(),
 }));
-jest.mock("./services/notifications.js", () => ({
-  setupNotifications: jest.fn(),
-  createNotification: jest.fn(),
-}));
+jest.mock("./services/notifications.js", () => ({}));
 jest.mock("../common/error-handler.js", () => ({
   logError: jest.fn(),
 }));
@@ -142,30 +139,18 @@ describe("Background Script", () => {
 
   test("should handle context menu click for logout successfully", async () => {
     const { authManager } = require("./services/auth/auth-manager.js");
-    const { createNotification } = require("./services/notifications.js");
 
-    // Load the background script
     jest.isolateModules(() => {
       require("./background.js");
     });
 
-    // Grab the onClicked callback from the chrome.contextMenus mock
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
-
-    // Simulate a click event for "kukbuk-logout"
     await onClickedCallback({ menuItemId: "kukbuk-logout" }, {});
 
-    // Wait for async operations
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // Check that signOut was called
     expect(authManager.signOut).toHaveBeenCalled();
-
-    // Check that success notification was shown
-    expect(createNotification).toHaveBeenCalledWith({
-      title: "Logged Out",
-      message: "You have been successfully logged out",
-    });
+    // No OS notification on logout — removed in Task 6
   });
 
   test("should handle context menu click for create recipe from description", () => {
@@ -188,33 +173,20 @@ describe("Background Script", () => {
 
   test("should handle context menu logout failure", async () => {
     const { authManager } = require("./services/auth/auth-manager.js");
-    const { createNotification } = require("./services/notifications.js");
     const { logError } = require("../common/error-handler.js");
 
-    // Mock signOut to fail
     authManager.signOut.mockRejectedValueOnce(new Error("Logout failed"));
 
-    // Load the background script
     jest.isolateModules(() => {
       require("./background.js");
     });
 
-    // Grab the onClicked callback from the chrome.contextMenus mock
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
-
-    // Simulate a click event for "kukbuk-logout"
     await onClickedCallback({ menuItemId: "kukbuk-logout" }, {});
 
-    // Wait for async operations
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // Check that error notification was shown
-    expect(createNotification).toHaveBeenCalledWith({
-      title: "Logout Failed",
-      message: "Logout failed",
-    });
-
-    // Check that error was logged
+    // No OS notification on failure — removed in Task 6
     expect(logError).toHaveBeenCalled();
   });
 

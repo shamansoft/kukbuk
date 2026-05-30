@@ -185,20 +185,20 @@ toolbar for a one-click action.
 - [x] run `npm run lint` + `npm run test` — must pass before next task
 
 ### Task 6: Remove OS notifications
-- [ ] remove `notify.recipeSaved(...)` calls from `background/services/api.js`
+- [x] remove `notify.recipeSaved(...)` calls from `background/services/api.js`
   (the bubble now owns save feedback)
-- [ ] remove save/auth notification helpers from
+- [x] remove save/auth notification helpers from
   `background/services/notifications.js`; keep only what's genuinely tab-less if
   needed (else delete the service and its `setupNotifications()` wiring in
   `background.js`)
-- [ ] remove the `"notifications"` permission from `manifest.json`
-- [ ] remove notification preference plumbing tied to the deleted feature
+- [x] remove the `"notifications"` permission from `manifest.json`
+- [x] remove notification preference plumbing tied to the deleted feature
   (`GET/UPDATE_NOTIFICATION_PREFERENCES`) if no longer referenced
-- [ ] update `background/services/notifications.test.js` and
+- [x] update `background/services/notifications.test.js` and
   `background/services/api.test.js` to reflect removal (delete obsolete cases,
   assert `notify.recipeSaved` is no longer called); update `test/manifest.test.js`
   to assert `notifications` permission is absent
-- [ ] run `npm run lint` + `npm run test` — must pass before next task
+- [x] run `npm run lint` + `npm run test` — must pass before next task
 
 ### Task 7: Restyle login popup (§4.2)
 - [ ] `popup.css`/`popup.html`: left-aligned layout, small mark + sans wordmark,

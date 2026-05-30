@@ -2,7 +2,6 @@
 import { setupAuth, authManager } from "./services/auth/auth-manager.js";
 import { setupTransformation } from "./services/transformation.js";
 import { setupApi, saveRecipe } from "./services/api.js";
-import { setupNotifications, createNotification } from "./services/notifications.js";
 import { logError } from "../common/error-handler.js";
 import { MESSAGE_TYPES, STORAGE_KEYS } from "../common/constants.js";
 
@@ -29,7 +28,6 @@ function initBackground() {
     setupAuth();
     setupApi();
     setupTransformation();
-    setupNotifications();
 
     // Setup message listeners
     setupMessageListeners();
@@ -236,21 +234,9 @@ function setupContextMenu() {
         await authManager.signOut();
         console.log("Logout successful");
         applyPopupState();
-
-        // Show success notification
-        createNotification({
-          title: "Logged Out",
-          message: "You have been successfully logged out",
-        });
       } catch (error) {
         console.error("Logout failed:", error.message);
         logError("Context menu logout error", error);
-
-        // Show error notification
-        createNotification({
-          title: "Logout Failed",
-          message: error.message || "Failed to log out",
-        });
       }
     }
   });
@@ -263,12 +249,8 @@ function setupMessageListeners() {
 
     // Handle only messages not handled by specific services
     switch (message.type) {
-      case MESSAGE_TYPES.NOTIFY_BACKGROUND_OPERATION:
-        // This will be handled by the notifications service
-        break;
       default:
         // Do nothing - the message should be handled by a specific service
-        // If no handler responds, Chrome will show a warning in the console
         break;
     }
 

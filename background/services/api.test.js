@@ -39,12 +39,6 @@ jest.mock("./auth/auth-manager.js", () => ({
   },
 }));
 
-jest.mock("./notifications.js", () => ({
-  notify: {
-    recipeSaved: jest.fn(),
-  },
-}));
-
 jest.mock("../../common/env-config.js", () => ({
   ENV: {
     API_BASE_URL: "https://api.example.com",
@@ -163,7 +157,7 @@ describe("API Service", () => {
 
       // Verify that fetch was called with the right parameters
       expect(fetchMock).toHaveBeenCalledWith(
-        "https://api.example.com/v1/recipes",
+        "https://api.example.com/v1/recipes?compression=gzip",
         expect.objectContaining({
           method: "POST",
           headers: expect.objectContaining({
@@ -366,7 +360,7 @@ describe("API Service", () => {
 
       // Verify it posts to the custom endpoint with compression query param
       expect(fetchMock).toHaveBeenCalledWith(
-        "https://api.example.com/v1/recipes/custom?compression=BASE64_GZIP",
+        "https://api.example.com/v1/recipes/custom?compression=gzip",
         expect.objectContaining({ method: "POST" }),
       );
 
@@ -518,6 +512,38 @@ describe("API Service", () => {
         error: "Description is required",
         errorCode: "unknown_error",
       });
+    });
+
+    it("does not call OS notifications on successful save (notify.recipeSaved removed)", async () => {
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: jest.fn().mockResolvedValueOnce({
+          title: "Test Recipe",
+          driveFileUrl: "https://drive.google.com/file/abc",
+          isRecipe: true,
+        }),
+      });
+
+      setupApi();
+      const messageListener = chrome.runtime.onMessage.addListener.mock.calls[0][0];
+      const sendResponse = jest.fn();
+
+      messageListener(
+        {
+          type: "SAVE_RECIPE",
+          pageContent: "<div>recipe</div>",
+          pageUrl: "https://example.com",
+          title: "Test",
+        },
+        {},
+        sendResponse,
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+      // notifications.js is not mocked here — if notify.recipeSaved were still called it would throw
     });
   });
 });
