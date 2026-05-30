@@ -235,15 +235,15 @@ toolbar for a one-click action.
 - [x] run `npm run lint` + `npm run test`; manual visual check — must pass before next task
 
 ### Task 10: Verify acceptance criteria & remove token aliases
-- [ ] remove the legacy token aliases added in Task 1 (all screens migrated)
-- [ ] verify all Overview goals implemented: single bubble feedback, windowless
+- [x] remove the legacy token aliases added in Task 1 (all screens migrated)
+- [x] verify all Overview goals implemented: single bubble feedback, windowless
   save, OS notifications gone, login/settings/creator restyled, serif retired
-- [ ] verify behavioral cases from the design doc: (a) waits → sees result,
+- [x] verify behavioral cases from the design doc: (a) waits → sees result,
   (b) keeps using page → bubble non-blocking & dismissible, (c) leaves → no
   errors, nothing tracked
-- [ ] run full `npm run test` (coverage ≥ project standard) and `npm run lint`
+- [x] run full `npm run test` (coverage ≥ project standard) and `npm run lint`
   (zero issues)
-- [ ] build check: `npm run build:local` succeeds
+- [x] build check: `npm run build:local` succeeds
 
 ### Task 11: Update documentation
 - [ ] update `CLAUDE.md` (remove `notifications` permission mention; note the

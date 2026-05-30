@@ -49,47 +49,6 @@
   --t-label: 500 13px/1.4 var(--font);
   --t-meta: 400 12px/1.4 var(--font);
 
-  /* ── Legacy aliases ─────────────────────────────────────────────────────────
-     These map old popup.css / options.css variable names to the new tokens so
-     existing stylesheets keep rendering while individual pages are migrated in
-     Tasks 2-9.  Remove in Task 10 once all pages use the new tokens directly.
-     ──────────────────────────────────────────────────────────────────────── */
-
-  /* Colors */
-  --color-terracotta: var(--accent);
-  --color-terracotta-light: #e89474;
-  --color-terracotta-dark: var(--accent-hover);
-  --color-sage: #8a9a79;
-  --color-sage-light: #a8b899;
-  --color-sage-dark: #6b7960;
-  --color-cream: var(--paper);
-  --color-cream-dark: #f0ede5;
-  --color-charcoal: var(--ink);
-  --color-charcoal-light: var(--ink-soft);
-  --color-success: var(--ok);
-  --color-error: var(--err);
-
-  /* Typography aliases */
-  --font-display: var(--font);
-  --font-body: var(--font);
-
-  /* Radius aliases */
-  --radius-sm: var(--radius);
-  --radius-md: var(--radius);
-  --radius-lg: var(--radius);
-  --radius-xl: var(--radius);
-  --radius-full: 999px;
-
-  /* Shadow aliases */
-  --shadow-sm: 0 2px 8px rgba(44, 44, 44, 0.08);
-  --shadow-md: 0 4px 16px rgba(44, 44, 44, 0.12);
-  --shadow-lg: 0 8px 32px rgba(44, 44, 44, 0.16);
-  --shadow-hover: 0 6px 24px rgba(212, 114, 77, 0.2);
-
-  /* Transition aliases */
-  --transition-fast: 0.15s var(--ease);
-  --transition-base: 0.3s var(--ease);
-  --transition-slow: 0.5s var(--ease);
 }
 
 /* Reduced-motion guard — disables all animations and transitions */
