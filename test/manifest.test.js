@@ -24,3 +24,24 @@ describe("manifest.json", () => {
     expect(manifest.oauth2.scopes).toEqual(["openid", "email", "profile"]);
   });
 });
+
+describe("HTML pages reference common/theme.css", () => {
+  const pages = [
+    ["popup/popup.html", "../popup/popup.html"],
+    ["options/options.html", "../options/options.html"],
+    ["recipe-creator/recipe-creator.html", "../recipe-creator/recipe-creator.html"],
+  ];
+
+  it.each(pages)("%s links common/theme.css before page stylesheet", (label, relPath) => {
+    const html = fs.readFileSync(path.resolve(__dirname, relPath), "utf8");
+    expect(html).toMatch(/href="[^"]*common\/theme\.css"/);
+    // theme.css must appear before the page-specific stylesheet
+    const themeIdx = html.indexOf("common/theme.css");
+    const pageIdx = Math.max(
+      html.indexOf("popup.css"),
+      html.indexOf("options.css"),
+      html.indexOf("recipe-creator.css"),
+    );
+    expect(themeIdx).toBeLessThan(pageIdx);
+  });
+});
