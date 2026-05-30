@@ -212,17 +212,17 @@ toolbar for a one-click action.
 - [x] run `npm run lint` + `npm run test`; manual visual check — must pass before next task
 
 ### Task 8: Restyle settings page & remove Notifications card (§4.5)
-- [ ] `options.html`: remove the entire Notifications `<section>` (toggles); keep
+- [x] `options.html`: remove the entire Notifications `<section>` (toggles); keep
   Account + About only
-- [ ] `options.css`: flat `--paper` background (no blobs), `--surface` + `1px --line`
+- [x] `options.css`: flat `--paper` background (no blobs), `--surface` + `1px --line`
   cards with no hover transform/shadow, container max-width ~620px, `--t-title`
   headings with a single hairline rule (drop animated underline + `::after`),
   delete now-unused toggle-switch CSS
-- [ ] `options.js`: remove notification-preference load/save handlers tied to the
+- [x] `options.js`: remove notification-preference load/save handlers tied to the
   removed card
-- [ ] update any options test/string assertions (Notifications section absent,
+- [x] update any options test/string assertions (Notifications section absent,
   Account/About present)
-- [ ] run `npm run lint` + `npm run test`; manual visual check — must pass before next task
+- [x] run `npm run lint` + `npm run test`; manual visual check — must pass before next task
 
 ### Task 9: Restyle recipe-creator window (§4.6)
 - [ ] `recipe-creator.css`/`.html`: flat 8px accent "Create recipe" button, 8px

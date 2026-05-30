@@ -29,6 +29,30 @@ describe("manifest.json", () => {
   });
 });
 
+describe("options.html structure", () => {
+  let optionsHtml;
+
+  beforeAll(() => {
+    optionsHtml = fs.readFileSync(path.resolve(__dirname, "../options/options.html"), "utf8");
+  });
+
+  it("contains account section", () => {
+    expect(optionsHtml).toMatch(/id="account-section"/);
+  });
+
+  it("contains about section", () => {
+    expect(optionsHtml).toMatch(/id="about-section"/);
+  });
+
+  it("does not contain notifications section (removed in redesign)", () => {
+    expect(optionsHtml).not.toMatch(/id="notifications-section"/);
+  });
+
+  it("does not contain toggle-switch elements", () => {
+    expect(optionsHtml).not.toMatch(/class="toggle-switch"/);
+  });
+});
+
 describe("HTML pages reference common/theme.css", () => {
   const pages = [
     ["popup/popup.html", "../popup/popup.html"],
