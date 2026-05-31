@@ -32,7 +32,6 @@ This is a Chrome Extension (Manifest V3) that saves recipes from websites to Goo
 **Services Architecture** (`background/services/`)
 - `auth/auth-manager.js` - Multi-provider authentication manager (email/password and Google Sign-In)
 - `api.js` - Backend API interactions (save recipe from page, create from description)
-- `notifications.js` - User notification system
 - `transformation.js` - Recipe content GZIP compression (Base64 output)
 
 **Content Scripts** (`content/`)
@@ -40,8 +39,8 @@ This is a Chrome Extension (Manifest V3) that saves recipes from websites to Goo
 - Handles DOM interaction and data collection
 
 **Popup UI** (`popup/`)
-- Extension popup interface
-- User interactions and settings
+- Login-only interface (email/password and Google Sign-In)
+- When authenticated, toolbar icon click triggers windowless save directly via `chrome.action.onClicked`; the popup only appears when logged out (`chrome.action.setPopup`)
 
 **Recipe Creator** (`recipe-creator/`)
 - Standalone page opened as a small popup window (440×340px)
@@ -50,7 +49,11 @@ This is a Chrome Extension (Manifest V3) that saves recipes from websites to Goo
 - Posts to `POST /v1/recipes/custom?compression=gzip` with compressed description
 
 **Options Page** (`options/`)
-- Extension configuration and preferences
+- Extension configuration: Account (sign out) and About sections only
+
+**Shared Design System** (`common/`)
+- `common/theme.css` — shared design tokens (warm-neutral palette, single accent, hairline borders, 8px radius, motion tokens) and the Hanken Grotesk font, loaded via a remote Google Fonts `@import` at the top of the file. Link this stylesheet **before** any page-specific CSS in every HTML page. Legacy token aliases have been removed; use the canonical tokens directly. (Self-hosting the woff2 files under `common/fonts/` and switching to `@font-face` would remove the remote dependency / FOUT, but is not yet done.)
+- Single in-page bubble (`showLightBubble` in `content/content.js`) is the sole save-feedback surface: loading → saved (auto-dismiss 4 s, "Open ↗" link) or error (persists until dismissed). OS notifications are not used.
 
 ### Environment Setup
 
@@ -74,8 +77,8 @@ Required environment variables:
 
 ### API Endpoints (backend)
 
-- `POST /v1/recipes` — save recipe from a web page (HTML + URL)
-- `POST /v1/recipes/custom` — create recipe from plain-text description; use `?compression=gzip`
+- `POST /v1/recipes?compression=gzip` — save recipe from a web page (HTML + URL)
+- `POST /v1/recipes/custom?compression=gzip` — create recipe from plain-text description
 - Both endpoints accept GZIP-compressed + Base64-encoded content via `transformContent()`
 
 ### Known Issues / Gotchas

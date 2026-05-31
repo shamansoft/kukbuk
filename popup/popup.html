@@ -3,7 +3,8 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>MyKukBuk</title>
+        <title>Save-A-Recipe</title>
+        <link rel="stylesheet" href="../common/theme.css" />
         <link rel="stylesheet" href="popup.css" />
     </head>
     <body>
@@ -11,32 +12,17 @@
             <header>
                 <img
                     src="../icons/icon48.png"
-                    alt="MyKukBuk Logo"
+                    alt=""
                     class="logo"
+                    aria-hidden="true"
                 />
-                <h1>MyKukBuk</h1>
+                <h1>Save-A-Recipe</h1>
             </header>
 
-            <!-- Minimal Status Section (EXT-12-a: for quick states) -->
-            <section id="minimal-status-section" style="display: none">
-                <div class="minimal-status">
-                    <div class="minimal-status-icon"></div>
-                    <p id="minimal-status-text">checking...</p>
-                </div>
-            </section>
-
-            <!-- Success Section with Drive Link -->
-            <section id="success-section" style="display: none">
-                <div class="success-message">
-                    <div class="success-icon">✓</div>
-                    <p class="success-text">Saved in</p>
-                    <a id="drive-link" href="#" target="_blank" class="drive-link">your drive</a>
-                </div>
-            </section>
-
-            <!-- Login Section (Hidden by default when logged in) -->
+            <!-- Login Section -->
             <section id="login-section">
                 <p class="welcome-text">Save recipes to your Google Drive</p>
+                <p id="login-error" class="login-error" style="display: none"></p>
 
                 <!-- Email/Password Form -->
                 <form id="email-login-form">
@@ -69,39 +55,8 @@
                     </button>
                 </div>
             </section>
-
-            <!-- Logged In Section (Hidden by default when logged out) -->
-            <section id="main-section" style="display: none">
-                <div class="user-info">
-                    <img
-                        src="../icons/user.png"
-                        alt="User"
-                        id="user-avatar"
-                        class="avatar"
-                    />
-                    <span id="user-email">user@example.com</span>
-                </div>
-
-                <button id="save-recipe-button" class="btn primary">
-                    Save This Recipe
-                </button>
-
-                <div class="action-buttons">
-                    <button id="settings-button" class="btn secondary">
-                        Settings
-                    </button>
-                    <button id="logout-button" class="btn secondary">
-                        Log Out
-                    </button>
-                </div>
-            </section>
-
-            <!-- Status Messages -->
-            <div id="status-container">
-                <p id="status-message"></p>
-            </div>
         </div>
 
-  <script src="popup.js" type="module"></script>
-</body>
+        <script src="popup.js" type="module"></script>
+    </body>
 </html>

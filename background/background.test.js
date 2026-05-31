@@ -7,6 +7,7 @@ jest.mock("./services/auth/auth-manager.js", () => ({
   setupAuth: jest.fn(),
   authManager: {
     signOut: jest.fn().mockResolvedValue(undefined),
+    checkAuthStatus: jest.fn().mockResolvedValue({ authenticated: true }),
   },
 }));
 jest.mock("./services/transformation.js", () => ({
@@ -14,16 +15,19 @@ jest.mock("./services/transformation.js", () => ({
 }));
 jest.mock("./services/api.js", () => ({
   setupApi: jest.fn(),
-}));
-jest.mock("./services/notifications.js", () => ({
-  setupNotifications: jest.fn(),
-  createNotification: jest.fn(),
+  saveRecipe: jest.fn(),
 }));
 jest.mock("../common/error-handler.js", () => ({
   logError: jest.fn(),
 }));
 jest.mock("../common/constants.js", () => ({
-  MESSAGE_TYPES: { AUTH_LOGOUT: "AUTH_LOGOUT" },
+  MESSAGE_TYPES: {
+    AUTH_LOGOUT: "AUTH_LOGOUT",
+    SHOW_BUBBLE: "SHOW_BUBBLE",
+    EXTRACT_RECIPE: "EXTRACT_RECIPE",
+    NOTIFY_BACKGROUND_OPERATION: "NOTIFY_BACKGROUND_OPERATION",
+  },
+  STORAGE_KEYS: { FIREBASE_TOKEN: "firebaseToken" },
 }));
 
 // Mock the chrome API
@@ -51,6 +55,23 @@ const mockChrome = {
   windows: {
     create: jest.fn(),
   },
+  action: {
+    setPopup: jest.fn(),
+    onClicked: {
+      addListener: jest.fn(),
+    },
+  },
+  storage: {
+    onChanged: {
+      addListener: jest.fn(),
+    },
+  },
+  tabs: {
+    sendMessage: jest.fn(),
+  },
+  scripting: {
+    executeScript: jest.fn(),
+  },
 };
 
 describe("Background Script", () => {
@@ -67,6 +88,7 @@ describe("Background Script", () => {
 
     // Spy on console
     jest.spyOn(console, "log").mockImplementation(() => {});
+    jest.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -82,7 +104,7 @@ describe("Background Script", () => {
     });
 
     // Check that the initialization log was printed
-    expect(console.log).toHaveBeenCalledWith("Initializing MyKukBuk background script");
+    expect(console.log).toHaveBeenCalledWith("Initializing Save-A-Recipe background script");
 
     // Verify that context menu was set up properly
     expect(chrome.contextMenus.removeAll).toHaveBeenCalled();
@@ -116,30 +138,22 @@ describe("Background Script", () => {
 
   test("should handle context menu click for logout successfully", async () => {
     const { authManager } = require("./services/auth/auth-manager.js");
-    const { createNotification } = require("./services/notifications.js");
+    // After sign-out, applyPopupState should restore the login popup
+    authManager.checkAuthStatus.mockResolvedValue({ authenticated: false });
 
-    // Load the background script
     jest.isolateModules(() => {
       require("./background.js");
     });
 
-    // Grab the onClicked callback from the chrome.contextMenus mock
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
-
-    // Simulate a click event for "kukbuk-logout"
+    chrome.action.setPopup.mockClear();
     await onClickedCallback({ menuItemId: "kukbuk-logout" }, {});
 
-    // Wait for async operations
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
-    // Check that signOut was called
     expect(authManager.signOut).toHaveBeenCalled();
-
-    // Check that success notification was shown
-    expect(createNotification).toHaveBeenCalledWith({
-      title: "Logged Out",
-      message: "You have been successfully logged out",
-    });
+    // Logout restores the login popup (windowless save is disabled) — no OS notification
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "popup/popup.html" });
   });
 
   test("should handle context menu click for create recipe from description", () => {
@@ -162,33 +176,312 @@ describe("Background Script", () => {
 
   test("should handle context menu logout failure", async () => {
     const { authManager } = require("./services/auth/auth-manager.js");
-    const { createNotification } = require("./services/notifications.js");
     const { logError } = require("../common/error-handler.js");
 
-    // Mock signOut to fail
     authManager.signOut.mockRejectedValueOnce(new Error("Logout failed"));
 
-    // Load the background script
     jest.isolateModules(() => {
       require("./background.js");
     });
 
-    // Grab the onClicked callback from the chrome.contextMenus mock
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
-
-    // Simulate a click event for "kukbuk-logout"
     await onClickedCallback({ menuItemId: "kukbuk-logout" }, {});
 
-    // Wait for async operations
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    // Check that error notification was shown
-    expect(createNotification).toHaveBeenCalledWith({
-      title: "Logout Failed",
-      message: "Logout failed",
+    // No OS notification on failure — removed in Task 6
+    expect(logError).toHaveBeenCalled();
+  });
+
+  // --- applyPopupState / setPopup tests ---
+
+  test("setPopup set to empty string when authenticated", async () => {
+    const { authManager } = require("./services/auth/auth-manager.js");
+    authManager.checkAuthStatus.mockResolvedValueOnce({ authenticated: true });
+
+    jest.isolateModules(() => {
+      require("./background.js");
     });
 
-    // Check that error was logged
-    expect(logError).toHaveBeenCalled();
+    // Wait for applyPopupState to complete
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "" });
+  });
+
+  test("setPopup set to popup.html when not authenticated", async () => {
+    const { authManager } = require("./services/auth/auth-manager.js");
+    authManager.checkAuthStatus.mockResolvedValueOnce({ authenticated: false });
+
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "popup/popup.html" });
+  });
+
+  test("setPopup falls back to popup.html on auth check error", async () => {
+    const { authManager } = require("./services/auth/auth-manager.js");
+    authManager.checkAuthStatus.mockRejectedValueOnce(new Error("storage error"));
+
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "popup/popup.html" });
+  });
+
+  test("storage.onChanged listener is registered on init", () => {
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+
+    expect(chrome.storage.onChanged.addListener).toHaveBeenCalled();
+  });
+
+  test("storage.onChanged re-applies popup state when the auth token changes", async () => {
+    const { authManager } = require("./services/auth/auth-manager.js");
+    authManager.checkAuthStatus.mockResolvedValue({ authenticated: true });
+
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const storageCallback = chrome.storage.onChanged.addListener.mock.calls[0][0];
+    chrome.action.setPopup.mockClear();
+
+    // Matching change in the local area triggers applyPopupState
+    storageCallback({ firebaseToken: { newValue: "abc" } }, "local");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "" });
+  });
+
+  test("storage.onChanged ignores changes in other areas or unrelated keys", async () => {
+    const { authManager } = require("./services/auth/auth-manager.js");
+    authManager.checkAuthStatus.mockResolvedValue({ authenticated: true });
+
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const storageCallback = chrome.storage.onChanged.addListener.mock.calls[0][0];
+    chrome.action.setPopup.mockClear();
+
+    // Wrong area
+    storageCallback({ firebaseToken: { newValue: "abc" } }, "sync");
+    // Right area, unrelated key
+    storageCallback({ somethingElse: { newValue: 1 } }, "local");
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(chrome.action.setPopup).not.toHaveBeenCalled();
+  });
+
+  test("onClicked sends a 'Save timed out' error bubble when the save never resolves", async () => {
+    jest.useFakeTimers();
+    try {
+      const { saveRecipe } = require("./services/api.js");
+      // saveRecipe never resolves — the 90s timeout should win the race
+      saveRecipe.mockReturnValue(new Promise(() => {}));
+
+      chrome.tabs.sendMessage
+        .mockResolvedValueOnce({ success: true }) // PING
+        .mockResolvedValueOnce({ success: true }) // SHOW_BUBBLE loading
+        .mockResolvedValueOnce({
+          success: true,
+          data: { pageContent: "<html></html>", pageUrl: "https://example.com", title: "Test" },
+        }) // EXTRACT_RECIPE
+        .mockResolvedValueOnce({ success: true }); // SHOW_BUBBLE timeout error
+
+      const handler = await loadAndGetActionHandler();
+      const done = handler({ id: 42 });
+
+      // Advance past the 90s timeout, flushing the awaits along the way
+      await jest.advanceTimersByTimeAsync(90000);
+      await done;
+
+      const bubbleCalls = chrome.tabs.sendMessage.mock.calls.filter(
+        (c) => c[1].type === "SHOW_BUBBLE",
+      );
+      const lastBubble = bubbleCalls[bubbleCalls.length - 1][1];
+      expect(lastBubble.data).toMatchObject({ variant: "error", text: "Save timed out" });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test("action.onClicked listener is registered on init", () => {
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+
+    expect(chrome.action.onClicked.addListener).toHaveBeenCalled();
+  });
+
+  // --- handleActionClick tests ---
+
+  async function loadAndGetActionHandler() {
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+    return chrome.action.onClicked.addListener.mock.calls[0][0];
+  }
+
+  test("onClicked sends loading bubble then success bubble", async () => {
+    const { saveRecipe } = require("./services/api.js");
+    saveRecipe.mockResolvedValueOnce({
+      success: true,
+      recipeName: "Pasta",
+      driveUrl: "https://drive.google.com/file/123",
+      isRecipe: true,
+    });
+
+    // PING succeeds (content script ready)
+    chrome.tabs.sendMessage
+      .mockResolvedValueOnce({ success: true }) // PING
+      .mockResolvedValueOnce({ success: true }) // SHOW_BUBBLE loading
+      .mockResolvedValueOnce({
+        // EXTRACT_RECIPE
+        success: true,
+        data: { pageContent: "<html>pasta</html>", pageUrl: "https://example.com", title: "Pasta" },
+      })
+      .mockResolvedValueOnce({ success: true }); // SHOW_BUBBLE success
+
+    const handler = await loadAndGetActionHandler();
+    await handler({ id: 42 });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const calls = chrome.tabs.sendMessage.mock.calls;
+    // Loading bubble
+    expect(calls[1][1]).toMatchObject({ type: "SHOW_BUBBLE", data: { variant: "loading" } });
+    // Success bubble
+    expect(calls[3][1]).toMatchObject({
+      type: "SHOW_BUBBLE",
+      data: { variant: "success", link: { url: "https://drive.google.com/file/123" } },
+    });
+  });
+
+  test("onClicked sends error bubble on save failure", async () => {
+    const { saveRecipe } = require("./services/api.js");
+    saveRecipe.mockRejectedValueOnce(new Error("Network error"));
+
+    chrome.tabs.sendMessage
+      .mockResolvedValueOnce({ success: true }) // PING
+      .mockResolvedValueOnce({ success: true }) // SHOW_BUBBLE loading
+      .mockResolvedValueOnce({
+        success: true,
+        data: { pageContent: "<html></html>", pageUrl: "https://example.com", title: "Test" },
+      }) // EXTRACT_RECIPE
+      .mockResolvedValueOnce({ success: true }); // SHOW_BUBBLE error
+
+    const handler = await loadAndGetActionHandler();
+    await handler({ id: 42 });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const calls = chrome.tabs.sendMessage.mock.calls;
+    expect(calls[3][1]).toMatchObject({
+      type: "SHOW_BUBBLE",
+      data: { variant: "error", text: "Network error" },
+    });
+  });
+
+  test("onClicked shows 'Not a recipe page' when isRecipe is false", async () => {
+    const { saveRecipe } = require("./services/api.js");
+    saveRecipe.mockResolvedValueOnce({
+      success: true,
+      recipeName: "Some Page",
+      driveUrl: null,
+      isRecipe: false,
+    });
+
+    chrome.tabs.sendMessage
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { pageContent: "<html></html>", pageUrl: "https://example.com", title: "Test" },
+      })
+      .mockResolvedValueOnce({ success: true });
+
+    const handler = await loadAndGetActionHandler();
+    await handler({ id: 42 });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const calls = chrome.tabs.sendMessage.mock.calls;
+    expect(calls[3][1]).toMatchObject({
+      type: "SHOW_BUBBLE",
+      data: { variant: "error", text: "Not a recipe page" },
+    });
+  });
+
+  test("double-click guard prevents a second in-flight save", async () => {
+    const { saveRecipe } = require("./services/api.js");
+    // saveRecipe never resolves (simulates in-flight)
+    saveRecipe.mockReturnValue(new Promise(() => {}));
+
+    chrome.tabs.sendMessage.mockResolvedValue({ success: true });
+    chrome.tabs.sendMessage
+      .mockResolvedValueOnce({ success: true }) // PING
+      .mockResolvedValueOnce({ success: true }) // SHOW_BUBBLE loading
+      .mockResolvedValueOnce({
+        success: true,
+        data: { pageContent: "<html></html>", pageUrl: "https://example.com", title: "Test" },
+      }); // EXTRACT_RECIPE
+
+    const handler = await loadAndGetActionHandler();
+
+    // First click — starts save (doesn't await)
+    handler({ id: 42 });
+    await new Promise((resolve) => setTimeout(resolve, 5));
+
+    // Second click — should be ignored
+    const saveCallsBefore = saveRecipe.mock.calls.length;
+    await handler({ id: 42 });
+    expect(saveRecipe.mock.calls.length).toBe(saveCallsBefore);
+  });
+
+  test("skips silently when content script cannot be injected (restricted page)", async () => {
+    const { saveRecipe } = require("./services/api.js");
+
+    // PING fails (no content script), scripting.executeScript also fails
+    chrome.tabs.sendMessage.mockRejectedValueOnce(new Error("Could not establish connection"));
+    chrome.scripting.executeScript.mockRejectedValueOnce(new Error("Cannot access chrome://"));
+
+    const handler = await loadAndGetActionHandler();
+    await handler({ id: 42 });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // No bubble, no saveRecipe call
+    expect(saveRecipe).not.toHaveBeenCalled();
+    expect(
+      chrome.tabs.sendMessage.mock.calls.filter((c) => c[1].type === "SHOW_BUBBLE"),
+    ).toHaveLength(0);
+  });
+
+  test("swallows error silently when tab is gone during bubble send", async () => {
+    const { saveRecipe } = require("./services/api.js");
+    saveRecipe.mockResolvedValueOnce({
+      success: true,
+      recipeName: "Soup",
+      driveUrl: null,
+      isRecipe: true,
+    });
+
+    chrome.tabs.sendMessage
+      .mockResolvedValueOnce({ success: true }) // PING
+      .mockRejectedValueOnce(new Error("Tab closed")) // SHOW_BUBBLE loading — tab gone
+      .mockResolvedValueOnce({
+        success: true,
+        data: { pageContent: "<html></html>", pageUrl: "https://example.com", title: "Soup" },
+      }) // EXTRACT_RECIPE
+      .mockRejectedValueOnce(new Error("Tab closed")); // SHOW_BUBBLE success — tab gone
+
+    const handler = await loadAndGetActionHandler();
+    // Should not throw
+    await expect(handler({ id: 42 })).resolves.not.toThrow();
   });
 });

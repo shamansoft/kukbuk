@@ -4,13 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Create Recipe</title>
+    <link rel="stylesheet" href="../common/theme.css" />
     <link rel="stylesheet" href="../popup/popup.css" />
     <link rel="stylesheet" href="recipe-creator.css" />
   </head>
   <body>
     <div class="container">
       <header>
-        <img src="../icons/icon48.png" alt="MyKukBuk Logo" class="logo" />
+        <img src="../icons/icon48.png" alt="Save-A-Recipe Logo" class="logo" />
         <h1>Create Recipe</h1>
       </header>
 
@@ -27,12 +28,12 @@
       </section>
 
       <section id="result-section" style="display: none">
-        <div class="result-message">
-          <div id="result-icon" class="minimal-status-icon"></div>
-          <p id="result-text" class="result-text"></p>
-          <a id="drive-link" href="#" target="_blank" class="drive-link" style="display: none">
-            Open in Drive
-          </a>
+        <div class="result-card">
+          <span id="result-dot" class="result-dot"></span>
+          <span class="result-body">
+            <span id="result-text" class="result-text"></span>
+            <a id="drive-link" href="#" target="_blank" class="drive-link" style="display: none">Open in Drive ↗</a>
+          </span>
         </div>
       </section>
     </div>

@@ -5,7 +5,7 @@ const textarea = document.getElementById("description-input");
 const submitButton = document.getElementById("submit-button");
 const formSection = document.getElementById("form-section");
 const resultSection = document.getElementById("result-section");
-const resultIcon = document.getElementById("result-icon");
+const resultDot = document.getElementById("result-dot");
 const resultText = document.getElementById("result-text");
 const driveLink = document.getElementById("drive-link");
 
@@ -29,7 +29,7 @@ form.addEventListener("submit", async (e) => {
     resultSection.style.display = "flex";
 
     if (response && response.success) {
-      resultIcon.className = "minimal-status-icon success";
+      resultDot.className = "result-dot success";
       resultText.textContent = response.recipeName
         ? `"${response.recipeName}" saved to Drive`
         : "Recipe saved to Drive";
@@ -41,13 +41,13 @@ form.addEventListener("submit", async (e) => {
 
       setTimeout(() => window.close(), 4000);
     } else {
-      resultIcon.className = "minimal-status-icon error";
+      resultDot.className = "result-dot error";
       resultText.textContent = (response && response.error) || "Failed to create recipe";
     }
   } catch (err) {
     formSection.style.display = "none";
     resultSection.style.display = "flex";
-    resultIcon.className = "minimal-status-icon error";
+    resultDot.className = "result-dot error";
     resultText.textContent = err.message || "Something went wrong";
   }
 });

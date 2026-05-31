@@ -5,7 +5,6 @@ import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from "../../common/constants
 import { transformContent } from "./transformation.js";
 import { authManager } from "./auth/auth-manager.js";
 import { ENV } from "../../common/env-config.js";
-import { notify } from "./notifications.js";
 import {
   extractErrorMessage,
   categorizeHttpError,
@@ -140,12 +139,6 @@ async function saveCustomRecipe({ description, title }) {
 
     const result = await response.json();
 
-    notify.recipeSaved({
-      recipeName: result.title,
-      driveUrl: result.driveFileUrl || null,
-      isRecipe: result.isRecipe,
-    });
-
     return {
       success: true,
       recipeName: result.title,
@@ -161,14 +154,12 @@ async function saveCustomRecipe({ description, title }) {
     ) {
       const authError = new Error("Authentication required, please sign in");
       authError.code = ERROR_CODES.AUTH_REQUIRED;
-      notify.recipeSaved({ success: false, error: "Please sign in to save recipes" });
       throw authError;
     }
 
     if (error.message.includes("401") || error.message.includes("Unauthorized")) {
       const authError = new Error("Authentication expired, please sign in again");
       authError.code = ERROR_CODES.AUTH_REQUIRED;
-      notify.recipeSaved({ success: false, error: "Session expired, please sign in again" });
       throw authError;
     }
 
@@ -181,7 +172,7 @@ async function saveCustomRecipe({ description, title }) {
  * @param {Object} recipeData - Recipe data from content script
  * @returns {Promise<Object>} Save result
  */
-async function saveRecipe(recipeData) {
+export async function saveRecipe(recipeData) {
   if (!recipeData || !recipeData.pageContent) {
     throw new Error("Invalid recipe data");
   }
@@ -294,14 +285,6 @@ async function saveRecipe(recipeData) {
     // Parse success response
     const result = await response.json();
 
-    // Send notification for successful save
-    notify.recipeSaved({
-      recipeName: result.title,
-      driveUrl: result.driveFileUrl || null,
-      isRecipe: result.isRecipe,
-      // folderName: folder.name
-    });
-
     return {
       success: true,
       recipeName: result.title,
@@ -319,13 +302,6 @@ async function saveRecipe(recipeData) {
     ) {
       const authError = new Error("Authentication required, please sign in");
       authError.code = ERROR_CODES.AUTH_REQUIRED;
-
-      // Notify user
-      notify.recipeSaved({
-        success: false,
-        error: "Please sign in to save recipes",
-      });
-
       throw authError;
     }
 
@@ -333,12 +309,6 @@ async function saveRecipe(recipeData) {
     if (error.message.includes("401") || error.message.includes("Unauthorized")) {
       const authError = new Error("Authentication expired, please sign in again");
       authError.code = ERROR_CODES.AUTH_REQUIRED;
-
-      notify.recipeSaved({
-        success: false,
-        error: "Session expired, please sign in again",
-      });
-
       throw authError;
     }
 

@@ -13,7 +13,7 @@ export default [
       "webpack.config.js",
       "scripts/zip-extension.js",
       "scripts/deploy-chrome.js",
-      "/mykukbuk.zip",
+      "/save-a-recipe.zip",
       "webpack_output/",
       "coverage/",
       ".cache/",

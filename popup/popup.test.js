@@ -4,18 +4,8 @@
 
 const POPUP_HTML = `
 <div class="container">
-  <section id="minimal-status-section" style="display: none">
-    <div class="minimal-status">
-      <div class="minimal-status-icon"></div>
-      <p id="minimal-status-text">checking...</p>
-    </div>
-  </section>
-  <section id="success-section" style="display: none">
-    <div class="success-message">
-      <a id="drive-link" href="#">your drive</a>
-    </div>
-  </section>
   <section id="login-section">
+    <p id="login-error" style="display: none"></p>
     <form id="email-login-form">
       <input type="email" id="email-input" />
       <input type="password" id="password-input" />
@@ -28,57 +18,28 @@ const POPUP_HTML = `
       </button>
     </div>
   </section>
-  <section id="main-section" style="display: none">
-    <div class="user-info">
-      <img src="" id="user-avatar" class="avatar" />
-      <span id="user-email">user@example.com</span>
-    </div>
-    <button id="save-recipe-button" class="btn primary">Save This Recipe</button>
-    <div class="action-buttons">
-      <button id="settings-button" class="btn secondary">Settings</button>
-      <button id="logout-button" class="btn secondary">Log Out</button>
-    </div>
-  </section>
-  <div id="status-container">
-    <p id="status-message"></p>
-  </div>
 </div>
 `;
 
 jest.mock("../common/error-handler.js", () => ({
   logError: jest.fn(),
-  showMessage: jest.fn((el, msg, _type) => {
-    if (el) el.textContent = msg;
-  }),
 }));
 
 jest.mock("../common/constants.js", () => ({
   MESSAGE_TYPES: {
     AUTH_CHECK: "AUTH_CHECK",
     AUTH_PROVIDER_SIGNIN: "AUTH_PROVIDER_SIGNIN",
-    AUTH_LOGOUT: "AUTH_LOGOUT",
-    SAVE_RECIPE: "SAVE_RECIPE",
-    EXTRACT_RECIPE: "EXTRACT_RECIPE",
-  },
-  ERROR_CODES: {
-    AUTH_REQUIRED: "AUTH_REQUIRED",
-    FOLDER_REQUIRED: "FOLDER_REQUIRED",
   },
 }));
 
-jest.mock("../common/toast-notification.js", () => ({
-  toast: {
-    info: jest.fn(),
-    success: jest.fn(),
-    error: jest.fn(),
-  },
-}));
-
-describe("popup.js - Google Sign-In button", () => {
+describe("popup.js - login-only popup", () => {
   let sendMessageMock;
+  let closeSpy;
 
   beforeAll(async () => {
     document.body.innerHTML = POPUP_HTML;
+
+    closeSpy = jest.spyOn(window, "close").mockImplementation(() => {});
 
     sendMessageMock = jest.fn();
     global.chrome = {
@@ -90,17 +51,9 @@ describe("popup.js - Google Sign-In button", () => {
           return null;
         },
       },
-      tabs: {
-        query: jest.fn(),
-        sendMessage: jest.fn(),
-        create: jest.fn(),
-      },
-      scripting: {
-        executeScript: jest.fn(),
-      },
     };
 
-    // Auth check returns "not authenticated" so popup shows login view
+    // Auth check returns "not authenticated" so popup shows login form
     sendMessageMock.mockImplementation((msg, callback) => {
       if (callback) callback({ success: true, authenticated: false });
     });
@@ -113,12 +66,15 @@ describe("popup.js - Google Sign-In button", () => {
   });
 
   beforeEach(() => {
-    // Reset to logged-out state for each test
-    document.getElementById("login-section").style.display = "flex";
-    document.getElementById("main-section").style.display = "none";
-    document.getElementById("minimal-status-section").style.display = "none";
-    document.getElementById("status-message").textContent = "";
+    const err = document.getElementById("login-error");
+    err.style.display = "none";
+    err.textContent = "";
     sendMessageMock.mockClear();
+    closeSpy.mockClear();
+  });
+
+  it("renders login section in the DOM", () => {
+    expect(document.getElementById("login-section")).not.toBeNull();
   });
 
   it("renders Google Sign-In button in the DOM", () => {
@@ -127,14 +83,32 @@ describe("popup.js - Google Sign-In button", () => {
     expect(btn.textContent.trim()).toContain("Continue with Google");
   });
 
-  it("sends AUTH_PROVIDER_SIGNIN with google provider and null credentials when clicked", async () => {
+  it("does not contain main-section, minimal-status-section, or success-section", () => {
+    expect(document.getElementById("main-section")).toBeNull();
+    expect(document.getElementById("minimal-status-section")).toBeNull();
+    expect(document.getElementById("success-section")).toBeNull();
+  });
+
+  it("contains email and password inputs", () => {
+    expect(document.getElementById("email-input")).not.toBeNull();
+    expect(document.getElementById("password-input")).not.toBeNull();
+  });
+
+  it("contains a Sign In submit button", () => {
+    const btn = document.querySelector("#email-login-form button[type='submit']");
+    expect(btn).not.toBeNull();
+    expect(btn.textContent.trim()).toContain("Sign In");
+  });
+
+  it("contains an or divider", () => {
+    const divider = document.querySelector(".divider");
+    expect(divider).not.toBeNull();
+    expect(divider.textContent.trim().toLowerCase()).toContain("or");
+  });
+
+  it("sends AUTH_PROVIDER_SIGNIN with google provider when Google button is clicked", async () => {
     sendMessageMock.mockImplementationOnce((msg, callback) => {
-      callback({
-        success: true,
-        email: "user@gmail.com",
-        displayName: "Test User",
-        photoURL: "",
-      });
+      callback({ success: true, email: "user@gmail.com" });
     });
 
     document.getElementById("google-signin-btn").click();
@@ -150,35 +124,65 @@ describe("popup.js - Google Sign-In button", () => {
     );
   });
 
-  it("shows logged-in section on successful Google sign-in", async () => {
+  it("closes window on successful Google sign-in", async () => {
     sendMessageMock.mockImplementationOnce((msg, callback) => {
-      callback({
-        success: true,
-        email: "user@gmail.com",
-        displayName: "Test Google User",
-        photoURL: "",
-      });
+      callback({ success: true, email: "user@gmail.com" });
     });
 
     document.getElementById("google-signin-btn").click();
     await new Promise((resolve) => setTimeout(resolve, 20));
 
-    expect(document.getElementById("main-section").style.display).toBe("flex");
-    expect(document.getElementById("login-section").style.display).toBe("none");
+    expect(closeSpy).toHaveBeenCalled();
   });
 
-  it("shows error in status message on failed Google sign-in", async () => {
+  it("shows inline error on failed Google sign-in", async () => {
     sendMessageMock.mockImplementationOnce((msg, callback) => {
-      callback({
-        success: false,
-        error: "Google sign-in was cancelled",
-      });
+      callback({ success: false, error: "Google sign-in was cancelled" });
     });
 
     document.getElementById("google-signin-btn").click();
     await new Promise((resolve) => setTimeout(resolve, 20));
 
-    const statusMessage = document.getElementById("status-message");
-    expect(statusMessage.textContent).toContain("Google sign-in was cancelled");
+    const loginError = document.getElementById("login-error");
+    expect(loginError.textContent).toContain("Google sign-in was cancelled");
+    expect(loginError.style.display).toBe("block");
+  });
+
+  it("closes window on successful email sign-in", async () => {
+    sendMessageMock.mockImplementationOnce((msg, callback) => {
+      callback({ success: true, email: "user@example.com" });
+    });
+
+    document.getElementById("email-input").value = "user@example.com";
+    document.getElementById("password-input").value = "password123";
+    document.getElementById("email-login-form").dispatchEvent(new Event("submit"));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(closeSpy).toHaveBeenCalled();
+  });
+
+  it("shows inline error on failed email sign-in", async () => {
+    sendMessageMock.mockImplementationOnce((msg, callback) => {
+      callback({ success: false, error: "Invalid credentials" });
+    });
+
+    document.getElementById("email-input").value = "bad@example.com";
+    document.getElementById("password-input").value = "wrongpassword";
+    document.getElementById("email-login-form").dispatchEvent(new Event("submit"));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const loginError = document.getElementById("login-error");
+    expect(loginError.textContent).toContain("Invalid credentials");
+    expect(loginError.style.display).toBe("block");
+  });
+
+  it("shows error when email or password field is empty", async () => {
+    document.getElementById("email-input").value = "";
+    document.getElementById("password-input").value = "";
+    document.getElementById("email-login-form").dispatchEvent(new Event("submit"));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const loginError = document.getElementById("login-error");
+    expect(loginError.textContent).toContain("Please enter both email and password");
   });
 });
