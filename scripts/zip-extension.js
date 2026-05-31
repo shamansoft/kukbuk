@@ -13,7 +13,7 @@ dotenv.config();
 
 // Get version from environment or manifest
 const version = process.env.EXTENSION_VERSION || "1.0.0";
-const zipFilename = `mykukbuk-extension-v${version}.zip`;
+const zipFilename = `save-a-recipe-extension-v${version}.zip`;
 
 // Files and directories to include
 const INCLUDE_FILES = [

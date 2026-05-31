@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "MyKukBuk",
+  "name": "Save-A-Recipe",
   "version": "${EXTENSION_VERSION}",
   "description": "Save recipes to your Google Drive",
   "permissions": ["activeTab", "storage", "contextMenus", "scripting", "tabs", "offscreen", "identity"],

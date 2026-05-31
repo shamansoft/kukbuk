@@ -104,7 +104,7 @@ describe("Background Script", () => {
     });
 
     // Check that the initialization log was printed
-    expect(console.log).toHaveBeenCalledWith("Initializing MyKukBuk background script");
+    expect(console.log).toHaveBeenCalledWith("Initializing Save-A-Recipe background script");
 
     // Verify that context menu was set up properly
     expect(chrome.contextMenus.removeAll).toHaveBeenCalled();

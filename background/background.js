@@ -19,7 +19,7 @@ function initBackground() {
   }
   isInitialized = true;
   try {
-    console.log("Initializing MyKukBuk background script");
+    console.log("Initializing Save-A-Recipe background script");
 
     // Setup context menu
     setupContextMenu();

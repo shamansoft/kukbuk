@@ -8,7 +8,7 @@ export function logError(message, error, context = null) {
   const timestamp = new Date().toISOString();
 
   // Basic error logging (backward compatible)
-  console.error(`MyKukBuk Error [${timestamp}]: ${message}`, error || "");
+  console.error(`Save-A-Recipe Error [${timestamp}]: ${message}`, error || "");
 
   // If context is provided, log it as a structured object
   if (context) {
