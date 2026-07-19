@@ -1,14 +1,14 @@
 {
   "name": "save-a-recipe-extension",
-  "version": "0.7.1",
+  "version": "0.7.4",
   "description": "Chrome extension to save recipes to Google Drive",
   "scripts": {
     "build": "node scripts/increment-version.js && node scripts/substitute-env.js && webpack --config webpack.config.js",
     "build:local": "node scripts/increment-version.js && node scripts/substitute-env.js --env=.env.local && cross-env NODE_ENV=development webpack --config webpack.config.js",
     "dev": "cross-env NODE_ENV=development node scripts/substitute-env.js && webpack --watch --config webpack.config.js",
     "dev:local": "cross-env NODE_ENV=development node scripts/substitute-env.js --env=.env.local && webpack --watch --config webpack.config.js",
-    "zip": "npm run build && node scripts/zip-extension.js",
-    "zip:local": "npm run build:local && node scripts/zip-extension.js",
+    "zip": "node scripts/substitute-env.js && webpack --config webpack.config.js && node scripts/zip-extension.js",
+    "zip:local": "node scripts/substitute-env.js --env=.env.local && cross-env NODE_ENV=development webpack --config webpack.config.js && node scripts/zip-extension.js",
     "deploy": "node scripts/deploy-chrome.js",
     "deploy:local": "node scripts/deploy-chrome.js --env=.env.local",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .js .",

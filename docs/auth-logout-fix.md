@@ -1,5 +1,7 @@
 # Authentication Logout Bug Fix
 
+Related: [auth provider architecture](../background/services/auth/README.md) · [Firebase setup](firebase-setup.md)
+
 ## Problem
 Users were being logged out unexpectedly after not using the extension for less than a day, even though their tokens were still valid.
 

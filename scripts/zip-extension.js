@@ -15,15 +15,19 @@ dotenv.config();
 const version = process.env.EXTENSION_VERSION || "1.0.0";
 const zipFilename = `save-a-recipe-extension-v${version}.zip`;
 
-// Files and directories to include
+// Files and directories to include in the distributable zip.
+// background/** is intentionally omitted — Chrome loads the compiled bundle
+// from dist/background.bundle.js, not the raw source files.
 const INCLUDE_FILES = [
   "manifest.json",
+  "dist/**",
   "popup/**",
-  "background/**",
   "content/**",
   "options/**",
   "common/**",
   "icons/**",
+  "offscreen/**",
+  "recipe-creator/**",
 ];
 
 // Files and directories to exclude

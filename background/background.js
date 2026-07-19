@@ -69,8 +69,9 @@ async function applyPopupState() {
 async function sendBubbleToTab(tabId, data) {
   try {
     await chrome.tabs.sendMessage(tabId, { type: MESSAGE_TYPES.SHOW_BUBBLE, data });
-  } catch (_e) {
-    // Tab gone or no content script — swallow silently
+  } catch (e) {
+    // Tab gone or content script unavailable — log so it's diagnosable
+    console.warn("sendBubbleToTab failed (tab", tabId, "variant:", data?.variant, "):", e?.message);
   }
 }
 

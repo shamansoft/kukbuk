@@ -288,11 +288,16 @@ function showLightBubble({
       window.requestAnimationFrame(() => bubble.classList.add("show"));
     }
 
-    // Auto-dismiss for success (duration > 0)
+    // Auto-dismiss when duration is set; for loading variant with no duration, add a
+    // safety-net dismiss so a failed success/error message never leaves the bubble stuck.
     if (duration && duration > 0) {
       currentBubbleTimeout = window.setTimeout(() => {
         dismissBubble();
       }, duration);
+    } else if (variant === "loading") {
+      currentBubbleTimeout = window.setTimeout(() => {
+        dismissBubble();
+      }, 90000);
     }
 
     return currentBubble;
