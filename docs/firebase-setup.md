@@ -1,6 +1,8 @@
 # Firebase Setup Guide
 
-This guide explains how to configure Firebase for the MyKukBuk Chrome Extension.
+This guide explains how to configure Firebase for the Save-A-Recipe (MyKukBuk) Chrome Extension.
+
+Related: [auth provider architecture](../background/services/auth/README.md) · [auth-logout-fix](auth-logout-fix.md)
 
 ## Overview
 
@@ -51,7 +53,7 @@ Copy the values from the Firebase configuration and update your environment file
 
 #### For Local Development (.env.local)
 
-Edit `/Users/alexey/dev/save-a-recipe/sar-ext/.env.local`:
+Edit `/Users/alexey/dev/sar/sar-ext/.env.local`:
 
 ```bash
 # Firebase Configuration
@@ -65,7 +67,7 @@ FIREBASE_APP_ID=1:123456789012:web:abcdef123456
 
 #### For Production (.env)
 
-Edit `/Users/alexey/dev/save-a-recipe/sar-ext/.env`:
+Edit `/Users/alexey/dev/sar/sar-ext/.env`:
 
 ```bash
 # Firebase Configuration
@@ -130,7 +132,7 @@ Should show a bundle around 310KB in size.
 1. Open Chrome and go to `chrome://extensions/`
 2. Enable **Developer mode** (top right)
 3. Click **Load unpacked**
-4. Select the `/Users/alexey/dev/save-a-recipe/sar-ext` folder
+4. Select the `/Users/alexey/dev/sar/sar-ext` folder
 5. The extension should load without errors
 
 ### 4. Test Firebase Initialization

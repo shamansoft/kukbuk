@@ -15,8 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run format` - Format code with Prettier
 - `npm run test` - Run all tests with Jest
 - `npm run test:background` - Run background script tests only
-- `npm run test:auth` - Run authentication service tests only  
 - `npm run test:transform` - Run transformation service tests only
+- Auth tests live under `background/services/auth/*.test.js`; run with `npx jest background/services/auth` (the `npm run test:auth` script points at a stale path and currently matches nothing)
 
 ## Architecture Overview
 
@@ -94,3 +94,38 @@ Required environment variables:
 - Double quotes, semicolons, 100 character line limit
 - ES2022 modules with browser/webextension environments
 - Console.log allowed for Chrome extension debugging
+
+## Documentation Index
+
+Start with **[STATUS.md](STATUS.md)** for current state, milestones, and backlog.
+The extension is named **"Save-A-Recipe"** in `manifest.json` (product brand
+"MyKukBuk" — both names appear across older docs).
+
+### Project status & overview
+- [STATUS.md](STATUS.md) — Current status, implemented features, backlog, known issues, milestones.
+- [README.MD](README.MD) — Public overview: features, install/build, project structure, permissions.
+
+### Architecture & reference
+- [background/services/auth/README.md](background/services/auth/README.md) — Auth provider architecture (BaseAuthProvider, Email + Google providers, how to add a provider).
+
+### Spec / design (design-of-record)
+- [docs/revised-design.md](docs/revised-design.md) — The "quiet utility" visual + feedback redesign spec; design-of-record, fully implemented in `common/theme.css` and the in-page bubble.
+
+### Setup / runbook
+- [docs/firebase-setup.md](docs/firebase-setup.md) — Firebase project config, env vars, build verification, OAuth/Google Sign-In console setup.
+
+### Reference (post-mortems)
+- [docs/auth-logout-fix.md](docs/auth-logout-fix.md) — Post-mortem for the false-logout bug; explains why Chrome storage is the auth source of truth with lazy token validation.
+
+### Completed plans (historical)
+- [docs/plans/completed/2026-04-27-google-signin.md](docs/plans/completed/2026-04-27-google-signin.md) — Implementation plan for Google Sign-In (done).
+- [docs/plans/completed/2026-05-30-extension-visual-redesign.md](docs/plans/completed/2026-05-30-extension-visual-redesign.md) — Implementation plan for the visual redesign (done).
+
+### Archive
+- [docs/archive/](docs/archive/README.md) — Superseded/outdated docs and ralphex execution logs, with a one-line note per file explaining why each was archived.
+
+## Cross-repo (SAR) notes
+This extension is one of four SAR repos: `sar-ext` (this), `sar-kmp` (client app),
+`sar-srv` (backend), `sar-infra` (infrastructure).
+- **Backend API contract (`sar-srv`):** `POST /v1/recipes?compression=gzip` (save from page) and `POST /v1/recipes/custom?compression=gzip` (create from description). Both take GZIP+Base64 content and return the final result synchronously (`title`, `driveFileUrl`/`driveUrl`, `isRecipe`); HTTP 429 = quota exceeded. The single-bubble feedback model depends on this synchronous response.
+- **Auth / Firebase:** Shared Firebase project `kukbuk-tf`. The extension authenticates with Firebase ID tokens; the backend stores Google OAuth tokens encrypted in Firestore and owns Drive folder assignment. `sar-kmp` shares the same Firebase auth backend.
