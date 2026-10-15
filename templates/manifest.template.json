@@ -34,6 +34,6 @@
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; frame-src http://localhost:* https://*.firebaseapp.com https://*.web.app; connect-src 'self' http://localhost:* https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://*.cloudfunctions.net https://*.run.app;"
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src http://localhost:* https://*.firebaseapp.com https://*.web.app; connect-src 'self' http://localhost:* https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://*.run.app;"
   }
 }
