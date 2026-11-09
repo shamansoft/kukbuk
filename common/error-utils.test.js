@@ -12,7 +12,7 @@ import { ERROR_CODES } from "./constants.js";
 describe("getUserFriendlyMessage", () => {
   it("asks the user to verify their email for 403 email_not_verified", () => {
     expect(getUserFriendlyMessage(403, "email_not_verified", { error: EMAIL_NOT_VERIFIED })).toBe(
-      "Please verify your email in the SAR app, then try again.",
+      "Please verify your email in the Save-A-Recipe app, then try again.",
     );
   });
 
@@ -109,6 +109,13 @@ describe("mapCategoryToErrorCode", () => {
     );
   });
 
+  it("returns email_not_verified instead of auth_required for an unverified email", () => {
+    expect(mapCategoryToErrorCode(ERROR_CATEGORIES.AUTH_ERROR, { error: EMAIL_NOT_VERIFIED })).toBe(
+      ERROR_CODES.EMAIL_NOT_VERIFIED,
+    );
+    expect(ERROR_CODES.EMAIL_NOT_VERIFIED).toBe("email_not_verified");
+  });
+
   it.each([
     [ERROR_CATEGORIES.AUTH_ERROR, ERROR_CODES.AUTH_REQUIRED],
     [ERROR_CATEGORIES.RATE_LIMITED, ERROR_CODES.QUOTA_EXCEEDED],
@@ -132,7 +139,12 @@ describe("formatErrorForLogging", () => {
       request: {
         method: "POST",
         url: "https://api.example.com",
-        headers: { Authorization: "Bearer secret", authorization: "x", "X-Extension-ID": "id" },
+        headers: {
+          Authorization: "Bearer secret",
+          Cookie: "session=1",
+          "x-api-key": "k",
+          "X-Extension-ID": "id",
+        },
       },
       response: { status: 500, statusText: "ISE", body: { error: "e" } },
       error,
@@ -140,8 +152,13 @@ describe("formatErrorForLogging", () => {
       category: ERROR_CATEGORIES.SERVER_ERROR,
     });
 
-    expect(logged.request.headers.authorization).toBe("[REDACTED]");
-    expect(logged.request.headers["X-Extension-ID"]).toBe("id");
+    expect(logged.request.headers).toEqual({
+      Authorization: "[REDACTED]",
+      Cookie: "[REDACTED]",
+      "x-api-key": "[REDACTED]",
+      "X-Extension-ID": "id",
+    });
+    expect(JSON.stringify(logged)).not.toContain("secret");
     expect(logged.response).toEqual({ status: 500, statusText: "ISE", body: { error: "e" } });
     expect(logged.error).toEqual(
       expect.objectContaining({ message: "boom", code: "c", statusCode: 500 }),

@@ -28,8 +28,9 @@ jest.mock("../../common/env-config.js", () => ({
 
 import { setupApi } from "./api";
 import { authManager } from "./auth/auth-manager.js";
+import { transformContent } from "./transformation.js";
 
-const VERIFY_MESSAGE = "Please verify your email in the SAR app, then try again.";
+const VERIFY_MESSAGE = "Please verify your email in the Save-A-Recipe app, then try again.";
 const PERMISSION_MESSAGE = "You don't have permission to perform this action.";
 
 function jsonResponse(status, body) {
@@ -109,7 +110,7 @@ describe.each(endpoints)("email_not_verified handling: $name", ({ url, message }
     );
     expect(global.fetch).toHaveBeenCalledTimes(2);
     expect(global.fetch.mock.calls.every(([calledUrl]) => calledUrl === url)).toBe(true);
-    expect(authManager.getIdToken.mock.calls).toEqual([[false], [true]]);
+    expect(authManager.getIdToken.mock.calls).toEqual([[], [true]]);
     expect(authHeaders()).toEqual(["Bearer cached-token", "Bearer fresh-token"]);
     // Same payload on both attempts
     expect(global.fetch.mock.calls[1][1].body).toBe(global.fetch.mock.calls[0][1].body);
@@ -123,10 +124,62 @@ describe.each(endpoints)("email_not_verified handling: $name", ({ url, message }
     expect(response).toEqual({
       success: false,
       error: VERIFY_MESSAGE,
-      errorCode: "auth_required",
+      errorCode: "email_not_verified",
     });
     expect(global.fetch).toHaveBeenCalledTimes(2);
-    expect(authManager.getIdToken.mock.calls).toEqual([[false], [true]]);
+    expect(authManager.getIdToken.mock.calls).toEqual([[], [true]]);
+  });
+
+  it("keeps the verify message when the retry fails with a network error", async () => {
+    global.fetch
+      .mockResolvedValueOnce(notVerified())
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    const response = await dispatch();
+
+    expect(response).toEqual({
+      success: false,
+      error: VERIFY_MESSAGE,
+      errorCode: "email_not_verified",
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the verify message when the forced refresh fails for a non-session reason", async () => {
+    global.fetch.mockResolvedValueOnce(notVerified());
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+    authManager.getIdToken.mockImplementation(async (forceRefresh) => {
+      if (forceRefresh) throw new Error("Offscreen document unavailable");
+      return "cached-token";
+    });
+
+    const response = await dispatch();
+
+    expect(response).toEqual(expect.objectContaining({ success: false, error: VERIFY_MESSAGE }));
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails before compressing the content when the user is signed out", async () => {
+    authManager.getIdToken.mockRejectedValue(new Error("Not authenticated"));
+
+    const response = await dispatch();
+
+    expect(response).toEqual(
+      expect.objectContaining({ success: false, errorCode: "auth_required" }),
+    );
+    expect(transformContent).not.toHaveBeenCalled();
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("serializes the request body once for both attempts", async () => {
+    global.fetch.mockResolvedValueOnce(notVerified()).mockResolvedValueOnce(saved());
+    const stringify = jest.spyOn(JSON, "stringify");
+
+    await dispatch();
+
+    expect(stringify).toHaveBeenCalledTimes(1);
+    expect(transformContent).toHaveBeenCalledTimes(1);
   });
 
   it("does not retry other 403 errors", async () => {

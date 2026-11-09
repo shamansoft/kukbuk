@@ -85,23 +85,42 @@ async function readErrorBody(response) {
 }
 
 /**
+ * True when the error means there is no usable session (signed out, or the token refresh
+ * failed and the provider cleared auth data). The user has to sign in again.
+ * @param {Error} error
+ * @returns {boolean}
+ */
+function isSessionError(error) {
+  const message = error?.message || "";
+  return (
+    message.includes("Not authenticated") ||
+    message.includes("Authentication expired") ||
+    message.includes("OAuth2 not granted or revoked")
+  );
+}
+
+/**
  * POSTs a JSON payload to the backend with the user's Firebase ID token.
  *
- * On `403 {"error": "email_not_verified"}` it forces a token refresh and retries once,
+ * On `403 {"error": "email_not_verified"}` it forces a token refresh and retries once.
  * The `email_verified` claim is fixed when a token is issued, so without the refresh a user
  * who has just verified keeps failing until the cached token expires (up to 50 minutes).
+ * If the retry fails for a reason other than a lost session (e.g. network), the first
+ * response is kept so the user still sees the verify message.
  *
  * @param {string} path - Path and query, e.g. "/v1/recipes?compression=gzip"
- * @param {Object} payload - Request body, serialized as JSON
+ * @param {() => Promise<Object>} buildPayload - Builds the request body. Called after the
+ *   token is read, so a signed-out user fails before the content is compressed.
  * @param {string} logLabel - Message used when logging a failed request
  * @returns {Promise<Object>} Parsed JSON body of the successful response
  * @throws {Error} With a user-friendly message, `code`, `statusCode` and `originalMessage`
  */
-async function postToBackend(path, payload, logLabel) {
+async function postToBackend(path, buildPayload, logLabel) {
   const url = `${ENV.API_BASE_URL}${path}`;
+  const cachedToken = await authManager.getIdToken();
+  const body = JSON.stringify(await buildPayload());
 
-  const send = async (forceRefresh) => {
-    const firebaseToken = await authManager.getIdToken(forceRefresh);
+  const send = async (firebaseToken) => {
     const request = {
       method: "POST",
       headers: {
@@ -109,7 +128,7 @@ async function postToBackend(path, payload, logLabel) {
         Authorization: `Bearer ${firebaseToken}`,
         "X-Extension-ID": ENV.EXTENSION_ID,
       },
-      body: JSON.stringify(payload),
+      body,
     };
     console.log("fetch", url);
     const response = await fetch(url, request);
@@ -117,11 +136,19 @@ async function postToBackend(path, payload, logLabel) {
     return { request, response, errorBody };
   };
 
-  let { request, response, errorBody } = await send(false);
+  let { request, response, errorBody } = await send(cachedToken);
 
   if (response.status === 403 && errorBody.errorData?.error === EMAIL_NOT_VERIFIED) {
     console.log("Email not verified; retrying once with a refreshed token");
-    ({ request, response, errorBody } = await send(true));
+    try {
+      const freshToken = await authManager.getIdToken(true);
+      ({ request, response, errorBody } = await send(freshToken));
+    } catch (retryError) {
+      if (isSessionError(retryError)) {
+        throw retryError;
+      }
+      console.warn("Retry after email_not_verified failed; keeping the first response", retryError);
+    }
   }
 
   if (!response.ok) {
@@ -158,11 +185,7 @@ async function postToBackend(path, payload, logLabel) {
  * @returns {Error}
  */
 function normalizeAuthError(error) {
-  if (
-    error.message.includes("Not authenticated") ||
-    error.message.includes("Authentication expired") ||
-    error.message.includes("OAuth2 not granted or revoked")
-  ) {
+  if (isSessionError(error)) {
     const authError = new Error("Authentication required, please sign in");
     authError.code = ERROR_CODES.AUTH_REQUIRED;
     return authError;
@@ -206,13 +229,12 @@ async function saveCustomRecipe({ description, title }) {
   }
 
   try {
-    const contentObject = await transformContent(description);
     const result = await postToBackend(
       "/v1/recipes/custom?compression=gzip",
-      {
-        description: contentObject.transformed,
+      async () => ({
+        description: (await transformContent(description)).transformed,
         title: title || description.split("\n")[0].slice(0, 80) || undefined,
-      },
+      }),
       "Custom recipe API request failed",
     );
     return toSaveResult(result);
@@ -232,14 +254,13 @@ export async function saveRecipe(recipeData) {
   }
 
   try {
-    const contentObject = await transformContent(recipeData.pageContent);
     const result = await postToBackend(
       "/v1/recipes?compression=gzip",
-      {
-        html: contentObject.transformed,
+      async () => ({
+        html: (await transformContent(recipeData.pageContent)).transformed,
         url: recipeData.pageUrl,
         title: recipeData.title,
-      },
+      }),
       "API request failed",
     );
     return toSaveResult(result);

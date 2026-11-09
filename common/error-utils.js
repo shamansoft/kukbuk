@@ -118,7 +118,7 @@ export function getUserFriendlyMessage(statusCode, errorMessage, errorData) {
       }
       if (statusCode === 403) {
         if (errorData?.error === EMAIL_NOT_VERIFIED) {
-          return "Please verify your email in the SAR app, then try again.";
+          return "Please verify your email in the Save-A-Recipe app, then try again.";
         }
         return "You don't have permission to perform this action.";
       }
@@ -163,6 +163,11 @@ export function mapCategoryToErrorCode(category, errorData) {
   // If backend provided explicit error code, use it
   if (errorData?.errorCode && typeof errorData.errorCode === "string") {
     return errorData.errorCode;
+  }
+
+  // Signed in but not verified: not the same as needing to sign in
+  if (errorData?.error === EMAIL_NOT_VERIFIED) {
+    return ERROR_CODES.EMAIL_NOT_VERIFIED;
   }
 
   // Map category to standard error code
@@ -239,16 +244,11 @@ function sanitizeHeaders(headers) {
 
   const sanitized = { ...headers };
 
-  // Remove sensitive headers
+  // Header names are case-insensitive: redact "Authorization" as well as "authorization"
   const sensitiveHeaders = ["authorization", "cookie", "x-api-key", "x-auth-token"];
-  sensitiveHeaders.forEach((header) => {
-    if (sanitized[header]) {
-      sanitized[header] = "[REDACTED]";
-    }
-    // Also check lowercase
-    const lowerHeader = header.toLowerCase();
-    if (sanitized[lowerHeader]) {
-      sanitized[lowerHeader] = "[REDACTED]";
+  Object.keys(sanitized).forEach((name) => {
+    if (sensitiveHeaders.includes(name.toLowerCase())) {
+      sanitized[name] = "[REDACTED]";
     }
   });
 
