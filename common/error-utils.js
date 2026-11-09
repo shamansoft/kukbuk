@@ -5,6 +5,12 @@
 import { ERROR_CODES } from "./constants.js";
 
 /**
+ * Backend error code sent as `403 {"error": "email_not_verified"}` when the user's
+ * email address is not verified yet.
+ */
+export const EMAIL_NOT_VERIFIED = "email_not_verified";
+
+/**
  * HTTP status code categories
  */
 export const ERROR_CATEGORIES = {
@@ -111,6 +117,9 @@ export function getUserFriendlyMessage(statusCode, errorMessage, errorData) {
         return "Your session has expired. Please sign in again.";
       }
       if (statusCode === 403) {
+        if (errorData?.error === EMAIL_NOT_VERIFIED) {
+          return "Please verify your email in the Save-A-Recipe app, then try again.";
+        }
         return "You don't have permission to perform this action.";
       }
       return "Authentication required. Please sign in.";
@@ -154,6 +163,11 @@ export function mapCategoryToErrorCode(category, errorData) {
   // If backend provided explicit error code, use it
   if (errorData?.errorCode && typeof errorData.errorCode === "string") {
     return errorData.errorCode;
+  }
+
+  // Signed in but not verified: not the same as needing to sign in
+  if (errorData?.error === EMAIL_NOT_VERIFIED) {
+    return ERROR_CODES.EMAIL_NOT_VERIFIED;
   }
 
   // Map category to standard error code
@@ -230,16 +244,11 @@ function sanitizeHeaders(headers) {
 
   const sanitized = { ...headers };
 
-  // Remove sensitive headers
+  // Header names are case-insensitive: redact "Authorization" as well as "authorization"
   const sensitiveHeaders = ["authorization", "cookie", "x-api-key", "x-auth-token"];
-  sensitiveHeaders.forEach((header) => {
-    if (sanitized[header]) {
-      sanitized[header] = "[REDACTED]";
-    }
-    // Also check lowercase
-    const lowerHeader = header.toLowerCase();
-    if (sanitized[lowerHeader]) {
-      sanitized[lowerHeader] = "[REDACTED]";
+  Object.keys(sanitized).forEach((name) => {
+    if (sensitiveHeaders.includes(name.toLowerCase())) {
+      sanitized[name] = "[REDACTED]";
     }
   });
 
