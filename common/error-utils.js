@@ -5,6 +5,12 @@
 import { ERROR_CODES } from "./constants.js";
 
 /**
+ * Backend error code sent as `403 {"error": "email_not_verified"}` when the user's
+ * email address is not verified yet.
+ */
+export const EMAIL_NOT_VERIFIED = "email_not_verified";
+
+/**
  * HTTP status code categories
  */
 export const ERROR_CATEGORIES = {
@@ -111,6 +117,9 @@ export function getUserFriendlyMessage(statusCode, errorMessage, errorData) {
         return "Your session has expired. Please sign in again.";
       }
       if (statusCode === 403) {
+        if (errorData?.error === EMAIL_NOT_VERIFIED) {
+          return "Please verify your email in the SAR app, then try again.";
+        }
         return "You don't have permission to perform this action.";
       }
       return "Authentication required. Please sign in.";
