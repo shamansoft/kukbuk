@@ -58,6 +58,7 @@ jest.mock("../../common/error-utils.js", () => ({
   getUserFriendlyMessage: jest.fn((status, errorMessage, errorData) => `Server error: ${status}`),
   mapCategoryToErrorCode: jest.fn(() => "network_error"),
   formatErrorForLogging: jest.fn((error) => JSON.stringify(error)),
+  EMAIL_NOT_VERIFIED: "email_not_verified",
 }));
 
 // Import the module under test

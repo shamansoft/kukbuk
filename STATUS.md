@@ -1,5 +1,5 @@
 # sar-ext — Status
-_Last updated: 2026-06-19_
+_Last updated: 2026-11-08_
 
 ## What this is
 Save-A-Recipe (product brand "MyKukBuk") is a Chrome Manifest V3 browser
@@ -26,6 +26,7 @@ recipes are then viewable from Drive or the `sar-kmp` mobile/desktop app.
   - Authentication: email/password and Google Sign-In via Firebase; Chrome storage is source of truth; lazy token refresh; auto sign-out only on refresh failure.
   - Recipe Creator: standalone window to create a recipe from a plain-text description (`POST /v1/recipes/custom`).
   - Single in-page feedback bubble (the only feedback surface; OS notifications removed); non-recipe detection; categorized, user-friendly error messages incl. quota (HTTP 429).
+  - Unverified email (HTTP 403 `email_not_verified`): one retry with a force-refreshed token, then "Please verify your email in the Save-A-Recipe app" (`errorCode: email_not_verified`). The extension has no verification UI.
   - Options page (Account + About) and a context menu (Settings, Log Out, Create Recipe from Description).
   - Shared "quiet utility" design system (`common/theme.css`): warm-neutral palette, single terracotta accent, hairline borders, 8px radius, restrained motion, reduced-motion support.
 - **In progress:** none.
@@ -38,7 +39,7 @@ recipes are then viewable from Drive or the `sar-kmp` mobile/desktop app.
   - Non-recipe analytics logging (US-10) — backend work in `sar-srv`.
 - **Known issues:**
   - Google Fonts dependency in `common/theme.css` (`@import url(...)`) causes FOUT and needs network access; fix is to self-host the Hanken Grotesk woff2 files and switch to `@font-face`.
-  - Test coverage gaps: `email-provider.js` and `common/error-utils.js` have 0% tests; overall ~65.8% statements / ~53.1% branches.
+  - Test coverage gaps: `email-provider.js` has 0% tests; overall ~73.7% statements / ~69.1% branches.
   - `node_modules/.bin/cross-env` can revert from symlink to plain file after some npm ops, breaking `build:local` (see CLAUDE.md for the fix).
 
 ## Active work

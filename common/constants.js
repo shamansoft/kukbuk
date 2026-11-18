@@ -45,4 +45,5 @@ export const ERROR_CODES = {
   NOT_FOUND: "not_found", // 404 specifically
   VALIDATION_ERROR: "validation_error", // 400/422
   QUOTA_EXCEEDED: "quota_exceeded", // 429 daily limit reached
+  EMAIL_NOT_VERIFIED: "email_not_verified", // 403: signed in, email not verified yet
 };

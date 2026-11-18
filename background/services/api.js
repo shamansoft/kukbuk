@@ -11,6 +11,7 @@ import {
   getUserFriendlyMessage,
   mapCategoryToErrorCode,
   formatErrorForLogging,
+  EMAIL_NOT_VERIFIED,
 } from "../../common/error-utils.js";
 
 /**
@@ -64,6 +65,157 @@ export function setupApi() {
 }
 
 /**
+ * Reads the error body of a failed response. Falls back to the raw text when it is not JSON.
+ * @param {Response} response - Failed fetch Response
+ * @returns {Promise<{errorData: Object, parseError: Error|null}>}
+ */
+async function readErrorBody(response) {
+  try {
+    return { errorData: await response.json(), parseError: null };
+  } catch (parseError) {
+    let errorData;
+    try {
+      const textBody = await response.text();
+      errorData = { _rawBody: textBody.substring(0, 500) };
+    } catch {
+      errorData = { _rawBody: "Unable to read response body" };
+    }
+    return { errorData, parseError };
+  }
+}
+
+/**
+ * True when the error means there is no usable session (signed out, or the token refresh
+ * failed and the provider cleared auth data). The user has to sign in again.
+ * @param {Error} error
+ * @returns {boolean}
+ */
+function isSessionError(error) {
+  const message = error?.message || "";
+  return (
+    message.includes("Not authenticated") ||
+    message.includes("Authentication expired") ||
+    message.includes("OAuth2 not granted or revoked")
+  );
+}
+
+/**
+ * POSTs a JSON payload to the backend with the user's Firebase ID token.
+ *
+ * On `403 {"error": "email_not_verified"}` it forces a token refresh and retries once.
+ * The `email_verified` claim is fixed when a token is issued, so without the refresh a user
+ * who has just verified keeps failing until the cached token expires (up to 50 minutes).
+ * If the retry fails for a reason other than a lost session (e.g. network), the first
+ * response is kept so the user still sees the verify message.
+ *
+ * @param {string} path - Path and query, e.g. "/v1/recipes?compression=gzip"
+ * @param {() => Promise<Object>} buildPayload - Builds the request body. Called after the
+ *   token is read, so a signed-out user fails before the content is compressed.
+ * @param {string} logLabel - Message used when logging a failed request
+ * @returns {Promise<Object>} Parsed JSON body of the successful response
+ * @throws {Error} With a user-friendly message, `code`, `statusCode` and `originalMessage`
+ */
+async function postToBackend(path, buildPayload, logLabel) {
+  const url = `${ENV.API_BASE_URL}${path}`;
+  const cachedToken = await authManager.getIdToken();
+  const body = JSON.stringify(await buildPayload());
+
+  const send = async (firebaseToken) => {
+    const request = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${firebaseToken}`,
+        "X-Extension-ID": ENV.EXTENSION_ID,
+      },
+      body,
+    };
+    console.log("fetch", url);
+    const response = await fetch(url, request);
+    const errorBody = response.ok ? null : await readErrorBody(response);
+    return { request, response, errorBody };
+  };
+
+  let { request, response, errorBody } = await send(cachedToken);
+
+  if (response.status === 403 && errorBody.errorData?.error === EMAIL_NOT_VERIFIED) {
+    console.log("Email not verified; retrying once with a refreshed token");
+    try {
+      const freshToken = await authManager.getIdToken(true);
+      ({ request, response, errorBody } = await send(freshToken));
+    } catch (retryError) {
+      if (isSessionError(retryError)) {
+        throw retryError;
+      }
+      console.warn("Retry after email_not_verified failed; keeping the first response", retryError);
+    }
+  }
+
+  if (!response.ok) {
+    const { errorData, parseError } = errorBody;
+    const errorMessage = extractErrorMessage(response, errorData);
+    const category = categorizeHttpError(response.status);
+    const errorCode = mapCategoryToErrorCode(category, errorData);
+
+    logError(
+      logLabel,
+      null,
+      formatErrorForLogging({
+        request: { method: request.method, url, headers: request.headers }, // headers sanitized
+        response: { status: response.status, statusText: response.statusText, body: errorData },
+        parseError,
+        category,
+      }),
+    );
+
+    const error = new Error(getUserFriendlyMessage(response.status, errorMessage, errorData));
+    error.code = errorCode;
+    error.statusCode = response.status;
+    error.originalMessage = errorMessage; // Preserve for specific handling
+    throw error;
+  }
+
+  return response.json();
+}
+
+/**
+ * Maps auth failures (no session, expired session, backend 401) to an AUTH_REQUIRED error.
+ * Other errors are returned unchanged.
+ * @param {Error} error
+ * @returns {Error}
+ */
+function normalizeAuthError(error) {
+  if (isSessionError(error)) {
+    const authError = new Error("Authentication required, please sign in");
+    authError.code = ERROR_CODES.AUTH_REQUIRED;
+    return authError;
+  }
+
+  if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+    const authError = new Error("Authentication expired, please sign in again");
+    authError.code = ERROR_CODES.AUTH_REQUIRED;
+    return authError;
+  }
+
+  return error;
+}
+
+/**
+ * Builds the success result sent back to the UI.
+ * @param {Object} result - Backend response body
+ * @returns {Object} Save result
+ */
+function toSaveResult(result) {
+  return {
+    success: true,
+    recipeName: result.title,
+    message: result.message || "Recipe saved to Google Drive successfully",
+    driveUrl: result.driveFileUrl || null,
+    isRecipe: result.isRecipe,
+  };
+}
+
+/**
  * Creates a recipe from a plain-text description via POST /v1/recipes/custom.
  * The description is compressed the same way as HTML in the main flow.
  * @param {Object} params
@@ -77,93 +229,17 @@ async function saveCustomRecipe({ description, title }) {
   }
 
   try {
-    const firebaseToken = await authManager.getIdToken();
-
-    const contentObject = await transformContent(description);
-    const compressedDescription = contentObject.transformed;
-
-    const request = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${firebaseToken}`,
-        "X-Extension-ID": ENV.EXTENSION_ID,
-      },
-      body: JSON.stringify({
-        description: compressedDescription,
+    const result = await postToBackend(
+      "/v1/recipes/custom?compression=gzip",
+      async () => ({
+        description: (await transformContent(description)).transformed,
         title: title || description.split("\n")[0].slice(0, 80) || undefined,
       }),
-    };
-
-    console.log("fetch custom recipe", ENV.API_BASE_URL, request);
-    const response = await fetch(`${ENV.API_BASE_URL}/v1/recipes/custom?compression=gzip`, request);
-
-    if (!response.ok) {
-      let errorData = null;
-      let parseError = null;
-
-      try {
-        errorData = await response.json();
-      } catch (e) {
-        parseError = e;
-        try {
-          const textBody = await response.text();
-          errorData = { _rawBody: textBody.substring(0, 500) };
-        } catch {
-          errorData = { _rawBody: "Unable to read response body" };
-        }
-      }
-
-      const errorMessage = extractErrorMessage(response, errorData);
-      const category = categorizeHttpError(response.status);
-      const errorCode = mapCategoryToErrorCode(category, errorData);
-
-      logError(
-        "Custom recipe API request failed",
-        null,
-        formatErrorForLogging({
-          request: { method: "POST", url: ENV.API_BASE_URL, headers: request.headers },
-          response: { status: response.status, statusText: response.statusText, body: errorData },
-          parseError,
-          category,
-        }),
-      );
-
-      const userMessage = getUserFriendlyMessage(response.status, errorMessage, errorData);
-      const error = new Error(userMessage);
-      error.code = errorCode;
-      error.statusCode = response.status;
-      error.originalMessage = errorMessage;
-      throw error;
-    }
-
-    const result = await response.json();
-
-    return {
-      success: true,
-      recipeName: result.title,
-      message: result.message || "Recipe saved to Google Drive successfully",
-      driveUrl: result.driveFileUrl || null,
-      isRecipe: result.isRecipe,
-    };
+      "Custom recipe API request failed",
+    );
+    return toSaveResult(result);
   } catch (error) {
-    if (
-      error.message.includes("Not authenticated") ||
-      error.message.includes("Authentication expired") ||
-      error.message.includes("OAuth2 not granted or revoked")
-    ) {
-      const authError = new Error("Authentication required, please sign in");
-      authError.code = ERROR_CODES.AUTH_REQUIRED;
-      throw authError;
-    }
-
-    if (error.message.includes("401") || error.message.includes("Unauthorized")) {
-      const authError = new Error("Authentication expired, please sign in again");
-      authError.code = ERROR_CODES.AUTH_REQUIRED;
-      throw authError;
-    }
-
-    throw error;
+    throw normalizeAuthError(error);
   }
 }
 
@@ -178,141 +254,17 @@ export async function saveRecipe(recipeData) {
   }
 
   try {
-    // Get Firebase ID token for backend authentication
-    const firebaseToken = await authManager.getIdToken();
-
-    // Check if Drive folder is selected
-    // const folder = await getCurrentFolder();
-    // if (!folder) {
-    //   const error = new Error('Google Drive folder not set. Please select a folder in settings.');
-    //   error.code = ERROR_CODES.FOLDER_REQUIRED;
-    //   throw error;
-    // }
-
-    const contentObject = await transformContent(recipeData.pageContent);
-    const content = contentObject.transformed;
-
-    // Prepare data for sending to API
-    const request = {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${firebaseToken}`,
-        "X-Extension-ID": ENV.EXTENSION_ID,
-        // "X-Request-ID": requestId,
-      },
-      body: JSON.stringify({
-        html: content,
+    const result = await postToBackend(
+      "/v1/recipes?compression=gzip",
+      async () => ({
+        html: (await transformContent(recipeData.pageContent)).transformed,
         url: recipeData.pageUrl,
         title: recipeData.title,
-        // folderId: folder.id,
-        // folderName: folder.name
       }),
-    };
-    console.log("fetch ", ENV.API_BASE_URL, request);
-    // Send to backend
-    const response = await fetch(`${ENV.API_BASE_URL}/v1/recipes?compression=gzip`, request);
-    //    or mock while debugging
-    // const response = await new Promise((resolve) => {
-    //   setTimeout(() => {
-    //     resolve({
-    //       ok: true,
-    //       status: 200,
-    //       json: async () => ({
-    //         recipeName: "Test Recipe",
-    //         message: "Recipe saved successfully",
-    //       }),
-    //     });
-    //   }, 3000);
-    // });
-
-    // Check for HTTP errors
-    if (!response.ok) {
-      let errorData = null;
-      let parseError = null;
-
-      // Try to parse JSON error response
-      try {
-        errorData = await response.json();
-      } catch (e) {
-        parseError = e;
-        // If JSON parsing fails, try to get text body for logging
-        try {
-          const textBody = await response.text();
-          errorData = { _rawBody: textBody.substring(0, 500) }; // Limit size
-        } catch (textError) {
-          errorData = { _rawBody: "Unable to read response body" };
-        }
-      }
-
-      // Extract best error message using utility
-      const errorMessage = extractErrorMessage(response, errorData);
-
-      // Categorize error for appropriate error code
-      const category = categorizeHttpError(response.status);
-      const errorCode = mapCategoryToErrorCode(category, errorData);
-
-      // Log detailed error information for debugging
-      logError(
-        "API request failed",
-        null,
-        formatErrorForLogging({
-          request: {
-            method: "POST",
-            url: ENV.API_BASE_URL,
-            headers: request.headers, // Will be sanitized in formatting
-          },
-          response: {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorData,
-          },
-          parseError,
-          category,
-        }),
-      );
-
-      // Create error with user-friendly message for UI
-      const userMessage = getUserFriendlyMessage(response.status, errorMessage, errorData);
-      const error = new Error(userMessage);
-      error.code = errorCode;
-      error.statusCode = response.status;
-      error.originalMessage = errorMessage; // Preserve for specific handling
-
-      throw error;
-    }
-
-    // Parse success response
-    const result = await response.json();
-
-    return {
-      success: true,
-      recipeName: result.title,
-      message: result.message || "Recipe saved to Google Drive successfully",
-      driveUrl: result.driveFileUrl || null,
-      isRecipe: result.isRecipe,
-      // folderName: folder.name,
-    };
+      "API request failed",
+    );
+    return toSaveResult(result);
   } catch (error) {
-    // Handle auth errors
-    if (
-      error.message.includes("Not authenticated") ||
-      error.message.includes("Authentication expired") ||
-      error.message.includes("OAuth2 not granted or revoked")
-    ) {
-      const authError = new Error("Authentication required, please sign in");
-      authError.code = ERROR_CODES.AUTH_REQUIRED;
-      throw authError;
-    }
-
-    // Handle 401 Unauthorized from backend
-    if (error.message.includes("401") || error.message.includes("Unauthorized")) {
-      const authError = new Error("Authentication expired, please sign in again");
-      authError.code = ERROR_CODES.AUTH_REQUIRED;
-      throw authError;
-    }
-
-    // Re-throw the error
-    throw error;
+    throw normalizeAuthError(error);
   }
 }
