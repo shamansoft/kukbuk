@@ -8,7 +8,7 @@ const emailInput = document.getElementById("email-input");
 const passwordInput = document.getElementById("password-input");
 const googleSignInBtn = document.getElementById("google-signin-btn");
 
-document.addEventListener("DOMContentLoaded", initPopup);
+document.addEventListener("DOMContentLoaded", initPopup, { once: true });
 
 async function initPopup() {
   try {
@@ -17,15 +17,15 @@ async function initPopup() {
       window.close();
       return;
     }
-    if (googleSignInBtn && authStatus.googleSignInAvailable === false) {
-      document.querySelector(".divider")?.remove();
-      googleSignInBtn.closest(".oauth-providers")?.remove();
+    if (authStatus.googleSignInAvailable) {
+      googleSignInBtn.closest(".oauth-providers").hidden = false;
+      document.querySelector(".divider").hidden = false;
     }
     if (authStatus.googleSignInFailed) {
       showLoginError("Google sign-in did not complete. Please try again.");
     }
-  } catch (_e) {
-    // Fall through to show login form
+  } catch {
+    // Keep the email form available if the auth check fails.
   }
   setupEventListeners();
 }

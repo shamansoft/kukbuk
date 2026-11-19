@@ -65,7 +65,7 @@ the Chrome build.
 2. In Firefox, open `about:debugging#/runtime/this-firefox`, click
    **Load Temporary Add-on**, and select `build/firefox/manifest.json` (or the
    manifest in the extracted ZIP).
-3. Sign in with a verified test account that has a Drive folder configured.
+3. Sign in with a verified test account that has cloud storage connected in Save-A-Recipe.
    Open a recipe page, click the toolbar icon, and check that the success bubble
    links to the saved file. Try **Create Recipe from Description** and **Log Out**
    from the toolbar context menu.
@@ -95,8 +95,11 @@ Keep the stable Gecko add-on ID (`save-a-recipe@mykukbuk.com` by default).
 3. Add `FIREFOX_GOOGLE_CLIENT_ID=your-web-client-id.apps.googleusercontent.com`
    to `.env`, rebuild, and reload the add-on. Keep any OAuth client secret out of
    the extension.
-4. Test Google sign-in by choosing a test account, then repeating the recipe
-   save check. Cancel a second sign-in attempt and confirm you can retry.
+4. Test **Continue with Google** using a verified test account with connected
+   storage. Save a recipe, open the link in the success bubble, and confirm the
+   recipe is in the account's connected storage. Sign out, cancel a second
+   Google sign-in attempt, and confirm you can retry. Run the same check with
+   accounts connected to Google Drive and Dropbox.
 
 [Mozilla’s redirect URI documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/identity#getting_the_redirect_url)
 
