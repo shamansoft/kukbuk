@@ -29,13 +29,12 @@ recipes are then viewable from Drive or the `sar-kmp` mobile/desktop app.
   - Unverified email (HTTP 403 `email_not_verified`): one retry with a force-refreshed token, then "Please verify your email in the Save-A-Recipe app" (`errorCode: email_not_verified`). The extension has no verification UI.
   - Options page (Account + About) and a context menu (Settings, Log Out, Create Recipe from Description).
   - Shared "quiet utility" design system (`common/theme.css`): warm-neutral palette, single terracotta accent, hairline borders, 8px radius, restrained motion, reduced-motion support.
-- **In progress:** none.
+- **In progress:** Desktop Firefox packaging and Firebase authentication are implemented. Live Mac testing, Google OAuth configuration, and Mozilla signing remain pending.
 - **Planned / backlog:**
   - Recipe conflict resolution UI when a cached URL's content changed (US-12, EXT).
   - "Save Recipe" item in the icon context menu (US-15, EXT).
   - Chrome Web Store listing: screenshots, description, privacy policy, ToS (US-17, EXT).
   - CI/CD packaging: automated zip / version bump on release (US-17, EXT).
-  - Firefox support: MV3 mostly compatible; `chrome.identity` needs a polyfill/alternative auth path (US-17, EXT).
   - Non-recipe analytics logging (US-10) — backend work in `sar-srv`.
 - **Known issues:**
   - Google Fonts dependency in `common/theme.css` (`@import url(...)`) causes FOUT and needs network access; fix is to self-host the Hanken Grotesk woff2 files and switch to `@font-face`.

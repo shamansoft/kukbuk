@@ -69,10 +69,14 @@ function generateConfig(args) {
 
   if (firefox) {
     manifest = createFirefoxManifest(manifest, process.env.FIREFOX_EXTENSION_ID || undefined);
+    fs.rmSync(outputDir, { recursive: true, force: true });
+    const bundledOnly = ["env-config.js", "firebase-config.js", "email-sign-in-error.js"];
     for (const directory of ["common", "content", "icons", "options", "popup", "recipe-creator"]) {
       fs.cpSync(path.join(root, directory), path.join(outputDir, directory), {
         recursive: true,
-        filter: (source) => !source.endsWith(".test.js"),
+        filter: (source) =>
+          !source.endsWith(".test.js") &&
+          (directory !== "common" || !bundledOnly.includes(path.basename(source))),
       });
     }
   }

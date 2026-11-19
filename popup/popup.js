@@ -21,6 +21,9 @@ async function initPopup() {
       document.querySelector(".divider")?.remove();
       googleSignInBtn.closest(".oauth-providers")?.remove();
     }
+    if (authStatus.googleSignInFailed) {
+      showLoginError("Google sign-in did not complete. Please try again.");
+    }
   } catch (_e) {
     // Fall through to show login form
   }

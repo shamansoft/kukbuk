@@ -83,6 +83,15 @@ test("email works without Google OAuth configuration", async () => {
   );
 });
 
+test("maps rejected email credentials to the shared sign-in error", async () => {
+  signInWithEmailAndPassword.mockRejectedValueOnce({ code: "auth/invalid-credential" });
+  const [email] = createFirefoxProviders();
+  await expect(email.signIn({ email: user.email, password: "wrong" })).rejects.toThrow(
+    "Invalid email or password. Please try again.",
+  );
+  expect(browser.storage.local.set).not.toHaveBeenCalled();
+});
+
 test("waits for Firebase to restore an event page's session before refreshing", async () => {
   auth.authStateReady.mockImplementationOnce(async () => {
     auth.currentUser = user;

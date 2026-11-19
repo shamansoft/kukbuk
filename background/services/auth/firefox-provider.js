@@ -8,6 +8,7 @@ import {
 import { auth } from "../../../common/firebase-config.js";
 import { ENV } from "../../../common/env-config.js";
 import { STORAGE_KEYS } from "../../../common/constants.js";
+import { emailSignInError } from "../../../common/email-sign-in-error.js";
 import { BaseAuthProvider } from "./base-provider.js";
 
 async function getGoogleCredential() {
@@ -74,7 +75,11 @@ class FirefoxProvider extends BaseAuthProvider {
     const result =
       this.name === "google"
         ? await signInWithCredential(auth, await getGoogleCredential())
-        : await signInWithEmailAndPassword(auth, credentials?.email, credentials?.password);
+        : await signInWithEmailAndPassword(auth, credentials?.email, credentials?.password).catch(
+            (error) => {
+              throw new Error(emailSignInError(error));
+            },
+          );
     const { uid: userId, email, displayName, photoURL } = result.user;
     const firebaseToken = await result.user.getIdToken();
     await browser.storage.local.set({

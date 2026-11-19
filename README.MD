@@ -73,6 +73,9 @@ the Chrome build.
 Firefox removes temporary add-ons on restart. Use a Mozilla-signed build to test
 session persistence across a full browser restart.
 
+For a Mozilla Add-ons submission, include the corresponding source and the
+Firefox build instructions so reviewers can reproduce the bundled package.
+
 #### Enable Google sign-in in Firefox
 
 Email and password sign-in works with the standard Firebase configuration. To
