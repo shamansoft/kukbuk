@@ -5,10 +5,12 @@
   "scripts": {
     "build": "node scripts/increment-version.js && node scripts/substitute-env.js && webpack --config webpack.config.js",
     "build:local": "node scripts/increment-version.js && node scripts/substitute-env.js --env=.env.local && cross-env NODE_ENV=development webpack --config webpack.config.js",
+    "build:firefox": "node scripts/substitute-env.js --firefox && webpack --config webpack.config.js --env firefox",
     "dev": "cross-env NODE_ENV=development node scripts/substitute-env.js && webpack --watch --config webpack.config.js",
     "dev:local": "cross-env NODE_ENV=development node scripts/substitute-env.js --env=.env.local && webpack --watch --config webpack.config.js",
     "zip": "node scripts/substitute-env.js && webpack --config webpack.config.js && node scripts/zip-extension.js",
     "zip:local": "node scripts/substitute-env.js --env=.env.local && cross-env NODE_ENV=development webpack --config webpack.config.js && node scripts/zip-extension.js",
+    "zip:firefox": "npm run build:firefox && node scripts/zip-extension.js --firefox",
     "deploy": "node scripts/deploy-chrome.js",
     "deploy:local": "node scripts/deploy-chrome.js --env=.env.local",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .js .",

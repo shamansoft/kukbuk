@@ -46,6 +46,9 @@ const mockChrome = {
     onInstalled: {
       addListener: jest.fn(),
     },
+    onStartup: {
+      addListener: jest.fn(),
+    },
     openOptionsPage: jest.fn(),
     getURL: jest.fn((path) => `chrome-extension://mock-id/${path}`),
     sendMessage: jest.fn((msg, callback) => {
@@ -106,13 +109,24 @@ describe("Background Script", () => {
     // Check that the initialization log was printed
     expect(console.log).toHaveBeenCalledWith("Initializing Save-A-Recipe background script");
 
-    // Verify that context menu was set up properly
-    expect(chrome.contextMenus.removeAll).toHaveBeenCalled();
-    expect(chrome.contextMenus.create).toHaveBeenCalledTimes(3);
+    // Wake-ups register the handler without recreating menu items.
+    expect(chrome.contextMenus.create).not.toHaveBeenCalled();
     expect(chrome.contextMenus.onClicked.addListener).toHaveBeenCalled();
 
     // Verify that runtime.onInstalled listener was added
     expect(chrome.runtime.onInstalled.addListener).toHaveBeenCalled();
+  });
+
+  test("creates context menu items on install", async () => {
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+
+    const onInstalled = chrome.runtime.onInstalled.addListener.mock.calls[0][0];
+    await onInstalled();
+
+    expect(chrome.contextMenus.removeAll).toHaveBeenCalled();
+    expect(chrome.contextMenus.create).toHaveBeenCalledTimes(3);
   });
 
   // Skip this test for now - it's difficult to test the "already initialized" behavior

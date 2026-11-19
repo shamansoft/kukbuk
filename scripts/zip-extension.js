@@ -8,12 +8,11 @@ const path = require("path");
 const AdmZip = require("adm-zip");
 const dotenv = require("dotenv");
 
+const firefox = process.argv.includes("--firefox");
+const firefoxDir = path.resolve(__dirname, "../build/firefox");
+
 // Load environment variables
 dotenv.config();
-
-// Get version from environment or manifest
-const version = process.env.EXTENSION_VERSION || "1.0.0";
-const zipFilename = `save-a-recipe-extension-v${version}.zip`;
 
 // Files and directories to include in the distributable zip.
 // background/** is intentionally omitted — Chrome loads the compiled bundle
@@ -112,13 +111,21 @@ function addGlobToZip(zip, pattern) {
 
 // Create ZIP file
 try {
+  const version = firefox
+    ? JSON.parse(fs.readFileSync(path.join(firefoxDir, "manifest.json"), "utf8")).version
+    : process.env.EXTENSION_VERSION || "1.0.0";
+  const browserSuffix = firefox ? "-firefox" : "";
+  const zipFilename = `save-a-recipe-extension${browserSuffix}-v${version}.zip`;
   console.log(`Creating extension package: ${zipFilename}`);
 
   const zip = new AdmZip();
 
-  // Add files to zip
-  for (const pattern of INCLUDE_FILES) {
-    addGlobToZip(zip, pattern);
+  if (firefox) {
+    zip.addLocalFolder(firefoxDir);
+  } else {
+    for (const pattern of INCLUDE_FILES) {
+      addGlobToZip(zip, pattern);
+    }
   }
 
   // Write zip file

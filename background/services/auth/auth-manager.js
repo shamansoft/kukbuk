@@ -3,10 +3,13 @@
  * Manages multiple auth providers and handles auth state
  */
 
-import { EmailPasswordProvider } from "./email-provider.js";
-import { GoogleProvider } from "./google-provider.js";
 import { STORAGE_KEYS, MESSAGE_TYPES } from "../../../common/constants.js";
 import { logError } from "../../../common/error-handler.js";
+
+const extension = globalThis.browser ?? globalThis.chrome;
+
+/* global __FIREFOX__ */
+const isFirefox = typeof __FIREFOX__ !== "undefined" && __FIREFOX__;
 
 class AuthManager {
   constructor() {
@@ -15,8 +18,15 @@ class AuthManager {
     this.authStateUnsubscribe = null;
 
     // Register available providers
-    this.registerProvider(new EmailPasswordProvider());
-    this.registerProvider(new GoogleProvider());
+    if (typeof __FIREFOX__ !== "undefined" && __FIREFOX__) {
+      const { createFirefoxProviders } = require("./firefox-provider.js");
+      createFirefoxProviders().forEach((provider) => this.registerProvider(provider));
+    } else {
+      const { EmailPasswordProvider } = require("./email-provider.js");
+      const { GoogleProvider } = require("./google-provider.js");
+      this.registerProvider(new EmailPasswordProvider());
+      this.registerProvider(new GoogleProvider());
+    }
 
     // Set default provider to email
     this.currentProvider = this.providers.get("email");
@@ -77,7 +87,7 @@ class AuthManager {
 
       if (result.success) {
         // Store current provider name
-        await chrome.storage.local.set({
+        await extension.storage.local.set({
           currentAuthProvider: providerName,
         });
 
@@ -109,7 +119,7 @@ class AuthManager {
       await this.currentProvider.signOut();
 
       // Clear current provider reference
-      await chrome.storage.local.remove(["currentAuthProvider"]);
+      await extension.storage.local.remove(["currentAuthProvider"]);
 
       console.log(`Signed out from ${providerName} successfully`);
     } catch (error) {
@@ -128,7 +138,7 @@ class AuthManager {
   async checkAuthStatus() {
     try {
       // Get stored auth data - Chrome storage is our source of truth
-      const authData = await chrome.storage.local.get([
+      const authData = await extension.storage.local.get([
         STORAGE_KEYS.FIREBASE_TOKEN,
         STORAGE_KEYS.USER_ID,
         STORAGE_KEYS.USER_EMAIL,
@@ -140,6 +150,13 @@ class AuthManager {
       const token = authData[STORAGE_KEYS.FIREBASE_TOKEN];
       const userId = authData[STORAGE_KEYS.USER_ID];
       const email = authData[STORAGE_KEYS.USER_EMAIL];
+
+      if (isFirefox) {
+        const user = await this.providers.get("email").getCurrentUser();
+        if (!user || user.uid !== userId) {
+          return { success: true, authenticated: false };
+        }
+      }
 
       // Check if we have basic auth data in storage
       if (!token || !userId || !email) {
@@ -202,7 +219,7 @@ class AuthManager {
    * @private
    */
   async clearAuthData() {
-    await chrome.storage.local.remove([
+    await extension.storage.local.remove([
       STORAGE_KEYS.FIREBASE_TOKEN,
       STORAGE_KEYS.FIREBASE_REFRESH_TIME,
       STORAGE_KEYS.USER_ID,
@@ -227,7 +244,7 @@ class AuthManager {
     }
 
     // Get the current provider from storage, or use Google as default
-    const storage = await chrome.storage.local.get(["currentAuthProvider"]);
+    const storage = await extension.storage.local.get(["currentAuthProvider"]);
     const providerName = storage.currentAuthProvider || "email";
     const provider = this.providers.get(providerName);
 
@@ -278,7 +295,7 @@ export function setupAuth() {
   authManager.setupAuthStateListener();
 
   // Listen for authentication messages from popup/content scripts
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  extension.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Sign in with provider
     if (
       message.type === MESSAGE_TYPES.AUTH_REQUEST ||
@@ -302,7 +319,12 @@ export function setupAuth() {
     if (message.type === MESSAGE_TYPES.AUTH_CHECK) {
       authManager
         .checkAuthStatus()
-        .then((response) => sendResponse(response))
+        .then((response) => {
+          sendResponse({
+            ...response,
+            googleSignInAvailable: Boolean(authManager.getProvider("google")),
+          });
+        })
         .catch((error) => {
           logError("Auth check error", error);
           sendResponse({ success: false, error: error.message });
