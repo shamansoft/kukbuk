@@ -5,6 +5,7 @@
 
 const fs = require("fs");
 const path = require("path");
+const { createHash } = require("node:crypto");
 const dotenv = require("dotenv");
 const { version } = require("../package.json");
 
@@ -40,7 +41,7 @@ function substituteEnvVars(content) {
       return version + (process.env.VERSION_SUFFIX ?? "");
     }
     if (varName === "FIREFOX_GOOGLE_CLIENT_ID") {
-      return process.env.FIREFOX_GOOGLE_CLIENT_ID ?? "";
+      return process.env.FIREFOX_GOOGLE_CLIENT_ID?.trim() ?? "";
     }
 
     const value = process.env[varName];
@@ -69,6 +70,16 @@ function generateConfig(args) {
 
   if (firefox) {
     manifest = createFirefoxManifest(manifest, process.env.FIREFOX_EXTENSION_ID || undefined);
+    if (!process.env.FIREFOX_GOOGLE_CLIENT_ID?.trim()) {
+      const { id } = manifest.browser_specific_settings.gecko;
+      // Firefox derives the identity redirect subdomain from the SHA-1 of the add-on ID.
+      const redirectHost = createHash("sha1").update(id).digest("hex");
+      console.warn(
+        "Google sign-in is disabled in this Firefox build. Set FIREFOX_GOOGLE_CLIENT_ID " +
+          "to a Web application OAuth client registered for " +
+          `http://127.0.0.1/mozoauth2/${redirectHost}.`,
+      );
+    }
     fs.rmSync(outputDir, { recursive: true, force: true });
     const bundledOnly = ["env-config.js", "firebase-config.js", "email-sign-in-error.js"];
     for (const directory of ["common", "content", "icons", "options", "popup", "recipe-creator"]) {

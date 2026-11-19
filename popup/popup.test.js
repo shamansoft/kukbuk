@@ -2,24 +2,10 @@
  * @jest-environment jsdom
  */
 
-const POPUP_HTML = `
-<div class="container">
-  <section id="login-section">
-    <p id="login-error" style="display: none"></p>
-    <form id="email-login-form">
-      <input type="email" id="email-input" />
-      <input type="password" id="password-input" />
-      <button type="submit" class="btn primary">Sign In</button>
-    </form>
-    <div class="divider"><span>or</span></div>
-    <div class="oauth-providers">
-      <button id="google-signin-btn" class="btn secondary oauth-btn" type="button">
-        Continue with Google
-      </button>
-    </div>
-  </section>
-</div>
-`;
+const fs = require("node:fs");
+const path = require("node:path");
+
+const popupHtml = fs.readFileSync(path.join(__dirname, "popup.html"), "utf8");
 
 jest.mock("../common/error-handler.js", () => ({
   logError: jest.fn(),
@@ -36,9 +22,18 @@ describe("popup.js - login-only popup", () => {
   let sendMessageMock;
   let closeSpy;
 
-  beforeAll(async () => {
-    document.body.innerHTML = POPUP_HTML;
+  async function openPopup(googleSignInAvailable) {
+    const popup = new DOMParser().parseFromString(popupHtml, "text/html");
+    document.body.replaceChildren(...popup.body.children);
+    sendMessageMock.mockImplementation((msg, callback) => {
+      callback({ success: true, authenticated: false, googleSignInAvailable });
+    });
+    jest.isolateModules(() => require("./popup.js"));
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+    await Promise.resolve();
+  }
 
+  beforeEach(async () => {
     closeSpy = jest.spyOn(window, "close").mockImplementation(() => {});
 
     sendMessageMock = jest.fn();
@@ -53,35 +48,45 @@ describe("popup.js - login-only popup", () => {
       },
     };
 
-    // Auth check returns "not authenticated" so popup shows login form
-    sendMessageMock.mockImplementation((msg, callback) => {
-      if (callback) callback({ success: true, authenticated: false });
-    });
-
-    require("./popup.js");
-    document.dispatchEvent(new Event("DOMContentLoaded"));
-
-    // Let initPopup async work settle
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  });
-
-  beforeEach(() => {
-    const err = document.getElementById("login-error");
-    err.style.display = "none";
-    err.textContent = "";
+    await openPopup(true);
     sendMessageMock.mockClear();
-    closeSpy.mockClear();
   });
 
-  it("renders login section in the DOM", () => {
-    expect(document.getElementById("login-section")).not.toBeNull();
+  afterEach(() => {
+    closeSpy.mockRestore();
   });
 
-  it("renders Google Sign-In button in the DOM", () => {
+  it("uses storage-provider-neutral copy for both sign-in options", () => {
+    const welcomeText = document.querySelector(".welcome-text").textContent;
+    expect(welcomeText).toMatch(/recipes/i);
+    expect(welcomeText).not.toMatch(/google drive|dropbox/i);
+  });
+
+  it("shows Google sign-in before the email form when available", () => {
     const btn = document.getElementById("google-signin-btn");
-    expect(btn).not.toBeNull();
+    const form = document.getElementById("email-login-form");
+    expect(btn.closest(".oauth-providers").hidden).toBe(false);
     expect(btn.textContent.trim()).toContain("Continue with Google");
+    expect(btn.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  it.each([false, undefined])(
+    "keeps email sign-in available with Google availability %s",
+    async (available) => {
+      await openPopup(available);
+
+      expect(document.querySelector(".oauth-providers").hidden).toBe(true);
+      expect(document.querySelector(".divider").hidden).toBe(true);
+
+      sendMessageMock.mockImplementationOnce((msg, callback) => callback({ success: true }));
+      document.getElementById("email-input").value = "user@example.com";
+      document.getElementById("password-input").value = "password123";
+      document.getElementById("email-login-form").dispatchEvent(new Event("submit"));
+      await Promise.resolve();
+
+      expect(closeSpy).toHaveBeenCalled();
+    },
+  );
 
   it("does not contain main-section, minimal-status-section, or success-section", () => {
     expect(document.getElementById("main-section")).toBeNull();
@@ -108,25 +113,25 @@ describe("popup.js - login-only popup", () => {
 
   it("sends AUTH_PROVIDER_SIGNIN with google provider when Google button is clicked", async () => {
     sendMessageMock.mockImplementationOnce((msg, callback) => {
-      callback({ success: true, email: "user@gmail.com" });
+      callback({ success: true });
     });
 
     document.getElementById("google-signin-btn").click();
     await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(sendMessageMock).toHaveBeenCalledWith(
-      expect.objectContaining({
+      {
         type: "AUTH_PROVIDER_SIGNIN",
         provider: "google",
         credentials: null,
-      }),
+      },
       expect.any(Function),
     );
   });
 
   it("closes window on successful Google sign-in", async () => {
     sendMessageMock.mockImplementationOnce((msg, callback) => {
-      callback({ success: true, email: "user@gmail.com" });
+      callback({ success: true });
     });
 
     document.getElementById("google-signin-btn").click();
