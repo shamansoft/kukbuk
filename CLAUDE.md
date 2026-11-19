@@ -28,7 +28,7 @@ This is a Chrome Extension (Manifest V3) that saves recipes from websites to Goo
 
 **Background Service Worker** (`background/background.js`)
 - Main extension logic and event handling
-- Chrome APIs integration (tabs, contextMenus, storage)
+- Chrome APIs integration (contextMenus, storage, scripting with activeTab)
 - Coordinates between content scripts and popup
 
 **Services Architecture** (`background/services/`)
@@ -37,8 +37,9 @@ This is a Chrome Extension (Manifest V3) that saves recipes from websites to Goo
 - `transformation.js` - Recipe content GZIP compression (Base64 output)
 
 **Content Scripts** (`content/`)
-- Injected into web pages to extract recipe data
-- Handles DOM interaction and data collection
+- No static content scripts. On toolbar click, `background.js` injects `content/recipe-extractor.js` + `content/content.js` into the active tab (`activeTab` + `scripting`)
+- `recipe-extractor.js` returns only recipe data (allowlisted JSON-LD/microdata Recipe fields + visible recipe-card text) and a cleaned URL; it never returns raw page HTML. No recipe → `NO_RECIPE_FOUND`, nothing uploaded
+- `content.js` handles PING / EXTRACT_RECIPE / SHOW_BUBBLE
 
 **Popup UI** (`popup/`)
 - Login-only interface (email/password and Google Sign-In)
@@ -65,6 +66,8 @@ The extension uses environment variable substitution during build:
 - `scripts/substitute-env.js` - Handles template variable replacement
 
 Required environment variables:
+- `API_BASE_URL` - Backend URL; its host is the manifest's only `host_permissions` entry and CSP `connect-src` API origin. Must be https, except `http://localhost`/`127.0.0.1`, which also adds local dev hosts. The build fails if missing/invalid.
+- `FIREBASE_AUTH_DOMAIN` - Becomes the CSP `frame-src` (no `*.firebaseapp.com` wildcard). The build fails if missing/invalid.
 - `EXTENSION_VERSION` - Extension version number (supports `VERSION_SUFFIX` env var appended at build time)
 - `FIREBASE_API_KEY` - Firebase API key for authentication
 - `CHROME_EXTENSION_CLIENT_ID` - OAuth 2.0 client ID of type "Chrome Extension" (not web/server type). Create at Google Cloud Console → APIs & Services → Credentials → Create OAuth Client ID → Chrome Extension. Required for `chrome.identity.getAuthToken()` / Google Sign-In.

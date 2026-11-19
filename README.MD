@@ -29,6 +29,7 @@ npm install
 3. Create a `.env` file at the root of the project with your Firebase and API credentials:
 ```bash
 # API Configuration
+# The build grants host access to this host only (plus localhost when this is a localhost URL).
 API_BASE_URL=https://your-backend-url.run.app
 EXTENSION_ID=mkb-prod
 
@@ -129,7 +130,7 @@ This will launch Chrome with a dedicated profile and the extension pre-loaded.
 mykukbuk-extension/
 ├── background/         # Background service worker scripts
 ├── common/             # Shared assets: theme.css design tokens
-├── content/            # Content scripts for webpage interaction
+├── content/            # On-demand scripts: recipe extraction + in-page bubble
 ├── docs/               # Documentation files
 ├── icons/              # Extension icons
 ├── popup/              # Login popup UI
@@ -141,13 +142,33 @@ mykukbuk-extension/
 
 ## Permissions
 
-This extension requires the following permissions:
+The extension asks for as little access as it can:
 
-- `activeTab` - To interact with the current tab
-- `storage` - To store user preferences and extension data
-- `contextMenus` - For right-click menu functionality
-- `scripting` - For executing scripts on web pages
-- `tabs` - For tab management
+- `activeTab` + `scripting` - When you click the toolbar button, inject the recipe extractor into
+  that one tab. There are no static content scripts and no access to other sites or tabs.
+- `storage` - Store sign-in state
+- `contextMenus` - Toolbar right-click menu (Settings, Log Out, Create Recipe)
+- `identity` - Google Sign-In
+- `offscreen` (Chrome only) - Firebase authentication document
+- Host access: only the backend host from `API_BASE_URL`. Local builds whose `API_BASE_URL`
+  points at `localhost`/`127.0.0.1` also get those hosts. The build fails rather than fall back to
+  broad host access when `API_BASE_URL` or `FIREBASE_AUTH_DOMAIN` is missing or invalid.
+
+## What a save sends
+
+Only recipe data, never the page's HTML:
+
+- schema.org `Recipe` JSON-LD or microdata, reduced to recipe fields (name, ingredients,
+  instructions, times, yield, nutrition, images, author name). Reviews, comments, ratings and
+  other fields are dropped.
+- The visible text of a known recipe card (WP Recipe Maker, Tasty Recipes, Mediavine Create,
+  h-recipe, schema.org microdata), rebuilt with plain structural tags. Hidden elements, form
+  fields, comments, ratings, sharing and ad blocks are skipped.
+- The page URL without fragment, credentials or query string (or the same-site canonical URL
+  minus tracking parameters).
+
+If the page has no recognizable recipe, nothing is uploaded and the bubble says
+"No recipe found on this page".
 
 ## Save Behavior
 

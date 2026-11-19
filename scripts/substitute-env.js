@@ -11,6 +11,85 @@ const { version } = require("../package.json");
 
 const root = path.resolve(__dirname, "..");
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1"]);
+const LOCAL_DEV_HOST_PERMISSIONS = ["http://localhost/*", "http://127.0.0.1/*"];
+const LOCAL_DEV_ORIGINS = ["http://localhost:*", "http://127.0.0.1:*"];
+
+/**
+ * Derives the extension's network allowlist from the build environment.
+ *
+ * Production builds get exactly one backend host (from API_BASE_URL) and one Firebase auth
+ * domain (from FIREBASE_AUTH_DOMAIN); no wildcards. Local development hosts (localhost and
+ * 127.0.0.1, any port) are added only when API_BASE_URL itself points at a loopback host.
+ * Throws instead of falling back to broad host access when either value is missing or invalid.
+ *
+ * @param {Object} env - Usually process.env
+ * @returns {{apiOrigin: string, apiHostPermission: string, authOrigin: string, localDev: boolean}}
+ */
+function resolveNetworkPolicy(env) {
+  const rawApi = env.API_BASE_URL?.trim();
+  if (!rawApi) {
+    throw new Error("API_BASE_URL is required: it sets the extension's only backend host.");
+  }
+  let api;
+  try {
+    api = new URL(rawApi);
+  } catch (_e) {
+    throw new Error(`API_BASE_URL is not a valid URL: ${rawApi}`);
+  }
+  const localDev = LOOPBACK_HOSTS.has(api.hostname);
+  if (api.protocol !== "https:" && !(localDev && api.protocol === "http:")) {
+    throw new Error("API_BASE_URL must use https:// (http:// is allowed only for localhost).");
+  }
+
+  const authDomain = env.FIREBASE_AUTH_DOMAIN?.trim();
+  if (
+    !authDomain ||
+    !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(authDomain)
+  ) {
+    throw new Error("FIREBASE_AUTH_DOMAIN must be a host name such as kukbuk-tf.firebaseapp.com.");
+  }
+
+  return {
+    apiOrigin: api.origin,
+    // Match patterns cannot name a port; the pattern covers every port on the host.
+    apiHostPermission: `${api.protocol}//${api.hostname}/*`,
+    authOrigin: `https://${authDomain.toLowerCase()}`,
+    localDev,
+  };
+}
+
+/**
+ * Fills the manifest's network placeholders (${API_HOST_PERMISSION}, ${API_ORIGIN},
+ * ${FIREBASE_AUTH_ORIGIN}) and adds the local development hosts when the policy allows them.
+ * @param {Object} manifest - Parsed manifest template
+ * @param {ReturnType<typeof resolveNetworkPolicy>} policy
+ * @returns {Object} New manifest
+ */
+function applyNetworkPolicy(manifest, policy) {
+  const fill = (value) =>
+    value
+      .replaceAll("${API_HOST_PERMISSION}", policy.apiHostPermission)
+      .replaceAll("${API_ORIGIN}", policy.apiOrigin)
+      .replaceAll("${FIREBASE_AUTH_ORIGIN}", policy.authOrigin);
+
+  const hostPermissions = manifest.host_permissions.map(fill);
+  let csp = fill(manifest.content_security_policy.extension_pages);
+  if (policy.localDev) {
+    hostPermissions.push(...LOCAL_DEV_HOST_PERMISSIONS);
+    const dev = LOCAL_DEV_ORIGINS.join(" ");
+    csp = csp
+      .replace("frame-src ", `frame-src ${dev} `)
+      .replace("connect-src 'self' ", `connect-src 'self' ${dev} `);
+  }
+
+  return {
+    ...manifest,
+    host_permissions: [...new Set(hostPermissions)],
+    content_security_policy: { ...manifest.content_security_policy, extension_pages: csp },
+  };
+}
+
 function createFirefoxManifest(manifest, id = "save-a-recipe@mykukbuk.com") {
   const firefoxManifest = {
     ...manifest,
@@ -66,7 +145,12 @@ function generateConfig(args) {
   const firefox = args.includes("--firefox");
   const outputDir = firefox ? path.join(root, "build/firefox") : root;
   const readTemplate = (name) => fs.readFileSync(path.join(root, "templates", name), "utf8");
-  let manifest = JSON.parse(readTemplate("manifest.template.json"));
+  const policy = resolveNetworkPolicy(process.env);
+  let manifest = applyNetworkPolicy(JSON.parse(readTemplate("manifest.template.json")), policy);
+  console.log(
+    `Network allowlist: ${manifest.host_permissions.join(", ")}` +
+      (policy.localDev ? " (local development hosts included)" : ""),
+  );
 
   if (firefox) {
     manifest = createFirefoxManifest(manifest, process.env.FIREFOX_EXTENSION_ID || undefined);
@@ -107,4 +191,4 @@ if (require.main === module) {
   generateConfig(process.argv.slice(2));
 }
 
-module.exports = { createFirefoxManifest };
+module.exports = { createFirefoxManifest, resolveNetworkPolicy, applyNetworkPolicy };

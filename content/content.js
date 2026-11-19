@@ -1,4 +1,6 @@
-// Content script for MyKukbuk
+// Content script for Save-A-Recipe.
+// Injected on demand into the active tab (activeTab + scripting) when the user clicks the
+// toolbar button; there are no static content scripts.
 
 // Message type constants (duplicated from constants.js since content scripts can't import modules)
 const MESSAGE_TYPES = {
@@ -25,6 +27,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({
             success: false,
             error: error.message || "Failed to extract recipe data",
+            code: error.code,
           });
         });
 
@@ -57,64 +60,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
- * Extracts recipe data from the current page
- * @returns {Promise<Object>} Recipe data
+ * Extracts the recipe on the current page with SarRecipeExtractor (content/recipe-extractor.js,
+ * injected just before this file). Only recipe data is returned, never the page's HTML.
+ * @returns {Promise<{pageContent: string, pageUrl: string, title: string}>}
+ * @throws {Error} With code NO_RECIPE_FOUND when the page has no recognizable recipe
  */
 async function extractRecipeData() {
-  // Basic data about the page
-  const pageContent = performBasicCleanup();
-  const pageData = {
-    pageContent,
-    pageUrl: window.location.href,
-    title: document.title,
-  };
-
-  return pageData;
-}
-
-/**
- * Performs basic cleanup of the page content to remove definitely non-content elements
- * Only removes scripts, styles, and other clearly non-content tags
- * @returns {string} Cleaned HTML content
- */
-function performBasicCleanup() {
-  try {
-    const initialDocSize = document.documentElement.outerHTML.length;
-    // log suppressed
-
-    // Create a clone of the document to avoid modifying the actual page
-    const docClone = document.cloneNode(true);
-
-    // ONLY remove these definitely non-content elements
-    const elementsToRemove = [
-      "script", // JavaScript
-      "style", // CSS
-      "noscript", // No-JS fallback
-      "iframe", // Embedded frames
-      "svg", // Vector graphics
-      "canvas", // Drawing canvas
-      "template", // Template elements
-    ];
-
-    // Remove elements
-    elementsToRemove.forEach((tag) => {
-      const elements = docClone.querySelectorAll(tag);
-      elements.forEach((el) => {
-        try {
-          el.parentNode?.removeChild(el);
-        } catch (e) {
-          // Ignore errors
-        }
-      });
-    });
-    // log suppressed
-    // log suppressed
-    return docClone.documentElement.outerHTML;
-  } catch (error) {
-    // error suppressed
-    // On any error, return the original HTML
-    return document.documentElement.outerHTML;
+  const extractor = globalThis.SarRecipeExtractor;
+  if (!extractor) {
+    throw new Error("Couldn't read page");
   }
+  const recipe = extractor.extractRecipe(document, window.location);
+  if (!recipe) {
+    const error = new Error("No recipe found on this page");
+    error.code = "NO_RECIPE_FOUND";
+    throw error;
+  }
+  return { pageContent: recipe.pageContent, pageUrl: recipe.pageUrl, title: recipe.title };
 }
 
 // Light bubble UI - small status card near the top-right (under extensions bar)

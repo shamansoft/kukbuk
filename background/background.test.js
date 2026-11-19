@@ -498,4 +498,50 @@ describe("Background Script", () => {
     // Should not throw
     await expect(handler({ id: 42 })).resolves.not.toThrow();
   });
+  test("injects the extractor and content script on demand, then saves the result", async () => {
+    const { saveRecipe } = require("./services/api.js");
+    saveRecipe.mockResolvedValueOnce({ success: true, recipeName: "Pasta", isRecipe: true });
+    chrome.scripting.executeScript.mockResolvedValueOnce([]);
+    const extracted = {
+      pageContent: '<script type="application/ld+json">{}</script>',
+      pageUrl: "https://example.com/pasta",
+      title: "Pasta",
+    };
+    chrome.tabs.sendMessage
+      .mockRejectedValueOnce(new Error("Could not establish connection")) // PING
+      .mockResolvedValueOnce({ success: true }) // SHOW_BUBBLE loading
+      .mockResolvedValueOnce({ success: true, data: extracted }) // EXTRACT_RECIPE
+      .mockResolvedValueOnce({ success: true }); // SHOW_BUBBLE success
+
+    const handler = await loadAndGetActionHandler();
+    await handler({ id: 42 });
+
+    expect(chrome.scripting.executeScript).toHaveBeenCalledWith({
+      target: { tabId: 42 },
+      files: ["content/recipe-extractor.js", "content/content.js"],
+    });
+    expect(saveRecipe).toHaveBeenCalledWith(extracted);
+  });
+
+  test("shows 'No recipe found' and uploads nothing when the page has no recipe", async () => {
+    const { saveRecipe } = require("./services/api.js");
+    chrome.tabs.sendMessage
+      .mockResolvedValueOnce({ success: true }) // PING
+      .mockResolvedValueOnce({ success: true }) // SHOW_BUBBLE loading
+      .mockResolvedValueOnce({
+        success: false,
+        error: "No recipe found on this page",
+        code: "NO_RECIPE_FOUND",
+      }) // EXTRACT_RECIPE
+      .mockResolvedValueOnce({ success: true }); // SHOW_BUBBLE error
+
+    const handler = await loadAndGetActionHandler();
+    await handler({ id: 42 });
+
+    expect(saveRecipe).not.toHaveBeenCalled();
+    expect(chrome.tabs.sendMessage.mock.calls[3][1]).toMatchObject({
+      type: "SHOW_BUBBLE",
+      data: { variant: "error", text: "No recipe found on this page", dismissible: true },
+    });
+  });
 });
