@@ -1,4 +1,4 @@
-# MyKukBuk Browser Extension
+# Save-A-Recipe Browser Extension
 
 Save recipes from websites or written descriptions to your connected storage with the Chrome or Firefox extension.
 
@@ -19,8 +19,8 @@ For store submission, follow the [publisher guide](docs/store-publication.md).
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/shamansoft/kukbuk.git
-cd kukbuk
+git clone https://github.com/shamansoft/sar-ext.git
+cd sar-ext
 ```
 
 2. Install dependencies:
@@ -169,7 +169,7 @@ This will launch Chrome with a dedicated profile and the extension pre-loaded.
 ### Project Structure
 
 ```
-mykukbuk-extension/
+sar-ext/
 ├── background/         # Background service worker scripts
 ├── common/             # Shared assets: theme.css design tokens
 ├── content/            # On-demand scripts: recipe extraction + in-page bubble
@@ -222,7 +222,7 @@ Shared visual tokens live in `common/theme.css` (warm-neutral palette, 8px radiu
 
 ## Authentication
 
-MyKukBuk uses **Firebase Authentication** with Google Sign-In:
+Save-A-Recipe uses **Firebase Authentication** with Google Sign-In:
 - Users sign in via Firebase popup
 - Firebase ID tokens authenticate with backend
 - OAuth tokens stored encrypted in Firestore (backend)

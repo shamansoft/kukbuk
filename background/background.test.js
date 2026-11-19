@@ -145,8 +145,8 @@ describe("Background Script", () => {
     // Grab the onClicked callback from the chrome.contextMenus mock
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
 
-    // Simulate a click event for "kukbuk-settings"
-    onClickedCallback({ menuItemId: "kukbuk-settings" }, {});
+    // Simulate a click event for "save-a-recipe-settings"
+    onClickedCallback({ menuItemId: "save-a-recipe-settings" }, {});
     expect(chrome.runtime.openOptionsPage).toHaveBeenCalled();
   });
 
@@ -161,7 +161,7 @@ describe("Background Script", () => {
 
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
     chrome.action.setPopup.mockClear();
-    await onClickedCallback({ menuItemId: "kukbuk-logout" }, {});
+    await onClickedCallback({ menuItemId: "save-a-recipe-logout" }, {});
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -179,8 +179,8 @@ describe("Background Script", () => {
     // Grab the onClicked callback from the chrome.contextMenus mock
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
 
-    // Simulate a click event for "kukbuk-create-from-description"
-    onClickedCallback({ menuItemId: "kukbuk-create-from-description" }, {});
+    // Simulate a click event for "save-a-recipe-create-from-description"
+    onClickedCallback({ menuItemId: "save-a-recipe-create-from-description" }, {});
 
     expect(chrome.runtime.getURL).toHaveBeenCalledWith("recipe-creator/recipe-creator.html");
     expect(chrome.windows.create).toHaveBeenCalledWith(
@@ -199,7 +199,7 @@ describe("Background Script", () => {
     });
 
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
-    await onClickedCallback({ menuItemId: "kukbuk-logout" }, {});
+    await onClickedCallback({ menuItemId: "save-a-recipe-logout" }, {});
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 

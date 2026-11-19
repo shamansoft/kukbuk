@@ -1,6 +1,6 @@
 # Firebase Setup Guide
 
-This guide explains how to configure Firebase for Save-A-Recipe (MyKukBuk). Firefox uses the same Firebase project and API configuration. See the [Firefox setup instructions](../README.MD#enable-google-sign-in-in-firefox) for its Web OAuth client and redirect URI.
+This guide explains how to configure Firebase for Save-A-Recipe. Firefox uses the same Firebase project and API configuration. See the [Firefox setup instructions](../README.MD#enable-google-sign-in-in-firefox) for its Web OAuth client and redirect URI.
 
 Related: [auth provider architecture](../background/services/auth/README.md) · [auth-logout-fix](auth-logout-fix.md)
 
@@ -32,7 +32,7 @@ The extension now uses Firebase Authentication for user authentication instead o
 1. Scroll down to the **Your apps** section
 2. If you haven't created a Web app yet:
    - Click **Add app** → Select **Web** (</> icon)
-   - Register app with nickname: `MyKukBuk Extension`
+   - Register app with nickname: `Save-A-Recipe Extension`
    - Click **Register app**
 3. You'll see the Firebase configuration object that looks like:
 
@@ -200,7 +200,7 @@ Should show a bundle around 310KB in size.
 2. Select project `kukbuk-tf`
 3. Navigate to **APIs & Services** → **OAuth consent screen**
 4. Configure with:
-   - App name: MyKukBuk
+   - App name: Save-A-Recipe
    - User support email
    - Developer contact email
    - Scopes: drive.file, userinfo.email, userinfo.profile

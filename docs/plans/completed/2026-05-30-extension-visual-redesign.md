@@ -1,4 +1,4 @@
-# MyKukBuk Extension — Visual Redesign
+# Save-A-Recipe Extension — Visual Redesign
 
 ## Overview
 
