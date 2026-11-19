@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Save-A-Recipe",
   "version": "${EXTENSION_VERSION}",
-  "description": "Save recipes to your Google Drive",
+  "description": "Save recipes from web pages or your own descriptions to your connected storage.",
   "permissions": ["activeTab", "storage", "contextMenus", "scripting", "tabs", "offscreen", "identity"],
   "oauth2": {
     "client_id": "${CHROME_EXTENSION_CLIENT_ID}",

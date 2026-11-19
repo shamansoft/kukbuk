@@ -209,7 +209,7 @@ function toSaveResult(result) {
   return {
     success: true,
     recipeName: result.title,
-    message: result.message || "Recipe saved to Google Drive successfully",
+    message: result.message || "Recipe saved successfully",
     driveUrl: result.driveFileUrl || null,
     isRecipe: result.isRecipe,
   };

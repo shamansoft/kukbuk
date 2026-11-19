@@ -110,8 +110,8 @@ describe("recipe-creator.html structure", () => {
     expect(html).toMatch(/class="result-dot"/);
   });
 
-  it("contains drive link with Open in Drive text", () => {
-    expect(html).toMatch(/Open in Drive/);
+  it("contains drive link with Open recipe text", () => {
+    expect(html).toMatch(/Open recipe/);
   });
 });
 

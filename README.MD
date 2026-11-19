@@ -1,6 +1,8 @@
 # MyKukBuk Browser Extension
 
-Save recipes from websites to Google Drive with the Chrome or Firefox extension.
+Save recipes from websites or written descriptions to your connected storage with the Chrome or Firefox extension.
+
+For store submission, follow the [publisher guide](docs/store-publication.md).
 
 ## Features
 
@@ -155,7 +157,7 @@ When signed in, clicking the toolbar icon saves the current page directly — no
 
 ## Design System
 
-Shared visual tokens live in `common/theme.css` (warm-neutral palette, 8px radius, Hanken Grotesk font). All extension pages link this stylesheet before their page-specific CSS.
+Shared visual tokens live in `common/theme.css` (warm-neutral palette, 8px radius, system font). All extension pages link this stylesheet before their page-specific CSS.
 
 ## Authentication
 

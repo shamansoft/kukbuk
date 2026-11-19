@@ -59,6 +59,7 @@ describe("popup.js - login-only popup", () => {
   it("uses storage-provider-neutral copy for both sign-in options", () => {
     const welcomeText = document.querySelector(".welcome-text").textContent;
     expect(welcomeText).toMatch(/recipes/i);
+    expect(welcomeText).toMatch(/URL, title, and recipe content go to the MyKukBuk service/);
     expect(welcomeText).not.toMatch(/google drive|dropbox/i);
   });
 
