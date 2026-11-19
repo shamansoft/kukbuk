@@ -1,6 +1,6 @@
 # Firebase Setup Guide
 
-This guide explains how to configure Firebase for the Save-A-Recipe (MyKukBuk) Chrome Extension.
+This guide explains how to configure Firebase for Save-A-Recipe (MyKukBuk). Firefox uses the same Firebase project and API configuration. See the [Firefox setup instructions](../README.MD#enable-google-sign-in-in-firefox) for its Web OAuth client and redirect URI.
 
 Related: [auth provider architecture](../background/services/auth/README.md) · [auth-logout-fix](auth-logout-fix.md)
 

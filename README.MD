@@ -1,6 +1,6 @@
-# MyKukBuk Chrome Extension
+# MyKukBuk Browser Extension
 
-A Chrome extension that allows users to save recipes from websites to their Google Drive.
+Save recipes from websites to Google Drive with the Chrome or Firefox extension.
 
 ## Features
 
@@ -29,7 +29,7 @@ npm install
 3. Create a `.env` file at the root of the project with your Firebase and API credentials:
 ```bash
 # API Configuration
-COOKBOOK_API_URL=https://your-backend-url.run.app/recipe
+API_BASE_URL=https://your-backend-url.run.app
 EXTENSION_ID=mkb-prod
 
 # Firebase Configuration
@@ -54,6 +54,51 @@ npm run build
 1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable "Developer mode" in the top right
 3. Click "Load unpacked" and select the build output directory
+
+### Load the Extension in Firefox
+
+Firefox 140 or later is required. Use the same Firebase and API configuration as
+the Chrome build.
+
+1. Run `npm run build:firefox` to generate `build/firefox/`, or
+   `npm run zip:firefox` to create a ZIP you can share.
+2. In Firefox, open `about:debugging#/runtime/this-firefox`, click
+   **Load Temporary Add-on**, and select `build/firefox/manifest.json` (or the
+   manifest in the extracted ZIP).
+3. Sign in with a verified test account that has a Drive folder configured.
+   Open a recipe page, click the toolbar icon, and check that the success bubble
+   links to the saved file. Try **Create Recipe from Description** and **Log Out**
+   from the toolbar context menu.
+
+Firefox removes temporary add-ons on restart. Use a Mozilla-signed build to test
+session persistence across a full browser restart.
+
+For a Mozilla Add-ons submission, include the corresponding source and the
+Firefox build instructions so reviewers can reproduce the bundled package.
+
+#### Enable Google sign-in in Firefox
+
+Email and password sign-in works with the standard Firebase configuration. To
+enable the Google button, set `FIREFOX_GOOGLE_CLIENT_ID` to the client ID of a
+**Web application** OAuth client in the same Google Cloud project as Firebase.
+Keep the stable Gecko add-on ID (`save-a-recipe@mykukbuk.com` by default).
+
+1. Inspect the loaded extension's background page in `about:debugging` and run
+   this in its console to get the exact redirect for the add-on ID:
+
+   ```js
+   const host = new URL(browser.identity.getRedirectURL()).hostname;
+   `http://127.0.0.1/mozoauth2/${host.split(".")[0]}`;
+   ```
+
+2. Add that URI to the Web application client's **Authorized redirect URIs**.
+3. Add `FIREFOX_GOOGLE_CLIENT_ID=your-web-client-id.apps.googleusercontent.com`
+   to `.env`, rebuild, and reload the add-on. Keep any OAuth client secret out of
+   the extension.
+4. Test Google sign-in by choosing a test account, then repeating the recipe
+   save check. Cancel a second sign-in attempt and confirm you can retry.
+
+[Mozilla’s redirect URI documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/identity#getting_the_redirect_url)
 
 ### Quick Deploy
 

@@ -3,10 +3,14 @@
  * Manages multiple auth providers and handles auth state
  */
 
-import { EmailPasswordProvider } from "./email-provider.js";
-import { GoogleProvider } from "./google-provider.js";
 import { STORAGE_KEYS, MESSAGE_TYPES } from "../../../common/constants.js";
 import { logError } from "../../../common/error-handler.js";
+
+const extension = globalThis.browser ?? globalThis.chrome;
+
+/* global __FIREFOX__ */
+const isFirefox = typeof __FIREFOX__ !== "undefined" && __FIREFOX__;
+const GOOGLE_SIGN_IN_FAILED = "googleSignInFailed";
 
 class AuthManager {
   constructor() {
@@ -15,8 +19,15 @@ class AuthManager {
     this.authStateUnsubscribe = null;
 
     // Register available providers
-    this.registerProvider(new EmailPasswordProvider());
-    this.registerProvider(new GoogleProvider());
+    if (typeof __FIREFOX__ !== "undefined" && __FIREFOX__) {
+      const { createFirefoxProviders } = require("./firefox-provider.js");
+      createFirefoxProviders().forEach((provider) => this.registerProvider(provider));
+    } else {
+      const { EmailPasswordProvider } = require("./email-provider.js");
+      const { GoogleProvider } = require("./google-provider.js");
+      this.registerProvider(new EmailPasswordProvider());
+      this.registerProvider(new GoogleProvider());
+    }
 
     // Set default provider to email
     this.currentProvider = this.providers.get("email");
@@ -64,6 +75,7 @@ class AuthManager {
    * @returns {Promise<AuthResult>} Authentication result
    */
   async signIn(providerName = "email", credentials = null) {
+    const isFirefoxGoogle = isFirefox && providerName === "google";
     try {
       const provider = this.providers.get(providerName);
 
@@ -73,11 +85,14 @@ class AuthManager {
 
       console.log(`Signing in with ${provider.displayName}...`);
 
+      if (isFirefoxGoogle) {
+        await extension.storage.session.remove(GOOGLE_SIGN_IN_FAILED);
+      }
       const result = await provider.signIn(credentials);
 
       if (result.success) {
         // Store current provider name
-        await chrome.storage.local.set({
+        await extension.storage.local.set({
           currentAuthProvider: providerName,
         });
 
@@ -88,6 +103,12 @@ class AuthManager {
 
       return result;
     } catch (error) {
+      if (isFirefoxGoogle) {
+        // The OAuth window can close the popup before the result is available.
+        await extension.storage.session.set({ [GOOGLE_SIGN_IN_FAILED]: true }).catch((e) => {
+          logError("Could not store Google sign-in status", e);
+        });
+      }
       logError("Sign-in error", error);
       throw error;
     }
@@ -109,7 +130,7 @@ class AuthManager {
       await this.currentProvider.signOut();
 
       // Clear current provider reference
-      await chrome.storage.local.remove(["currentAuthProvider"]);
+      await extension.storage.local.remove(["currentAuthProvider"]);
 
       console.log(`Signed out from ${providerName} successfully`);
     } catch (error) {
@@ -120,15 +141,13 @@ class AuthManager {
 
   /**
    * Check authentication status
-   * Uses Chrome storage as the source of truth for auth state
-   * Token validation happens only when the token is actually used
+   * Checks stored account data and confirms the restored Firebase user on Firefox.
    *
    * @returns {Promise<AuthStatus>} Authentication status
    */
   async checkAuthStatus() {
     try {
-      // Get stored auth data - Chrome storage is our source of truth
-      const authData = await chrome.storage.local.get([
+      const authData = await extension.storage.local.get([
         STORAGE_KEYS.FIREBASE_TOKEN,
         STORAGE_KEYS.USER_ID,
         STORAGE_KEYS.USER_EMAIL,
@@ -150,9 +169,17 @@ class AuthManager {
         };
       }
 
-      // Set current provider if stored
-      const providerName = authData.currentAuthProvider || "email";
-      this.currentProvider = this.providers.get(providerName);
+      const emailProvider = this.providers.get("email");
+      if (isFirefox) {
+        const user = await emailProvider.getCurrentUser();
+        if (!user || user.uid !== userId) {
+          return { success: true, authenticated: false };
+        }
+      }
+
+      const storedProvider = this.providers.get(authData.currentAuthProvider || "email");
+      // Firefox providers use the same Firebase session, including after a build loses its OAuth ID.
+      this.currentProvider = storedProvider ?? (isFirefox ? emailProvider : undefined);
 
       if (!this.currentProvider) {
         return {
@@ -162,8 +189,6 @@ class AuthManager {
         };
       }
 
-      // We have auth data in storage - trust it
-      // Token will be validated when actually used (in getIdToken)
       return {
         success: true,
         authenticated: true,
@@ -171,7 +196,7 @@ class AuthManager {
         email: email,
         displayName: authData[STORAGE_KEYS.USER_DISPLAY_NAME] || "",
         photoURL: authData[STORAGE_KEYS.USER_PHOTO_URL] || "",
-        provider: providerName,
+        provider: this.currentProvider.name,
       };
     } catch (error) {
       logError("Auth check error", error);
@@ -202,7 +227,7 @@ class AuthManager {
    * @private
    */
   async clearAuthData() {
-    await chrome.storage.local.remove([
+    await extension.storage.local.remove([
       STORAGE_KEYS.FIREBASE_TOKEN,
       STORAGE_KEYS.FIREBASE_REFRESH_TIME,
       STORAGE_KEYS.USER_ID,
@@ -227,7 +252,7 @@ class AuthManager {
     }
 
     // Get the current provider from storage, or use Google as default
-    const storage = await chrome.storage.local.get(["currentAuthProvider"]);
+    const storage = await extension.storage.local.get(["currentAuthProvider"]);
     const providerName = storage.currentAuthProvider || "email";
     const provider = this.providers.get(providerName);
 
@@ -278,7 +303,7 @@ export function setupAuth() {
   authManager.setupAuthStateListener();
 
   // Listen for authentication messages from popup/content scripts
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  extension.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Sign in with provider
     if (
       message.type === MESSAGE_TYPES.AUTH_REQUEST ||
@@ -302,7 +327,18 @@ export function setupAuth() {
     if (message.type === MESSAGE_TYPES.AUTH_CHECK) {
       authManager
         .checkAuthStatus()
-        .then((response) => sendResponse(response))
+        .then(async (response) => {
+          const googleSignInAvailable = Boolean(authManager.getProvider("google"));
+          const googleSignInFailed =
+            isFirefox && googleSignInAvailable && !response.authenticated
+              ? (await extension.storage.session.get(GOOGLE_SIGN_IN_FAILED))[GOOGLE_SIGN_IN_FAILED]
+              : false;
+          sendResponse({
+            ...response,
+            googleSignInAvailable,
+            googleSignInFailed,
+          });
+        })
         .catch((error) => {
           logError("Auth check error", error);
           sendResponse({ success: false, error: error.message });

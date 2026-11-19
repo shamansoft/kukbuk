@@ -1,16 +1,30 @@
 const path = require("path");
+const webpack = require("webpack");
 
-module.exports = {
+module.exports = ({ firefox = false } = {}) => ({
   mode: process.env.NODE_ENV === "development" ? "development" : "production",
+  // Firefox provides the browser global directly. Skip Webpack's eval-based fallback.
+  node: firefox ? { global: false } : undefined,
   entry: {
     background: "./background/background.js",
-    "offscreen/auth-offscreen": "./offscreen/auth-offscreen.js",
+    ...(!firefox && { "offscreen/auth-offscreen": "./offscreen/auth-offscreen.js" }),
   },
   output: {
-    path: path.resolve(__dirname, "dist"),
+    path: path.resolve(__dirname, firefox ? "build/firefox/dist" : "dist"),
     filename: "[name].bundle.js",
-    clean: false, // Don't clean the dist folder (keep other extension files)
+    clean: firefox,
   },
+  plugins: [
+    new webpack.DefinePlugin({ __FIREFOX__: JSON.stringify(firefox) }),
+    ...(firefox
+      ? [
+          new webpack.NormalModuleReplacementPlugin(
+            /\/env-config\.js$/,
+            path.resolve(__dirname, "build/firefox/common/env-config.js"),
+          ),
+        ]
+      : []),
+  ],
   module: {
     rules: [
       {
@@ -40,4 +54,4 @@ module.exports = {
   stats: {
     errorDetails: true,
   },
-};
+});

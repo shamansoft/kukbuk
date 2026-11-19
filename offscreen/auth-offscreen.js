@@ -13,6 +13,7 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 import { ENV } from "../common/env-config.js";
+import { emailSignInError } from "../common/email-sign-in-error.js";
 
 console.log("[Offscreen] Auth offscreen document loaded");
 
@@ -244,20 +245,7 @@ async function handleSignInWithEmail(email, password) {
     console.error("[Offscreen] Error code:", error.code);
     console.error("[Offscreen] Error message:", error.message);
 
-    // Handle specific Firebase errors
-    if (error.code === "auth/invalid-credential" || error.code === "auth/wrong-password") {
-      throw new Error("Invalid email or password. Please try again.");
-    } else if (error.code === "auth/user-not-found") {
-      throw new Error("Account not found. Please create an account on our website.");
-    } else if (error.code === "auth/invalid-email") {
-      throw new Error("Invalid email address format.");
-    } else if (error.code === "auth/network-request-failed") {
-      throw new Error("Network error. Please check your internet connection.");
-    } else if (error.code === "auth/too-many-requests") {
-      throw new Error("Too many failed attempts. Please try again later.");
-    } else {
-      throw new Error(error.message || "Email/password sign-in failed");
-    }
+    throw new Error(emailSignInError(error));
   }
 }
 

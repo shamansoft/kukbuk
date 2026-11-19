@@ -1,10 +1,12 @@
 /**
  * Build-artifact test: verifies manifest.json contains the required identity/oauth2 fields.
- * Run `npm run build:local` (or `npm run build`) before running this test so manifest.json is up to date.
+ * Generate the Chrome manifest before running these tests.
  */
 
 const fs = require("fs");
 const path = require("path");
+const { createFirefoxManifest } = require("../scripts/substitute-env");
+const manifestTemplate = require("../templates/manifest.template.json");
 
 describe("manifest.json", () => {
   let manifest;
@@ -26,6 +28,35 @@ describe("manifest.json", () => {
     expect(manifest.oauth2).toBeDefined();
     expect(manifest.oauth2.client_id).toMatch(/\.apps\.googleusercontent\.com$/);
     expect(manifest.oauth2.scopes).toEqual(["openid", "email", "profile"]);
+  });
+});
+
+describe("Firefox manifest", () => {
+  it("uses a background script and supports OAuth without Chrome-only manifest fields", () => {
+    const manifest = createFirefoxManifest(manifestTemplate);
+
+    expect(manifest.background).toEqual({ scripts: [manifestTemplate.background.service_worker] });
+    expect(manifest.permissions).toContain("identity");
+    expect(manifest.permissions).not.toContain("offscreen");
+    expect(manifest.oauth2).toBeUndefined();
+    expect(manifest.browser_specific_settings.gecko).toMatchObject({
+      id: "save-a-recipe@mykukbuk.com",
+      strict_min_version: "140.0",
+      data_collection_permissions: {
+        required: expect.arrayContaining([
+          "authenticationInfo",
+          "browsingActivity",
+          "websiteContent",
+        ]),
+      },
+    });
+    expect(manifestTemplate.background.service_worker).toBeDefined();
+    expect(manifestTemplate.oauth2).toBeDefined();
+  });
+
+  it("allows an explicit Firefox extension ID", () => {
+    const manifest = createFirefoxManifest(manifestTemplate, "test@example.com");
+    expect(manifest.browser_specific_settings.gecko.id).toBe("test@example.com");
   });
 });
 

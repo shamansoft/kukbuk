@@ -9,6 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run dev` - Development build with watch mode
 - `npm run dev:local` - Development build with local env and watch mode
 - `npm run zip` - Create distribution zip file
+- `npm run build:firefox` - Build the unpacked desktop Firefox extension in `build/firefox/`
+- `npm run zip:firefox` - Create the Firefox distribution ZIP
 - `npm run deploy` - Launch Chrome with extension loaded for testing
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Run ESLint with auto-fix
@@ -85,7 +87,7 @@ Required environment variables:
 ### Known Issues / Gotchas
 
 - `node_modules/.bin/cross-env` may become a plain file instead of a symlink after some npm operations, breaking `build:local`. Fix: `rm node_modules/.bin/cross-env && ln -s ../cross-env/src/bin/cross-env.js node_modules/.bin/cross-env`
-- `checkAuthStatus()` trusts Chrome storage as source of truth; token validity is checked lazily on first use via `getIdToken()`
+- `checkAuthStatus()` reads stored account data. Firefox also checks that the restored Firebase session matches the stored user ID.
 - New extension pages (e.g. `recipe-creator/`) do not need webpack entries — load JS as `type="module"` directly and Chrome resolves ES imports natively
 - Google Sign-In (`GoogleProvider`) requires a **Chrome Extension** type OAuth 2.0 client ID in `manifest.json` → `oauth2.client_id`. Create it in Google Cloud Console → APIs & Services → Credentials → Create OAuth Client ID → Chrome Extension. Do not reuse the web/server client ID — it will not work with `chrome.identity.getAuthToken()`.
 

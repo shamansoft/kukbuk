@@ -405,14 +405,3 @@ function dismissBubble() {
   _removeBubble(currentBubble);
   currentBubble = null;
 }
-
-// Initialize content script
-function init() {
-  // log suppressed
-}
-
-// Run initialization
-init();
-
-// Send a ready message to let the extension know content script is available
-chrome.runtime.sendMessage({ type: "CONTENT_SCRIPT_READY" });

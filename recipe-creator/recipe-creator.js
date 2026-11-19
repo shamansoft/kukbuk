@@ -20,7 +20,8 @@ form.addEventListener("submit", async (e) => {
   submitButton.textContent = "Creating…";
 
   try {
-    const response = await chrome.runtime.sendMessage({
+    const runtime = (globalThis.browser ?? globalThis.chrome).runtime;
+    const response = await runtime.sendMessage({
       type: MESSAGE_TYPES.CREATE_RECIPE_FROM_DESCRIPTION,
       description,
     });
