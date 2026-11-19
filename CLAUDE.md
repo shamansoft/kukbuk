@@ -104,8 +104,7 @@ Required environment variables:
 ## Documentation Index
 
 Start with **[STATUS.md](STATUS.md)** for current state, milestones, and backlog.
-The extension is named **"Save-A-Recipe"** in `manifest.json` (product brand
-"MyKukBuk" — both names appear across older docs).
+Use **Save-A-Recipe** for the extension and service in all product copy.
 
 ### Project status & overview
 - [STATUS.md](STATUS.md) — Current status, implemented features, backlog, known issues, milestones.

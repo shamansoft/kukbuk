@@ -1,4 +1,4 @@
-# MyKukBuk Chrome Extension User Stories
+# Save-A-Recipe Chrome Extension User Stories
 
 ## V 1.0 Code Organization
 
@@ -359,7 +359,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 ```json
 {
   "manifest_version": 3,
-  "name": "MyKukBuk - Recipe Saver",
+  "name": "Save-A-Recipe - Recipe Saver",
   "version": "1.0.0",
   "description": "Save recipes from any website to your Google Drive as organized YAML files",
   "permissions": [
@@ -411,7 +411,7 @@ cookbook:
       - ".advertisement"
       - ".social-share"
   drive:
-    default-folder-name: "MyKukBuk Recipes"
+    default-folder-name: "Save-A-Recipe Recipes"
     max-recipes-per-folder: 1000
     enable-statistics: true
 ```

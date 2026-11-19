@@ -127,7 +127,7 @@ Backend work is tagged **[BE]**, extension-only **[EXT]**.
 |---|---|---|
 | `README.MD` | Current | Minor update needed: reflect "Save-A-Recipe" name and current visual design |
 | `CLAUDE.md` | Current | Keep updated as architecture changes |
-| `docs/stories.md` | Outdated | Replace with this document; stories.md has wrong project name ("MyKukBuk"), completed plans still listed as open, Java backend code examples that don't apply |
+| `docs/stories.md` | Outdated | Replace with this document; stories.md has completed plans still listed as open, Java backend code examples that don't apply |
 | `docs/design-system.md` | Superseded | Documents the *old* culinary-editorial design (terracotta/sage dual palette, Crimson Pro serif, gradient blobs). Archive or delete — current design is in `docs/revised-design.md` and `common/theme.css` |
 | `docs/revised-design.md` | Current | Completed design spec; keep as historical reference |
 | `docs/firebase-setup.md` | Current (minor) | Path `/Users/alexey/dev/save-a-recipe/sar-ext` is stale (should be `/sar/sar-ext`); otherwise accurate |
