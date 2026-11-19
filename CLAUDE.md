@@ -65,7 +65,7 @@ The extension uses environment variable substitution during build:
 - `scripts/substitute-env.js` - Handles template variable replacement
 
 Required environment variables:
-- `EXTENSION_VERSION` - Extension version number (supports `VERSION_SUFFIX` env var appended at build time)
+- Extension version comes from `package.json`. Set `VERSION_SUFFIX` for an optional fourth numeric component.
 - `FIREBASE_API_KEY` - Firebase API key for authentication
 - `CHROME_EXTENSION_CLIENT_ID` - OAuth 2.0 client ID of type "Chrome Extension" (not web/server type). Create at Google Cloud Console → APIs & Services → Credentials → Create OAuth Client ID → Chrome Extension. Required for `chrome.identity.getAuthToken()` / Google Sign-In.
 

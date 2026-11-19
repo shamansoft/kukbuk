@@ -6,10 +6,8 @@
 const fs = require("fs");
 const path = require("path");
 const { createHash } = require("node:crypto");
-const dotenv = require("dotenv");
-const { version } = require("../package.json");
-
-const root = path.resolve(__dirname, "..");
+const { root, readBuildConfig, buildVersion } = require("./build-config");
+const { sharedFiles } = require("./runtime-files");
 
 function createFirefoxManifest(manifest, id = "save-a-recipe@mykukbuk.com") {
   const firefoxManifest = {
@@ -35,42 +33,46 @@ function createFirefoxManifest(manifest, id = "save-a-recipe@mykukbuk.com") {
   return firefoxManifest;
 }
 
-function substituteEnvVars(content) {
-  return content.replace(/\${([^}]+)}/g, (match, varName) => {
-    if (varName === "EXTENSION_VERSION") {
-      return version + (process.env.VERSION_SUFFIX ?? "");
-    }
-    if (varName === "FIREFOX_GOOGLE_CLIENT_ID") {
-      return process.env.FIREFOX_GOOGLE_CLIENT_ID?.trim() ?? "";
-    }
-
-    const value = process.env[varName];
-    if (value === undefined) {
-      console.warn(`Warning: Environment variable '${varName}' not found`);
-      return match;
-    }
-    return value;
-  });
-}
-
-function generateConfig(args) {
-  const envArg = args.find((arg) => arg.startsWith("--env="));
-  const envFilePath = path.resolve(root, envArg?.slice("--env=".length) ?? ".env");
-  if (fs.existsSync(envFilePath)) {
-    dotenv.config({ path: envFilePath });
-    console.log(`Using environment file: ${envFilePath}`);
-  } else {
-    console.warn(`Warning: Environment file '${envFilePath}' not found`);
-  }
-
+function createBuildConfig(args) {
   const firefox = args.includes("--firefox");
+  const config = readBuildConfig(args, firefox);
   const outputDir = firefox ? path.join(root, "build/firefox") : root;
   const readTemplate = (name) => fs.readFileSync(path.join(root, "templates", name), "utf8");
   let manifest = JSON.parse(readTemplate("manifest.template.json"));
 
+  manifest.version = buildVersion(config);
   if (firefox) {
-    manifest = createFirefoxManifest(manifest, process.env.FIREFOX_EXTENSION_ID || undefined);
-    if (!process.env.FIREFOX_GOOGLE_CLIENT_ID?.trim()) {
+    manifest = createFirefoxManifest(manifest, config.FIREFOX_EXTENSION_ID);
+  } else {
+    manifest.oauth2.client_id = config.CHROME_EXTENSION_CLIENT_ID;
+  }
+
+  const env = {
+    ...config,
+    EXTENSION_VERSION: manifest.version,
+    FIREFOX_GOOGLE_CLIENT_ID: config.FIREFOX_GOOGLE_CLIENT_ID ?? "",
+  };
+  const envSource = readTemplate("env-config.template.js").replace(
+    /"\$\{([^}]+)\}"/g,
+    (_, name) => {
+      if (!Object.hasOwn(env, name)) throw new Error(`Unknown environment template field: ${name}`);
+      return JSON.stringify(env[name]);
+    },
+  );
+  return {
+    firefox,
+    outputDir,
+    manifest,
+    envSource,
+    firefoxGoogleEnabled: Boolean(config.FIREFOX_GOOGLE_CLIENT_ID),
+  };
+}
+
+function generateConfig(args) {
+  const { firefox, outputDir, manifest, envSource, firefoxGoogleEnabled } = createBuildConfig(args);
+
+  if (firefox) {
+    if (!firefoxGoogleEnabled) {
       const { id } = manifest.browser_specific_settings.gecko;
       // Firefox derives the identity redirect subdomain from the SHA-1 of the add-on ID.
       const redirectHost = createHash("sha1").update(id).digest("hex");
@@ -81,30 +83,25 @@ function generateConfig(args) {
       );
     }
     fs.rmSync(outputDir, { recursive: true, force: true });
-    const bundledOnly = ["env-config.js", "firebase-config.js", "email-sign-in-error.js"];
-    for (const directory of ["common", "content", "icons", "options", "popup", "recipe-creator"]) {
-      fs.cpSync(path.join(root, directory), path.join(outputDir, directory), {
-        recursive: true,
-        filter: (source) =>
-          !source.endsWith(".test.js") &&
-          (directory !== "common" || !bundledOnly.includes(path.basename(source))),
-      });
+    for (const file of sharedFiles) {
+      const destination = path.join(outputDir, file);
+      fs.mkdirSync(path.dirname(destination), { recursive: true });
+      fs.copyFileSync(path.join(root, file), destination);
     }
   }
 
-  fs.writeFileSync(
-    path.join(outputDir, "manifest.json"),
-    substituteEnvVars(JSON.stringify(manifest, null, 2)) + "\n",
-  );
-  fs.writeFileSync(
-    path.join(outputDir, "common/env-config.js"),
-    substituteEnvVars(readTemplate("env-config.template.js")),
-  );
+  fs.writeFileSync(path.join(outputDir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
+  fs.writeFileSync(path.join(outputDir, "common/env-config.js"), envSource);
   console.log(`Generated extension configuration in ${outputDir}`);
 }
 
 if (require.main === module) {
-  generateConfig(process.argv.slice(2));
+  try {
+    generateConfig(process.argv.slice(2));
+  } catch (error) {
+    console.error(`Build configuration failed: ${error.message}`);
+    process.exitCode = 1;
+  }
 }
 
-module.exports = { createFirefoxManifest };
+module.exports = { createFirefoxManifest, createBuildConfig };

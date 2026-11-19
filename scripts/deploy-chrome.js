@@ -65,7 +65,11 @@ function ensureProfileDirectory() {
 function buildExtension() {
   console.log("Building extension...");
   try {
-    execSync("npm run prebuild", { stdio: "inherit", cwd: EXTENSION_DIR });
+    execSync("npm run build", {
+      stdio: "inherit",
+      cwd: EXTENSION_DIR,
+      env: { ...process.env, EXTENSION_CONFIG_FILE: envFile },
+    });
     console.log("Extension built successfully.");
   } catch (error) {
     console.error("Failed to build extension:", error.message);

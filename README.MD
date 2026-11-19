@@ -23,10 +23,10 @@ cd kukbuk
 
 2. Install dependencies:
 ```bash
-npm install
+npm ci
 ```
 
-3. Create a `.env` file at the root of the project with your Firebase and API credentials:
+3. Create a `.env` file at the root of the project with the public build values shown below. Replace the sample values with your extension configuration:
 ```bash
 # API Configuration
 API_BASE_URL=https://your-backend-url.run.app
@@ -40,6 +40,9 @@ FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
 FIREBASE_MESSAGING_SENDER_ID=your_sender_id_here
 FIREBASE_APP_ID=your_app_id_here
+
+# Required for Chrome Google sign-in
+CHROME_EXTENSION_CLIENT_ID=your-chrome-client-id.apps.googleusercontent.com
 ```
 
 See [docs/firebase-setup.md](docs/firebase-setup.md) for detailed Firebase configuration instructions.
@@ -53,7 +56,7 @@ npm run build
 
 1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable "Developer mode" in the top right
-3. Click "Load unpacked" and select the build output directory
+3. Click "Load unpacked" and select the repository root
 
 ### Load the Extension in Firefox
 
@@ -73,8 +76,46 @@ the Chrome build.
 Firefox removes temporary add-ons on restart. Use a Mozilla-signed build to test
 session persistence across a full browser restart.
 
-For a Mozilla Add-ons submission, include the corresponding source and the
-Firefox build instructions so reviewers can reproduce the bundled package.
+### Release archives
+
+Run `npm run zip` for Chrome or `npm run zip:firefox` for Firefox. Both commands
+build in production mode and name the ZIP using the version in the packaged
+manifest. The manifest version comes from `package.json`. Set `VERSION_SUFFIX`
+to an optional fourth numeric component such as `.7`. Use `npm run version:patch`
+to bump the version in the package and lockfile before committing a new release.
+
+Builds stop when required public values are missing or placeholders. Chrome
+requires its Chrome Extension OAuth client ID. Firefox uses email-only sign-in
+when `FIREFOX_GOOGLE_CLIENT_ID` is empty. By default the build reads `.env` and lets
+shell variables override it. Set `EXTENSION_CONFIG_FILE` to select a config file
+for release builds.
+
+#### Mozilla Add-ons source submission
+
+Use the same committed checkout, Node/npm versions, and public build settings
+for both archives. From a checkout with all release source changes committed,
+run these commands with the Firefox settings from the setup section:
+
+```sh
+npm ci --include=dev
+npm run zip:firefox
+npm run zip:amo-source
+```
+
+Upload the Firefox distribution ZIP as the add-on and the corresponding
+`-source.zip` as review source. The source command takes build files from
+`HEAD` and adds the lockfile, build instructions, and a JSON snapshot of the
+validated public Firefox build values. Keep service-account files, OAuth client
+secrets, signing keys, and test account credentials outside the release
+configuration. The source command reads the selected config and copies only
+the fields used by the Firefox build.
+
+To verify the submission, extract the source ZIP into an empty directory and
+run the commands in its `AMO-BUILD.md`. They install the locked dependencies and
+rebuild the Firefox ZIP using the included `amo-build-config.json`. Shell build
+variables do not override this captured config.
+
+See [Mozilla’s source submission guide](https://extensionworkshop.com/documentation/publish/source-code-submission/).
 
 #### Enable Google sign-in in Firefox
 
@@ -117,7 +158,6 @@ This will launch Chrome with a dedicated profile and the extension pre-loaded.
 
 ### Available Scripts
 
-- `npm run prebuild` - Substitutes environment variables in template files
 - `npm run build` - Builds the extension for production
 - `npm run dev` - Builds in development mode with watch enabled
 - `npm run zip` - Creates a distribution zip file for the extension

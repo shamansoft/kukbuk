@@ -39,12 +39,16 @@ jest.mock("./auth/auth-manager.js", () => ({
   },
 }));
 
-jest.mock("../../common/env-config.js", () => ({
-  ENV: {
-    API_BASE_URL: "https://api.example.com",
-    EXTENSION_ID: "mock-extension-id",
-  },
-}));
+jest.mock(
+  "../../common/env-config.js",
+  () => ({
+    ENV: {
+      API_BASE_URL: "https://api.example.com",
+      EXTENSION_ID: "mock-extension-id",
+    },
+  }),
+  { virtual: true },
+);
 
 jest.mock("../../common/error-utils.js", () => ({
   extractErrorMessage: jest.fn(

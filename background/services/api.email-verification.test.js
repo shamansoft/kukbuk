@@ -19,12 +19,16 @@ jest.mock("./auth/auth-manager.js", () => ({
   },
 }));
 
-jest.mock("../../common/env-config.js", () => ({
-  ENV: {
-    API_BASE_URL: "https://api.example.com",
-    EXTENSION_ID: "mock-extension-id",
-  },
-}));
+jest.mock(
+  "../../common/env-config.js",
+  () => ({
+    ENV: {
+      API_BASE_URL: "https://api.example.com",
+      EXTENSION_ID: "mock-extension-id",
+    },
+  }),
+  { virtual: true },
+);
 
 import { setupApi } from "./api";
 import { authManager } from "./auth/auth-manager.js";
