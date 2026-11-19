@@ -1,19 +1,13 @@
-/**
- * Build-artifact test: verifies manifest.json contains the required identity/oauth2 fields.
- * Generate the Chrome manifest before running these tests.
- */
-
 const fs = require("fs");
 const path = require("path");
-const { createFirefoxManifest } = require("../scripts/substitute-env");
+const { createBuildConfig, createFirefoxManifest } = require("../scripts/substitute-env");
 const manifestTemplate = require("../templates/manifest.template.json");
 
 describe("manifest.json", () => {
   let manifest;
 
   beforeAll(() => {
-    const manifestPath = path.resolve(__dirname, "../manifest.json");
-    manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    ({ manifest } = createBuildConfig(["--env=test/fixtures/public-build.json"]));
   });
 
   it("includes identity permission", () => {

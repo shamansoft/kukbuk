@@ -11,7 +11,7 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-} from "firebase/auth";
+} from "firebase/auth/web-extension";
 import { ENV } from "../common/env-config.js";
 import { emailSignInError } from "../common/email-sign-in-error.js";
 

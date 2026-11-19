@@ -20,9 +20,13 @@ jest.mock("firebase/auth/web-extension", () => ({
 jest.mock("../../../common/firebase-config.js", () => ({
   auth: { currentUser: null, authStateReady: jest.fn() },
 }));
-jest.mock("../../../common/env-config.js", () => ({
-  ENV: { FIREFOX_GOOGLE_CLIENT_ID: "" },
-}));
+jest.mock(
+  "../../../common/env-config.js",
+  () => ({
+    ENV: { FIREFOX_GOOGLE_CLIENT_ID: "" },
+  }),
+  { virtual: true },
+);
 
 const user = {
   uid: "firebase-user",
