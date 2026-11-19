@@ -44,6 +44,7 @@ it.each([
   const { zip, filename } = packageExtension(buildDir, firefox);
   const archive = new AdmZip(zip.toBuffer());
   expect(filename).toBe(expectedFilename);
+  expect(archive.getEntry("content/recipe-extractor.js")).toBeTruthy();
   expect(JSON.parse(archive.readAsText("manifest.json")).version).toBe("1.2.3.4");
   expect(
     archive

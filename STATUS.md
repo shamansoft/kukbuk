@@ -10,7 +10,7 @@ backend, which uses an LLM to parse the recipe and write it to Drive. Saved
 recipes are then viewable from Drive or the `sar-kmp` mobile/desktop app.
 
 ## Tech stack
-- Chrome Extension, Manifest V3 (background service worker + content scripts)
+- Chrome Extension, Manifest V3 (background service worker + on-demand content scripts via `activeTab`)
 - Vanilla JavaScript (ES2022 modules), no UI framework
 - Firebase Authentication (`firebase` JS SDK v10) — email/password + Google Sign-In
 - Google `chrome.identity` API for Google Sign-In; offscreen document for Firebase auth ops

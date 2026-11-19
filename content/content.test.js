@@ -33,6 +33,7 @@ describe("content script bubble", () => {
     document.body.innerHTML = "";
     // Load content script fresh each test
     jest.isolateModules(() => {
+      require("./recipe-extractor.js");
       require("./content.js");
     });
   });
@@ -180,24 +181,47 @@ describe("content script bubble", () => {
     expect(sendResponse).toHaveBeenCalledWith({ success: true });
   });
 
-  test("EXTRACT_RECIPE responds with page content, url and title", async () => {
-    document.title = "Test Recipe Page";
-    document.body.innerHTML = "<h1>Pasta</h1>";
+  async function extract() {
     const listener = getOnMessageListener();
     const sendResponse = jest.fn();
     const returned = listener({ type: "EXTRACT_RECIPE" }, {}, sendResponse);
     // Async response: handler must return true to keep the channel open
     expect(returned).toBe(true);
-    // Flush the extractRecipeData promise
     await Promise.resolve();
     await Promise.resolve();
     expect(sendResponse).toHaveBeenCalledTimes(1);
-    const response = sendResponse.mock.calls[0][0];
+    return sendResponse.mock.calls[0][0];
+  }
+
+  test("EXTRACT_RECIPE responds with recipe-only content, clean url and title", async () => {
+    document.title = "Test Recipe Page";
+    document.body.innerHTML = `
+      <p>Personal blog story</p>
+      <script type="application/ld+json">${JSON.stringify({
+        "@type": "Recipe",
+        name: "Pasta",
+        recipeIngredient: ["pasta"],
+      })}</script>`;
+    const response = await extract();
     expect(response.success).toBe(true);
-    expect(response.data.title).toBe("Test Recipe Page");
-    expect(response.data.pageUrl).toBe(window.location.href);
-    expect(typeof response.data.pageContent).toBe("string");
-    expect(response.data.pageContent).toContain("Pasta");
+    expect(response.data.title).toBe("Pasta");
+    const expectedUrl = new URL(window.location.href);
+    expectedUrl.search = "";
+    expectedUrl.hash = "";
+    expect(response.data.pageUrl).toBe(expectedUrl.href);
+    expect(response.data.pageContent).toContain('"recipeIngredient":["pasta"]');
+    expect(response.data.pageContent).not.toContain("Personal blog story");
+  });
+
+  test("EXTRACT_RECIPE reports NO_RECIPE_FOUND instead of sending the page", async () => {
+    document.title = "Not a recipe";
+    document.body.innerHTML = "<h1>Pasta</h1><p>Some article</p>";
+    const response = await extract();
+    expect(response).toEqual({
+      success: false,
+      error: "No recipe found on this page",
+      code: "NO_RECIPE_FOUND",
+    });
   });
 
   test("unknown message type responds with success:false", () => {

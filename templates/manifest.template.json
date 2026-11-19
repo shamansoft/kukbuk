@@ -3,12 +3,12 @@
   "name": "Save-A-Recipe",
   "version": "${EXTENSION_VERSION}",
   "description": "Save recipes from web pages or your own descriptions to your connected storage.",
-  "permissions": ["activeTab", "storage", "contextMenus", "scripting", "tabs", "offscreen", "identity"],
+  "permissions": ["activeTab", "storage", "contextMenus", "scripting", "offscreen", "identity"],
   "oauth2": {
     "client_id": "${CHROME_EXTENSION_CLIENT_ID}",
     "scopes": ["openid", "email", "profile"]
   },
-  "host_permissions": ["https://*/*"],
+  "host_permissions": ["${API_HOST_PERMISSION}"],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
@@ -21,19 +21,12 @@
     "service_worker": "dist/background.bundle.js"
   },
   "options_page": "options/options.html",
-  "content_scripts": [
-    {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content/content.js"],
-      "run_at": "document_idle"
-    }
-  ],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; frame-src http://localhost:* https://*.firebaseapp.com https://*.web.app; connect-src 'self' http://localhost:* https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://identitytoolkit.googleapis.com https://*.run.app;"
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src ${FIREBASE_AUTH_ORIGIN}; connect-src 'self' ${API_ORIGIN} https://apis.google.com https://www.gstatic.com https://www.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com;"
   }
 }
