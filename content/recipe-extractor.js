@@ -58,6 +58,8 @@
     "i",
   );
 
+  const RECIPE_ID_PARAM = /^(?:id|p|recipe[_-]?id)$/i;
+
   // Elements whose content is never read.
   const DROPPED_TAGS = new Set([
     "SCRIPT",
@@ -92,7 +94,7 @@
     "(^|[-_])(" +
       ["comments?", "ratings?", "reviews?", "share", "sharing", "social", "newsletter"]
         .concat(["subscribe", "signup", "advert", "ads?", "sponsored", "promo", "print", "jump"])
-        .concat(["video", "screen-reader-text", "sr-only", "visually-hidden"])
+        .concat(["video", "screen-reader-text", "sr-only", "visually-hidden", "private", "user-notes", "notes-user"])
         .join("|") +
       ")([-_]|$)",
     "i",
@@ -136,31 +138,29 @@
       container: ".wprm-recipe-container, .wprm-recipe",
       ingredients: ".wprm-recipe-ingredient, .wprm-recipe-ingredients",
       title: ".wprm-recipe-name",
+      sections:
+        ".wprm-recipe-ingredients-container, .wprm-recipe-instructions-container, .wprm-recipe-instructions, .wprm-recipe-summary, .wprm-recipe-nutrition-container",
     },
     {
       source: "tasty-recipes",
       container: ".tasty-recipes",
       ingredients: ".tasty-recipes-ingredients, .tasty-recipes-ingredients-body",
       title: ".tasty-recipes-title",
+      sections: ".tasty-recipes-instructions, .tasty-recipes-instructions-body, .tasty-recipes-description, .tasty-recipes-nutrition",
     },
     {
       source: "mv-create",
       container: ".mv-create-card",
       ingredients: ".mv-create-ingredients",
       title: ".mv-create-title",
+      sections: ".mv-create-instructions, .mv-create-description, .mv-create-nutrition",
     },
     {
       source: "h-recipe",
       container: ".h-recipe",
       ingredients: ".p-ingredient",
       title: ".p-name",
-    },
-    {
-      source: "microdata",
-      container: "[itemscope][itemtype]",
-      ingredients: '[itemprop~="recipeIngredient"], [itemprop~="ingredients"]',
-      title: '[itemprop~="name"]',
-      filter: (el) => isRecipeItemtype(el.getAttribute("itemtype")),
+      sections: ".e-instructions, .p-summary, .p-yield, .dt-duration",
     },
   ];
 
@@ -189,7 +189,9 @@
     for (const item of toArray(value)) {
       if (out.length >= limit) break;
       const text =
-        item && typeof item === "object" ? cleanText(item.name ?? item.text) : cleanText(item);
+        item && typeof item === "object"
+          ? toArray(item.name ?? item.text).map(cleanText).find(Boolean)
+          : cleanText(item);
       if (text) out.push(text);
     }
     return out;
@@ -237,18 +239,29 @@
     return x === y || x.endsWith(`.${y}`) || y.endsWith(`.${x}`);
   }
 
-  /**
-   * The URL sent with a recipe: the page's same-site canonical URL (minus tracking parameters),
-   * otherwise the current address without its query string or fragment.
-   */
+  function cleanRecipeUrl(raw, base) {
+    const clean = cleanUrl(raw, base, { keepQuery: false });
+    if (!clean) return null;
+
+    const original = new URL(raw, base);
+    const url = new URL(clean);
+    for (const [key, value] of original.searchParams) {
+      if (RECIPE_ID_PARAM.test(key) && /^\d{1,12}$/.test(value)) {
+        url.searchParams.set(key, value);
+      }
+    }
+    return url.href;
+  }
+
+  /** Prefers a same-site canonical URL and retains only numeric recipe identifiers. */
   function pagePermalink(doc, location) {
     const href = location.href;
     const canonical = doc.querySelector('link[rel~="canonical"][href]');
     if (canonical) {
-      const cleaned = cleanUrl(canonical.getAttribute("href"), href);
+      const cleaned = cleanRecipeUrl(canonical.getAttribute("href"), href);
       if (cleaned && sameSite(new URL(cleaned).hostname, location.hostname)) return cleaned;
     }
-    return cleanUrl(href, undefined, { keepQuery: false });
+    return cleanRecipeUrl(href);
   }
 
   // ---------------------------------------------------------------------------------------
@@ -351,7 +364,7 @@
     const authors = textList(node.author, 5);
     if (authors.length) recipe.author = authors.map((name) => ({ name }));
 
-    const url = cleanUrl(firstText(node.url), base);
+    const url = cleanRecipeUrl(firstText(node.url), base);
     if (url) recipe.url = url;
 
     if (!recipe.name || !(ingredients.length || instructions.length)) return null;
@@ -515,54 +528,55 @@
       .replace(/"/g, "&quot;");
   }
 
-  /** Rebuilds the visible text of a recipe card with plain structural tags only. */
-  function sanitizeCard(el) {
+  function isReadableSection(el, container) {
+    for (let node = el; node !== container; node = node.parentElement) {
+      if (isSkipped(node)) return false;
+    }
+    return true;
+  }
+
+  /** Rebuilds only recognized recipe sections with plain structural tags. */
+  function sanitizeCard(sections) {
     const render = (node) => {
-      let html = "";
-      for (const child of node.childNodes) {
-        if (child.nodeType === 3) {
-          html += escapeHtml(child.nodeValue.replace(/\s+/g, " "));
-          continue;
-        }
-        if (child.nodeType !== 1 || isSkipped(child)) continue;
-        const tag = child.tagName.toUpperCase();
-        const inner = render(child);
-        if (tag === "BR") {
-          html += "<br>";
-        } else if (KEPT_TAGS.has(tag)) {
-          if (!inner.trim()) continue;
-          const classes = (child.getAttribute("class") || "")
-            .split(/\s+/)
-            .filter((token) => KEPT_CLASS.test(token));
-          const name = tag.toLowerCase();
-          const attr = classes.length ? ` class="${escapeHtml(classes.join(" "))}"` : "";
-          html += `<${name}${attr}>${inner.trim()}</${name}>`;
-        } else {
-          html += inner;
-        }
-      }
-      return html;
+      if (node.nodeType === 3) return escapeHtml(node.nodeValue.replace(/\s+/g, " "));
+      if (node.nodeType !== 1 || isSkipped(node)) return "";
+      const tag = node.tagName.toUpperCase();
+      if (tag === "BR") return "<br>";
+
+      const inner = Array.from(node.childNodes, render).join("");
+      if (!KEPT_TAGS.has(tag)) return inner;
+      if (!inner.trim()) return "";
+
+      const classes = (node.getAttribute("class") || "")
+        .split(/\s+/)
+        .filter((token) => KEPT_CLASS.test(token));
+      const name = tag.toLowerCase();
+      const attr = classes.length ? ` class="${escapeHtml(classes.join(" "))}"` : "";
+      return `<${name}${attr}>${inner.trim()}</${name}>`;
     };
-    return render(el).trim();
+    return sections.map(render).join("");
   }
 
   function findRecipeCard(doc) {
     for (const card of RECIPE_CARDS) {
       for (const container of doc.querySelectorAll(card.container)) {
-        if (card.filter && !card.filter(container)) continue;
         if (!isVisibleTree(container) || hasNoiseToken(container)) continue;
         const hasIngredients = [...container.querySelectorAll(card.ingredients)].some(
-          (el) => isVisibleTree(el) && visibleText(el),
+          (el) => isReadableSection(el, container) && visibleText(el),
         );
         if (!hasIngredients) continue;
-        const html = sanitizeCard(container);
+
+        const selector = [card.title, card.ingredients, card.sections].join(", ");
+        const sections = [];
+        for (const section of container.querySelectorAll(selector)) {
+          if (!isReadableSection(section, container)) continue;
+          if (sections.some((parent) => parent.contains(section))) continue;
+          sections.push(section);
+        }
+        const html = sanitizeCard(sections);
         if (!html || html.length > MAX_CARD_CHARS) continue;
-        const titleEl = container.querySelector(card.title);
-        return {
-          source: card.source,
-          html,
-          title: titleEl && isVisibleTree(titleEl) ? visibleText(titleEl) : "",
-        };
+        const titleEl = sections.find((section) => section.matches(card.title));
+        return { source: card.source, html, title: titleEl ? visibleText(titleEl) : "" };
       }
     }
     return null;

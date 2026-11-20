@@ -3,6 +3,7 @@ const webpack = require("webpack");
 
 module.exports = ({ firefox = false } = {}) => ({
   mode: process.env.NODE_ENV === "development" ? "development" : "production",
+  target: ["web", "es2022"],
   // Extension contexts provide globalThis. Omit Webpack's dynamic-code fallback.
   node: { global: false },
   entry: {
@@ -33,7 +34,17 @@ module.exports = ({ firefox = false } = {}) => ({
         use: {
           loader: "babel-loader",
           options: {
-            presets: ["@babel/preset-env"],
+            babelrc: false,
+            configFile: false,
+            presets: [
+              [
+                "@babel/preset-env",
+                {
+                  targets: firefox ? { firefox: "140" } : { chrome: "109" },
+                  ignoreBrowserslistConfig: true,
+                },
+              ],
+            ],
           },
         },
       },

@@ -206,6 +206,10 @@ describe("microdata recipes", () => {
     <div itemscope itemtype="https://schema.org/Recipe">
       <h1 itemprop="name">Lemon Cake</h1>
       <meta itemprop="prepTime" content="PT15M">
+      <span itemprop="author" itemscope itemtype="https://schema.org/Person">
+        <span itemprop="name">Chef Ana</span>
+        <span itemprop="email">ana@example.com</span>
+      </span>
       <img itemprop="image" src="/img/cake.jpg?fbclid=abc">
       <ul>
         <li itemprop="recipeIngredient">2 lemons</li>
@@ -228,12 +232,34 @@ describe("microdata recipes", () => {
     expect(recipe).toMatchObject({
       name: "Lemon Cake",
       prepTime: "PT15M",
+      author: [{ name: "Chef Ana" }],
       image: ["https://www.example.com/img/cake.jpg"],
       recipeIngredient: ["2 lemons", "1 cup sugar"],
       recipeInstructions: [{ "@type": "HowToStep", text: "Bake 30 minutes." }],
     });
     expect(result.pageContent).not.toContain("secret affiliate token");
     expect(result.pageContent).not.toContain("csrf-999");
+    expect(result.pageContent).not.toContain("Reader Bob");
+    expect(result.pageContent).not.toContain("ana@example.com");
+  });
+
+  test("keeps only marked recipe fields when the Recipe scope covers the page body", () => {
+    const doc = new DOMParser().parseFromString(
+      `<body itemscope itemtype="https://schema.org/Recipe">
+        <header>Signed in as jane@example.com</header>
+        <h1 itemprop="name">Lemon Cake</h1>
+        <p itemprop="recipeIngredient">2 lemons</p>
+        <div id="disqus_thread">Reader Bob posted an address</div>
+      </body>`,
+      "text/html",
+    );
+
+    const result = extractRecipe(doc, PAGE);
+    expect(embeddedJsonLd(result.pageContent)).toMatchObject({
+      name: "Lemon Cake",
+      recipeIngredient: ["2 lemons"],
+    });
+    expect(result.pageContent).not.toContain("jane@example.com");
     expect(result.pageContent).not.toContain("Reader Bob");
   });
 });
@@ -254,6 +280,11 @@ describe("recipe card markup", () => {
       </div>
       <div class="wprm-recipe-instructions-container">
         <ol><li class="wprm-recipe-instruction">Simmer <em>20</em> min.</li></ol>
+        <div class="wprm-private-notes-user">Nested personal instructions</div>
+      </div>
+      <div>Account information jane@example.com</div>
+      <div class="wprm-private-notes-user">
+        <div class="wprm-recipe-summary">Personal notes from my last save</div>
       </div>
       <span class="wprm-screen-reader-text">Screen reader duplicate</span>
       <div class="wprm-recipe-notes" style="visibility:hidden">private note</div>
@@ -283,6 +314,9 @@ describe("recipe card markup", () => {
       "hidden-dup",
       "Screen reader duplicate",
       "private note",
+      "Nested personal instructions",
+      "jane@example.com",
+      "Personal notes from my last save",
       "me@example.com",
       "Reader Bob",
       "Reader Carol",
@@ -333,8 +367,13 @@ describe("URLs", () => {
     expect(pagePermalink(document, location)).toBe("https://example.com/r/1");
   });
 
-  test("prefers a same-site canonical URL, minus tracking parameters", () => {
-    const href = "https://example.com/recipes/pasta?id=7&utm_medium=email&fbclid=1#x";
+  test("retains a numeric recipe ID in the current address", () => {
+    const location = new URL("https://example.com/r?id=42&p=private&token=secret#top");
+    expect(pagePermalink(document, location)).toBe("https://example.com/r?id=42");
+  });
+
+  test("prefers a same-site canonical URL and keeps only numeric recipe IDs", () => {
+    const href = "https://example.com/recipes/pasta?id=7&session=secret&utm_medium=email&fbclid=1#x";
     document.head.innerHTML = `<link rel="canonical" href="${href}">`;
     expect(pagePermalink(document, PAGE)).toBe("https://example.com/recipes/pasta?id=7");
   });

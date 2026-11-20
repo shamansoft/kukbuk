@@ -11,7 +11,6 @@ const os = require("os");
 // Parse command line arguments for environment file
 const args = process.argv.slice(2);
 const envArg = args.find((arg) => arg.startsWith("--env="));
-const envFile = envArg ? envArg.replace("--env=", "") : ".env";
 
 // Configuration
 const EXTENSION_DIR = path.resolve(__dirname, "..");
@@ -68,7 +67,9 @@ function buildExtension() {
     execSync("npm run build", {
       stdio: "inherit",
       cwd: EXTENSION_DIR,
-      env: { ...process.env, EXTENSION_CONFIG_FILE: envFile },
+      env: envArg
+        ? { ...process.env, EXTENSION_CONFIG_FILE: envArg.slice("--env=".length) }
+        : process.env,
     });
     console.log("Extension built successfully.");
   } catch (error) {

@@ -207,11 +207,11 @@ Only recipe data, never the page's HTML:
 - schema.org `Recipe` JSON-LD or microdata, reduced to recipe fields (name, ingredients,
   instructions, times, yield, nutrition, images, author name). Reviews, comments, ratings and
   other fields are dropped.
-- The visible text of a known recipe card (WP Recipe Maker, Tasty Recipes, Mediavine Create,
-  h-recipe, schema.org microdata), rebuilt with plain structural tags. Hidden elements, form
-  fields, comments, ratings, sharing and ad blocks are skipped.
-- The page URL without fragment, credentials or query string (or the same-site canonical URL
-  minus tracking parameters).
+- Visible recipe fields from known card sections (WP Recipe Maker, Tasty Recipes, Mediavine
+  Create and h-recipe), rebuilt with plain structural tags. Hidden elements, form fields,
+  private notes, comments, ratings, sharing and ad blocks are skipped.
+- The same-site canonical URL when available, otherwise the current page URL. The extension
+  strips credentials, fragments and query parameters except recognized numeric recipe IDs.
 
 If the page has no recognizable recipe, nothing is uploaded and the bubble says
 "No recipe found on this page".
