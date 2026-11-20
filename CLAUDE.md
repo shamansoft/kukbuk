@@ -37,8 +37,8 @@ This is a Chrome Extension (Manifest V3) that saves recipes from websites to Goo
 - `transformation.js` - Recipe content GZIP compression (Base64 output)
 
 **Content Scripts** (`content/`)
-- No static content scripts. On toolbar click, `background.js` injects `content/recipe-extractor.js` + `content/content.js` into the active tab (`activeTab` + `scripting`)
-- `recipe-extractor.js` returns only recipe data (allowlisted JSON-LD/microdata Recipe fields + visible recipe-card text) and a cleaned URL; it never returns raw page HTML. No recipe → `NO_RECIPE_FOUND`, nothing uploaded
+- On toolbar click, `background.js` injects `content/page-content.js` and `content/content.js` into the active tab using `activeTab` and `scripting`.
+- `page-content.js` returns cleaned page HTML, title, and URL. The backend detects and extracts the recipe. If cleanup fails, the extension uploads nothing.
 - `content.js` handles PING / EXTRACT_RECIPE / SHOW_BUBBLE
 
 **Popup UI** (`popup/`)

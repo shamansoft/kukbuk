@@ -208,9 +208,10 @@ the recipe, including on pages with plain text or unfamiliar layouts. It reports
 does not contain a recipe.
 
 The extension keeps page text and structure, so the upload can include text outside the recipe.
-Before sending it, the extension removes executable scripts, styles, forms, embedded frames,
-explicitly hidden elements, and recognizable comment, account, and private-note blocks. It redacts obvious email
-addresses and retains recognized recipe fields from structured recipe metadata when available.
+Before sending it, the extension removes executable scripts, styles, form fields, embedded
+frames, explicitly hidden elements, and common comment containers. It also removes the WordPress
+admin bar and recognizable private-note blocks, redacts obvious email addresses, and retains
+recognized recipe fields from structured recipe metadata when available.
 The source URL excludes credentials, fragments, and query parameters other than recognized
 numeric recipe IDs.
 

@@ -41,12 +41,13 @@ test("removes likely private material without changing the original page", () =>
       <p>Keep the ingredient list. Email reader@example.com</p>
       <a href="mailto:author@example.com">Contact the author</a>
       <a href="tel:+15551234567">Call the author</a>
-      <form><input type="hidden" value="hidden-token"><p>Account form</p></form>
+      <form><input type="hidden" value="hidden-token"><textarea>private draft</textarea></form>
       <p hidden>hidden profile</p>
-      <p aria-hidden="true">hidden accessibility block</p>
       <p style="display: none">inline hidden profile</p>
       <div class="wprm-private-notes-user">private note text</div>
       <section id="disqus_thread">Reader comment with an address</section>
+      <section class="comment-list">A different reader's comment</section>
+      <p itemprop="review">Private details in a review</p>
       <div id="wpadminbar">Signed-in user display name</div>
       <div contenteditable>draft text</div>
       <script>page state token</script>
@@ -65,12 +66,13 @@ test("removes likely private material without changing the original page", () =>
     "opaque-token",
     "event-token",
     "hidden-token",
-    "Account form",
+    "private draft",
     "hidden profile",
-    "hidden accessibility block",
     "inline hidden profile",
     "private note text",
     "Reader comment with an address",
+    "A different reader's comment",
+    "Private details in a review",
     "Signed-in user display name",
     "draft text",
     "page state token",
@@ -82,6 +84,47 @@ test("removes likely private material without changing the original page", () =>
   }
   expect(document.querySelector("input").value).toBe("hidden-token");
   expect(document.querySelector("article").getAttribute("onclick")).toBe("event-token");
+});
+
+test("keeps plain recipe text inside a form while stripping its fields", () => {
+  const page = prepare(`
+    <form id="aspnetForm" action="/account?token=private">
+      <input type="hidden" value="hidden-token">
+      <main><h1>Potato salad</h1><p>Boil the potatoes until tender.</p></main>
+      <button value="button-token">Add two potatoes</button>
+      <select><option>private selection</option></select>
+    </form>
+  `);
+
+  expect(page.html.querySelector("#aspnetForm main").textContent).toContain("Boil the potatoes");
+  expect(page.html.querySelector("button").textContent).toBe("Add two potatoes");
+  expect(page.html.querySelector("form").hasAttribute("action")).toBe(false);
+  expect(page.html.querySelector("input, select")).toBeNull();
+  expect(page.pageContent).not.toContain("hidden-token");
+  expect(page.pageContent).not.toContain("button-token");
+});
+
+test("keeps recipe content behind an open modal and inside searchable collapsed sections", () => {
+  const page = prepare(`
+    <main aria-hidden="true" inert>
+      <h1>Potato salad</h1>
+      <section hidden="until-found">Boil the potatoes.</section>
+    </main>
+    <dialog open><p>Stir in dressing.</p></dialog>
+    <dialog><p>Closed private dialog</p></dialog>
+  `);
+
+  expect(page.html.querySelector("main").textContent).toContain("Boil the potatoes.");
+  expect(page.html.querySelector("dialog").textContent).toBe("Stir in dressing.");
+  expect(page.pageContent).not.toContain("Closed private dialog");
+});
+
+test("redacts an email without slowing down on long unbroken text", () => {
+  const unbrokenText = "a".repeat(100_000);
+  const started = performance.now();
+  const page = prepare(`<p>${unbrokenText} reader@example.com</p>`);
+  expect(performance.now() - started).toBeLessThan(3000);
+  expect(page.html.querySelector("p").textContent).toBe(`${unbrokenText} [email removed]`);
 });
 
 test("keeps cleaned recipe metadata alongside the full page structure", () => {

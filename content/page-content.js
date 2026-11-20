@@ -1,9 +1,10 @@
 // Prepares a cleaned copy of the selected page. The backend decides whether it contains a recipe.
 (function (root) {
-  const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
+  const EMAIL = /\b[A-Z0-9._%+-]{1,64}@[A-Z0-9-]{1,63}(?:\.[A-Z0-9-]{1,63}){0,8}\.[A-Z]{2,24}\b/gi;
   const RECIPE_ID_PARAM = /^(?:id|p|recipe[_-]?id)$/i;
   const PRIVATE_BLOCK = /(?:^|[\s_-])(?:private[-_]notes|user[-_]notes|notes[-_]user)(?=$|[\s_-])/i;
 
+  // Forms, buttons and modal backdrops can contain the recipe text itself.
   const REMOVE_ELEMENTS = [
     "script",
     "style",
@@ -15,21 +16,22 @@
     "embed",
     "svg",
     "canvas",
-    "form",
     "input",
     "textarea",
     "select",
     "option",
-    "button",
     "output",
-    "dialog",
+    "dialog:not([open])",
     "base",
-    "[hidden]",
-    '[aria-hidden="true"]',
-    "[inert]",
+    '[hidden]:not([hidden="until-found" i])',
     '[contenteditable]:not([contenteditable="false"])',
     "#comments",
     "#disqus_thread",
+    ".comments-area",
+    ".comment-list",
+    ".commentlist",
+    '[itemprop~="comment"]',
+    '[itemprop~="review"]',
     "#wpadminbar",
     "#save-a-recipe-light-bubble-container",
   ].join(", ");

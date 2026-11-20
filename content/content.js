@@ -60,7 +60,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 /** Prepares the selected page for backend recipe detection and extraction. */
 async function extractRecipeData() {
-  return globalThis.SarPageContent.preparePage(document, window.location);
+  const pageContent = globalThis.SarPageContent;
+  if (!pageContent) throw new Error("Couldn't read page");
+  return pageContent.preparePage(document, window.location);
 }
 
 // Light bubble UI - small status card near the top-right (under extensions bar)
