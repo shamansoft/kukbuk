@@ -498,12 +498,12 @@ describe("Background Script", () => {
     // Should not throw
     await expect(handler({ id: 42 })).resolves.not.toThrow();
   });
-  test("injects the extractor and content script on demand, then saves the result", async () => {
+  test("injects the page cleanup scripts on demand and saves the result", async () => {
     const { saveRecipe } = require("./services/api.js");
     saveRecipe.mockResolvedValueOnce({ success: true, recipeName: "Pasta", isRecipe: true });
     chrome.scripting.executeScript.mockResolvedValueOnce([]);
     const extracted = {
-      pageContent: '<script type="application/ld+json">{}</script>',
+      pageContent: "<html><body><section>Boil the pasta for ten minutes.</section></body></html>",
       pageUrl: "https://example.com/pasta",
       title: "Pasta",
     };
@@ -518,20 +518,19 @@ describe("Background Script", () => {
 
     expect(chrome.scripting.executeScript).toHaveBeenCalledWith({
       target: { tabId: 42 },
-      files: ["content/recipe-extractor.js", "content/content.js"],
+      files: ["content/page-content.js", "content/content.js"],
     });
     expect(saveRecipe).toHaveBeenCalledWith(extracted);
   });
 
-  test("shows 'No recipe found' and uploads nothing when the page has no recipe", async () => {
+  test("uploads nothing when the selected page could not be cleaned", async () => {
     const { saveRecipe } = require("./services/api.js");
     chrome.tabs.sendMessage
       .mockResolvedValueOnce({ success: true }) // PING
       .mockResolvedValueOnce({ success: true }) // SHOW_BUBBLE loading
       .mockResolvedValueOnce({
         success: false,
-        error: "No recipe found on this page",
-        code: "NO_RECIPE_FOUND",
+        error: "Couldn't read page",
       }) // EXTRACT_RECIPE
       .mockResolvedValueOnce({ success: true }); // SHOW_BUBBLE error
 
@@ -541,7 +540,7 @@ describe("Background Script", () => {
     expect(saveRecipe).not.toHaveBeenCalled();
     expect(chrome.tabs.sendMessage.mock.calls[3][1]).toMatchObject({
       type: "SHOW_BUBBLE",
-      data: { variant: "error", text: "No recipe found on this page", dismissible: true },
+      data: { variant: "error", text: "Couldn't read page", dismissible: true },
     });
   });
 });

@@ -8,7 +8,7 @@ For store submission, follow the [publisher guide](docs/store-publication.md).
 
 - **Firebase Authentication** with Google Sign-In for secure access
 - Save recipes from any website with a single click
-- Automatic extraction and cleanup of recipe content
+- Backend recipe extraction from cleaned page content
 - Secure token storage - OAuth tokens encrypted in backend
 - User-friendly interface with visual feedback
 - Cross-browser compatible authentication system
@@ -202,19 +202,17 @@ The extension asks for as little access as it can:
 
 ## What a save sends
 
-Only recipe data, never the page's HTML:
+When you click Save-A-Recipe, the extension sends the page title, cleaned source URL, and a
+cleaned copy of the page HTML to the Save-A-Recipe service. The service identifies and extracts
+the recipe, including on pages with plain text or unfamiliar layouts. It reports when a page
+does not contain a recipe.
 
-- schema.org `Recipe` JSON-LD or microdata, reduced to recipe fields (name, ingredients,
-  instructions, times, yield, nutrition, images, author name). Reviews, comments, ratings and
-  other fields are dropped.
-- Visible recipe fields from known card sections (WP Recipe Maker, Tasty Recipes, Mediavine
-  Create and h-recipe), rebuilt with plain structural tags. Hidden elements, form fields,
-  private notes, comments, ratings, sharing and ad blocks are skipped.
-- The same-site canonical URL when available, otherwise the current page URL. The extension
-  strips credentials, fragments and query parameters except recognized numeric recipe IDs.
-
-If the page has no recognizable recipe, nothing is uploaded and the bubble says
-"No recipe found on this page".
+The extension keeps page text and structure, so the upload can include text outside the recipe.
+Before sending it, the extension removes executable scripts, styles, forms, embedded frames,
+explicitly hidden elements, and recognizable comment, account, and private-note blocks. It redacts obvious email
+addresses and retains recognized recipe fields from structured recipe metadata when available.
+The source URL excludes credentials, fragments, and query parameters other than recognized
+numeric recipe IDs.
 
 ## Save Behavior
 
