@@ -1,8 +1,8 @@
-# MyKukBuk Design System
+# Save-A-Recipe Design System
 
 ## Overview
 
-The MyKukBuk extension features a **Culinary Editorial** design aesthetic that evokes warmth, sophistication, and a premium cooking experience. This design system moves away from generic tech blues toward an organic, food-focused visual language.
+The Save-A-Recipe extension features a **Culinary Editorial** design aesthetic that evokes warmth, sophistication, and a premium cooking experience. This design system moves away from generic tech blues toward an organic, food-focused visual language.
 
 ## Design Philosophy
 

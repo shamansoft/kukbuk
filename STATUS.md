@@ -2,7 +2,7 @@
 _Last updated: 2026-11-08_
 
 ## What this is
-Save-A-Recipe (product brand "MyKukBuk") is a Chrome Manifest V3 browser
+Save-A-Recipe is a Chrome Manifest V3 browser
 extension that captures a recipe from any web page and saves it to the user's
 Google Drive as a structured YAML file. It is the web-capture client of the SAR
 product: it extracts and compresses page HTML and posts it to the `sar-srv`
@@ -10,7 +10,7 @@ backend, which uses an LLM to parse the recipe and write it to Drive. Saved
 recipes are then viewable from Drive or the `sar-kmp` mobile/desktop app.
 
 ## Tech stack
-- Chrome Extension, Manifest V3 (background service worker + content scripts)
+- Chrome Extension, Manifest V3 (background service worker + on-demand content scripts via `activeTab`)
 - Vanilla JavaScript (ES2022 modules), no UI framework
 - Firebase Authentication (`firebase` JS SDK v10) — email/password + Google Sign-In
 - Google `chrome.identity` API for Google Sign-In; offscreen document for Firebase auth ops

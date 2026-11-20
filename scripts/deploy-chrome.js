@@ -11,7 +11,6 @@ const os = require("os");
 // Parse command line arguments for environment file
 const args = process.argv.slice(2);
 const envArg = args.find((arg) => arg.startsWith("--env="));
-const envFile = envArg ? envArg.replace("--env=", "") : ".env";
 
 // Configuration
 const EXTENSION_DIR = path.resolve(__dirname, "..");
@@ -65,7 +64,13 @@ function ensureProfileDirectory() {
 function buildExtension() {
   console.log("Building extension...");
   try {
-    execSync("npm run prebuild", { stdio: "inherit", cwd: EXTENSION_DIR });
+    execSync("npm run build", {
+      stdio: "inherit",
+      cwd: EXTENSION_DIR,
+      env: envArg
+        ? { ...process.env, EXTENSION_CONFIG_FILE: envArg.slice("--env=".length) }
+        : process.env,
+    });
     console.log("Extension built successfully.");
   } catch (error) {
     console.error("Failed to build extension:", error.message);

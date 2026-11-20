@@ -3,8 +3,9 @@ const webpack = require("webpack");
 
 module.exports = ({ firefox = false } = {}) => ({
   mode: process.env.NODE_ENV === "development" ? "development" : "production",
-  // Firefox provides the browser global directly. Skip Webpack's eval-based fallback.
-  node: firefox ? { global: false } : undefined,
+  target: ["web", "es2022"],
+  // Extension contexts provide globalThis. Omit Webpack's dynamic-code fallback.
+  node: { global: false },
   entry: {
     background: "./background/background.js",
     ...(!firefox && { "offscreen/auth-offscreen": "./offscreen/auth-offscreen.js" }),
@@ -12,7 +13,7 @@ module.exports = ({ firefox = false } = {}) => ({
   output: {
     path: path.resolve(__dirname, firefox ? "build/firefox/dist" : "dist"),
     filename: "[name].bundle.js",
-    clean: firefox,
+    clean: true,
   },
   plugins: [
     new webpack.DefinePlugin({ __FIREFOX__: JSON.stringify(firefox) }),
@@ -33,7 +34,17 @@ module.exports = ({ firefox = false } = {}) => ({
         use: {
           loader: "babel-loader",
           options: {
-            presets: ["@babel/preset-env"],
+            babelrc: false,
+            configFile: false,
+            presets: [
+              [
+                "@babel/preset-env",
+                {
+                  targets: firefox ? { firefox: "140" } : { chrome: "109" },
+                  ignoreBrowserslistConfig: true,
+                },
+              ],
+            ],
           },
         },
       },

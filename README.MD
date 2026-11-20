@@ -1,6 +1,8 @@
-# MyKukBuk Browser Extension
+# Save-A-Recipe Browser Extension
 
-Save recipes from websites to Google Drive with the Chrome or Firefox extension.
+Save recipes from websites or written descriptions to your connected storage with the Chrome or Firefox extension.
+
+For store submission, follow the [publisher guide](docs/store-publication.md).
 
 ## Features
 
@@ -17,18 +19,19 @@ Save recipes from websites to Google Drive with the Chrome or Firefox extension.
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/shamansoft/kukbuk.git
-cd kukbuk
+git clone https://github.com/shamansoft/sar-ext.git
+cd sar-ext
 ```
 
 2. Install dependencies:
 ```bash
-npm install
+npm ci
 ```
 
-3. Create a `.env` file at the root of the project with your Firebase and API credentials:
+3. Create a `.env` file at the root of the project with the public build values shown below. Replace the sample values with your extension configuration:
 ```bash
 # API Configuration
+# The build grants host access to this host only (plus localhost when this is a localhost URL).
 API_BASE_URL=https://your-backend-url.run.app
 EXTENSION_ID=mkb-prod
 
@@ -40,6 +43,9 @@ FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
 FIREBASE_MESSAGING_SENDER_ID=your_sender_id_here
 FIREBASE_APP_ID=your_app_id_here
+
+# Required for Chrome Google sign-in
+CHROME_EXTENSION_CLIENT_ID=your-chrome-client-id.apps.googleusercontent.com
 ```
 
 See [docs/firebase-setup.md](docs/firebase-setup.md) for detailed Firebase configuration instructions.
@@ -53,9 +59,13 @@ npm run build
 
 1. Open Chrome and navigate to `chrome://extensions/`
 2. Enable "Developer mode" in the top right
-3. Click "Load unpacked" and select the build output directory
+3. Click "Load unpacked" and select the repository root
 
 ### Load the Extension in Firefox
+
+Set `FIREFOX_EXTENSION_ID` in your build configuration before building for Firefox.
+For an existing listing, use the ID in its last signed manifest or AMO listing.
+For a new listing, choose a stable ID before registering its Google OAuth redirect.
 
 Firefox 140 or later is required. Use the same Firebase and API configuration as
 the Chrome build.
@@ -73,15 +83,53 @@ the Chrome build.
 Firefox removes temporary add-ons on restart. Use a Mozilla-signed build to test
 session persistence across a full browser restart.
 
-For a Mozilla Add-ons submission, include the corresponding source and the
-Firefox build instructions so reviewers can reproduce the bundled package.
+### Release archives
+
+Run `npm run zip` for Chrome or `npm run zip:firefox` for Firefox. Both commands
+build in production mode and name the ZIP using the version in the packaged
+manifest. The manifest version comes from `package.json`. Set `VERSION_SUFFIX`
+to an optional fourth numeric component such as `.7`. Use `npm run version:patch`
+to bump the version in the package and lockfile before committing a new release.
+
+Builds stop when required public values are missing or placeholders. Chrome
+requires its Chrome Extension OAuth client ID. Firefox uses email-only sign-in
+when `FIREFOX_GOOGLE_CLIENT_ID` is empty. By default the build reads `.env` and lets
+shell variables override it. Set `EXTENSION_CONFIG_FILE` to select a config file
+for release builds.
+
+#### Mozilla Add-ons source submission
+
+Use the same committed checkout, Node/npm versions, and public build settings
+for both archives. From a checkout with all release source changes committed,
+run these commands with the Firefox settings from the setup section:
+
+```sh
+npm ci --include=dev
+npm run zip:firefox
+npm run zip:amo-source
+```
+
+Upload the Firefox distribution ZIP as the add-on and the corresponding
+`-source.zip` as review source. The source command takes build files from
+`HEAD` and adds the lockfile, build instructions, and a JSON snapshot of the
+validated public Firefox build values. Keep service-account files, OAuth client
+secrets, signing keys, and test account credentials outside the release
+configuration. The source command reads the selected config and copies only
+the fields used by the Firefox build.
+
+To verify the submission, extract the source ZIP into an empty directory and
+run the commands in its `AMO-BUILD.md`. They install the locked dependencies and
+rebuild the Firefox ZIP using the included `amo-build-config.json`. Shell build
+variables do not override this captured config.
+
+See [Mozilla’s source submission guide](https://extensionworkshop.com/documentation/publish/source-code-submission/).
 
 #### Enable Google sign-in in Firefox
 
 Email and password sign-in works with the standard Firebase configuration. To
 enable the Google button, set `FIREFOX_GOOGLE_CLIENT_ID` to the client ID of a
 **Web application** OAuth client in the same Google Cloud project as Firebase.
-Keep the stable Gecko add-on ID (`save-a-recipe@mykukbuk.com` by default).
+Keep the stable Gecko add-on ID by setting `FIREFOX_EXTENSION_ID`.
 
 1. Inspect the loaded extension's background page in `about:debugging` and run
    this in its console to get the exact redirect for the add-on ID:
@@ -117,7 +165,6 @@ This will launch Chrome with a dedicated profile and the extension pre-loaded.
 
 ### Available Scripts
 
-- `npm run prebuild` - Substitutes environment variables in template files
 - `npm run build` - Builds the extension for production
 - `npm run dev` - Builds in development mode with watch enabled
 - `npm run zip` - Creates a distribution zip file for the extension
@@ -126,10 +173,10 @@ This will launch Chrome with a dedicated profile and the extension pre-loaded.
 ### Project Structure
 
 ```
-mykukbuk-extension/
+sar-ext/
 ├── background/         # Background service worker scripts
 ├── common/             # Shared assets: theme.css design tokens
-├── content/            # Content scripts for webpage interaction
+├── content/            # On-demand scripts: recipe extraction + in-page bubble
 ├── docs/               # Documentation files
 ├── icons/              # Extension icons
 ├── popup/              # Login popup UI
@@ -141,13 +188,33 @@ mykukbuk-extension/
 
 ## Permissions
 
-This extension requires the following permissions:
+The extension asks for as little access as it can:
 
-- `activeTab` - To interact with the current tab
-- `storage` - To store user preferences and extension data
-- `contextMenus` - For right-click menu functionality
-- `scripting` - For executing scripts on web pages
-- `tabs` - For tab management
+- `activeTab` + `scripting` - When you click the toolbar button, inject the recipe extractor into
+  that one tab. There are no static content scripts and no access to other sites or tabs.
+- `storage` - Store sign-in state
+- `contextMenus` - Toolbar right-click menu (Settings, Log Out, Create Recipe)
+- `identity` - Google Sign-In
+- `offscreen` (Chrome only) - Firebase authentication document
+- Host access: only the backend host from `API_BASE_URL`. Local builds whose `API_BASE_URL`
+  points at `localhost`/`127.0.0.1` also get those hosts. The build fails rather than fall back to
+  broad host access when `API_BASE_URL` or `FIREBASE_AUTH_DOMAIN` is missing or invalid.
+
+## What a save sends
+
+Only recipe data, never the page's HTML:
+
+- schema.org `Recipe` JSON-LD or microdata, reduced to recipe fields (name, ingredients,
+  instructions, times, yield, nutrition, images, author name). Reviews, comments, ratings and
+  other fields are dropped.
+- Visible recipe fields from known card sections (WP Recipe Maker, Tasty Recipes, Mediavine
+  Create and h-recipe), rebuilt with plain structural tags. Hidden elements, form fields,
+  private notes, comments, ratings, sharing and ad blocks are skipped.
+- The same-site canonical URL when available, otherwise the current page URL. The extension
+  strips credentials, fragments and query parameters except recognized numeric recipe IDs.
+
+If the page has no recognizable recipe, nothing is uploaded and the bubble says
+"No recipe found on this page".
 
 ## Save Behavior
 
@@ -155,11 +222,11 @@ When signed in, clicking the toolbar icon saves the current page directly — no
 
 ## Design System
 
-Shared visual tokens live in `common/theme.css` (warm-neutral palette, 8px radius, Hanken Grotesk font). All extension pages link this stylesheet before their page-specific CSS.
+Shared visual tokens live in `common/theme.css` (warm-neutral palette, 8px radius, system font). All extension pages link this stylesheet before their page-specific CSS.
 
 ## Authentication
 
-MyKukBuk uses **Firebase Authentication** with Google Sign-In:
+Save-A-Recipe uses **Firebase Authentication** with Google Sign-In:
 - Users sign in via Firebase popup
 - Firebase ID tokens authenticate with backend
 - OAuth tokens stored encrypted in Firestore (backend)

@@ -33,6 +33,7 @@ describe("content script bubble", () => {
     document.body.innerHTML = "";
     // Load content script fresh each test
     jest.isolateModules(() => {
+      require("./recipe-extractor.js");
       require("./content.js");
     });
   });
@@ -45,10 +46,10 @@ describe("content script bubble", () => {
   test("renders a bubble on SHOW_BUBBLE message", () => {
     sendBubble({ text: "Saving recipe…", variant: "loading" });
     flushAnimationFrame();
-    const bubble = document.querySelector(".kukbuk-light-bubble");
+    const bubble = document.querySelector(".save-a-recipe-light-bubble");
     expect(bubble).not.toBeNull();
-    expect(bubble.querySelector(".kukbuk-bubble-text").textContent).toBe("Saving recipe…");
-    expect(bubble.querySelector(".kukbuk-bubble-dot").classList.contains("loading")).toBe(true);
+    expect(bubble.querySelector(".save-a-recipe-bubble-text").textContent).toBe("Saving recipe…");
+    expect(bubble.querySelector(".save-a-recipe-bubble-dot").classList.contains("loading")).toBe(true);
   });
 
   test("sendResponse is called with success:true on SHOW_BUBBLE", () => {
@@ -61,11 +62,11 @@ describe("content script bubble", () => {
     flushAnimationFrame();
     sendBubble({ text: "Saved", variant: "success" });
     flushAnimationFrame();
-    const bubbles = document.querySelectorAll(".kukbuk-light-bubble");
+    const bubbles = document.querySelectorAll(".save-a-recipe-light-bubble");
     expect(bubbles.length).toBe(1);
-    const textEl = bubbles[0].querySelector(".kukbuk-bubble-text");
+    const textEl = bubbles[0].querySelector(".save-a-recipe-bubble-text");
     expect(textEl.textContent).toBe("Saved");
-    expect(bubbles[0].querySelector(".kukbuk-bubble-dot").classList.contains("success")).toBe(true);
+    expect(bubbles[0].querySelector(".save-a-recipe-bubble-dot").classList.contains("success")).toBe(true);
   });
 
   test("loading→success state transition updates dot and text", () => {
@@ -73,9 +74,9 @@ describe("content script bubble", () => {
     flushAnimationFrame();
     sendBubble({ text: "Saved!", variant: "success", duration: 4000 });
     flushAnimationFrame();
-    const bubble = document.querySelector(".kukbuk-light-bubble");
-    expect(bubble.querySelector(".kukbuk-bubble-dot").classList.contains("success")).toBe(true);
-    expect(bubble.querySelector(".kukbuk-bubble-text").textContent).toBe("Saved!");
+    const bubble = document.querySelector(".save-a-recipe-light-bubble");
+    expect(bubble.querySelector(".save-a-recipe-bubble-dot").classList.contains("success")).toBe(true);
+    expect(bubble.querySelector(".save-a-recipe-bubble-text").textContent).toBe("Saved!");
   });
 
   test("loading→error state transition updates dot and text", () => {
@@ -83,9 +84,9 @@ describe("content script bubble", () => {
     flushAnimationFrame();
     sendBubble({ text: "Couldn't save", variant: "error", duration: 0 });
     flushAnimationFrame();
-    const bubble = document.querySelector(".kukbuk-light-bubble");
-    expect(bubble.querySelector(".kukbuk-bubble-dot").classList.contains("error")).toBe(true);
-    expect(bubble.querySelector(".kukbuk-bubble-text").textContent).toBe("Couldn't save");
+    const bubble = document.querySelector(".save-a-recipe-light-bubble");
+    expect(bubble.querySelector(".save-a-recipe-bubble-dot").classList.contains("error")).toBe(true);
+    expect(bubble.querySelector(".save-a-recipe-bubble-text").textContent).toBe("Couldn't save");
   });
 
   test("link is rendered on success", () => {
@@ -95,7 +96,7 @@ describe("content script bubble", () => {
       link: { url: "https://drive.google.com/file/123", label: "Open ↗" },
     });
     flushAnimationFrame();
-    const link = document.querySelector(".kukbuk-bubble-link");
+    const link = document.querySelector(".save-a-recipe-bubble-link");
     expect(link).not.toBeNull();
     expect(link.href).toBe("https://drive.google.com/file/123");
     expect(link.textContent).toBe("Open ↗");
@@ -105,20 +106,20 @@ describe("content script bubble", () => {
   test("no link rendered when link is absent", () => {
     sendBubble({ text: "Saving…", variant: "loading" });
     flushAnimationFrame();
-    expect(document.querySelector(".kukbuk-bubble-link")).toBeNull();
+    expect(document.querySelector(".save-a-recipe-bubble-link")).toBeNull();
   });
 
   test("link updates when transitioning from loading to success", () => {
     sendBubble({ text: "Saving…", variant: "loading" });
     flushAnimationFrame();
-    expect(document.querySelector(".kukbuk-bubble-link")).toBeNull();
+    expect(document.querySelector(".save-a-recipe-bubble-link")).toBeNull();
     sendBubble({
       text: "Saved",
       variant: "success",
       link: { url: "https://drive.google.com/file/abc", label: "Open ↗" },
     });
     flushAnimationFrame();
-    const link = document.querySelector(".kukbuk-bubble-link");
+    const link = document.querySelector(".save-a-recipe-bubble-link");
     expect(link).not.toBeNull();
     expect(link.textContent).toBe("Open ↗");
   });
@@ -126,51 +127,51 @@ describe("content script bubble", () => {
   test("dismiss button removes bubble on success when clicked", () => {
     sendBubble({ text: "Saved", variant: "success", dismissible: true });
     flushAnimationFrame();
-    const btn = document.querySelector(".kukbuk-bubble-dismiss");
+    const btn = document.querySelector(".save-a-recipe-bubble-dismiss");
     expect(btn).not.toBeNull();
     btn.click();
     // advance past the hide-animation timeout (150ms)
     jest.advanceTimersByTime(200);
-    expect(document.querySelector(".kukbuk-light-bubble")).toBeNull();
+    expect(document.querySelector(".save-a-recipe-light-bubble")).toBeNull();
   });
 
   test("error variant shows dismiss button automatically", () => {
     sendBubble({ text: "Couldn't save", variant: "error" });
     flushAnimationFrame();
-    const btn = document.querySelector(".kukbuk-bubble-dismiss");
+    const btn = document.querySelector(".save-a-recipe-bubble-dismiss");
     expect(btn).not.toBeNull();
   });
 
   test("dismiss button removes bubble on error when clicked", () => {
     sendBubble({ text: "Couldn't save", variant: "error", duration: 0 });
     flushAnimationFrame();
-    const btn = document.querySelector(".kukbuk-bubble-dismiss");
+    const btn = document.querySelector(".save-a-recipe-bubble-dismiss");
     btn.click();
     jest.advanceTimersByTime(200);
-    expect(document.querySelector(".kukbuk-light-bubble")).toBeNull();
+    expect(document.querySelector(".save-a-recipe-light-bubble")).toBeNull();
   });
 
   test("loading variant has no dismiss button by default", () => {
     sendBubble({ text: "Saving…", variant: "loading", duration: 0 });
     flushAnimationFrame();
-    expect(document.querySelector(".kukbuk-bubble-dismiss")).toBeNull();
+    expect(document.querySelector(".save-a-recipe-bubble-dismiss")).toBeNull();
   });
 
   test("success auto-dismisses after duration", () => {
     sendBubble({ text: "Saved", variant: "success", duration: 4000 });
     flushAnimationFrame();
-    expect(document.querySelector(".kukbuk-light-bubble")).not.toBeNull();
+    expect(document.querySelector(".save-a-recipe-light-bubble")).not.toBeNull();
     // Advance past the auto-dismiss delay, then past the hide-animation timeout (150ms)
     jest.advanceTimersByTime(4001);
     jest.advanceTimersByTime(200);
-    expect(document.querySelector(".kukbuk-light-bubble")).toBeNull();
+    expect(document.querySelector(".save-a-recipe-light-bubble")).toBeNull();
   });
 
   test("loading persists (no auto-dismiss) when duration is 0", () => {
     sendBubble({ text: "Saving…", variant: "loading", duration: 0 });
     flushAnimationFrame();
     jest.advanceTimersByTime(60000);
-    expect(document.querySelector(".kukbuk-light-bubble")).not.toBeNull();
+    expect(document.querySelector(".save-a-recipe-light-bubble")).not.toBeNull();
   });
 
   test("responds to PING message", () => {
@@ -180,24 +181,47 @@ describe("content script bubble", () => {
     expect(sendResponse).toHaveBeenCalledWith({ success: true });
   });
 
-  test("EXTRACT_RECIPE responds with page content, url and title", async () => {
-    document.title = "Test Recipe Page";
-    document.body.innerHTML = "<h1>Pasta</h1>";
+  async function extract() {
     const listener = getOnMessageListener();
     const sendResponse = jest.fn();
     const returned = listener({ type: "EXTRACT_RECIPE" }, {}, sendResponse);
     // Async response: handler must return true to keep the channel open
     expect(returned).toBe(true);
-    // Flush the extractRecipeData promise
     await Promise.resolve();
     await Promise.resolve();
     expect(sendResponse).toHaveBeenCalledTimes(1);
-    const response = sendResponse.mock.calls[0][0];
+    return sendResponse.mock.calls[0][0];
+  }
+
+  test("EXTRACT_RECIPE responds with recipe-only content, clean url and title", async () => {
+    document.title = "Test Recipe Page";
+    document.body.innerHTML = `
+      <p>Personal blog story</p>
+      <script type="application/ld+json">${JSON.stringify({
+        "@type": "Recipe",
+        name: "Pasta",
+        recipeIngredient: ["pasta"],
+      })}</script>`;
+    const response = await extract();
     expect(response.success).toBe(true);
-    expect(response.data.title).toBe("Test Recipe Page");
-    expect(response.data.pageUrl).toBe(window.location.href);
-    expect(typeof response.data.pageContent).toBe("string");
-    expect(response.data.pageContent).toContain("Pasta");
+    expect(response.data.title).toBe("Pasta");
+    const expectedUrl = new URL(window.location.href);
+    expectedUrl.search = "";
+    expectedUrl.hash = "";
+    expect(response.data.pageUrl).toBe(expectedUrl.href);
+    expect(response.data.pageContent).toContain('"recipeIngredient":["pasta"]');
+    expect(response.data.pageContent).not.toContain("Personal blog story");
+  });
+
+  test("EXTRACT_RECIPE reports NO_RECIPE_FOUND instead of sending the page", async () => {
+    document.title = "Not a recipe";
+    document.body.innerHTML = "<h1>Pasta</h1><p>Some article</p>";
+    const response = await extract();
+    expect(response).toEqual({
+      success: false,
+      error: "No recipe found on this page",
+      code: "NO_RECIPE_FOUND",
+    });
   });
 
   test("unknown message type responds with success:false", () => {

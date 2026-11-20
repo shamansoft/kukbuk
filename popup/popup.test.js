@@ -57,9 +57,20 @@ describe("popup.js - login-only popup", () => {
   });
 
   it("uses storage-provider-neutral copy for both sign-in options", () => {
-    const welcomeText = document.querySelector(".welcome-text").textContent;
-    expect(welcomeText).toMatch(/recipes/i);
+    const welcomeText = document.querySelector(".welcome-text + .welcome-text").textContent;
+    expect(welcomeText).toContain("your connected storage");
+    expect(welcomeText).toMatch(/URL, title, and recipe content go to the Save-A-Recipe service/);
     expect(welcomeText).not.toMatch(/google drive|dropbox/i);
+  });
+
+  it("links to Save-A-Recipe account registration from the sign-in popup", () => {
+    const registrationLink = document.querySelector(".welcome-text a");
+    expect(registrationLink.textContent).toBe("Create your account");
+    expect(registrationLink.href).toBe("https://savearecipe.com/register");
+    expect(registrationLink.target).toBe("_blank");
+    expect(registrationLink.parentElement.textContent).toContain(
+      "Sign in with your Save-A-Recipe account.",
+    );
   });
 
   it("shows Google sign-in before the email form when available", () => {

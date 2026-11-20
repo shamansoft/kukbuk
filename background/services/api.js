@@ -1,4 +1,4 @@
-// API service for MyKukbuk
+// API service for Save-A-Recipe
 
 import { logError } from "../../common/error-handler.js";
 import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from "../../common/constants.js";
@@ -209,7 +209,7 @@ function toSaveResult(result) {
   return {
     success: true,
     recipeName: result.title,
-    message: result.message || "Recipe saved to Google Drive successfully",
+    message: result.message || "Recipe saved successfully",
     driveUrl: result.driveFileUrl || null,
     isRecipe: result.isRecipe,
   };
