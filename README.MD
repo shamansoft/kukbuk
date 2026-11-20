@@ -1,4 +1,4 @@
-# MyKukBuk Browser Extension
+# Save-A-Recipe Browser Extension
 
 Save recipes from websites to Google Drive with the Chrome or Firefox extension.
 
@@ -17,8 +17,8 @@ Save recipes from websites to Google Drive with the Chrome or Firefox extension.
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/shamansoft/kukbuk.git
-cd kukbuk
+git clone https://github.com/shamansoft/sar-ext.git
+cd sar-ext
 ```
 
 2. Install dependencies:
@@ -59,6 +59,10 @@ npm run build
 3. Click "Load unpacked" and select the repository root
 
 ### Load the Extension in Firefox
+
+Set `FIREFOX_EXTENSION_ID` in your build configuration before building for Firefox.
+For an existing listing, use the ID in its last signed manifest or AMO listing.
+For a new listing, choose a stable ID before registering its Google OAuth redirect.
 
 Firefox 140 or later is required. Use the same Firebase and API configuration as
 the Chrome build.
@@ -122,7 +126,7 @@ See [Mozilla’s source submission guide](https://extensionworkshop.com/document
 Email and password sign-in works with the standard Firebase configuration. To
 enable the Google button, set `FIREFOX_GOOGLE_CLIENT_ID` to the client ID of a
 **Web application** OAuth client in the same Google Cloud project as Firebase.
-Keep the stable Gecko add-on ID (`save-a-recipe@mykukbuk.com` by default).
+Keep the stable Gecko add-on ID by setting `FIREFOX_EXTENSION_ID`.
 
 1. Inspect the loaded extension's background page in `about:debugging` and run
    this in its console to get the exact redirect for the add-on ID:
@@ -166,7 +170,7 @@ This will launch Chrome with a dedicated profile and the extension pre-loaded.
 ### Project Structure
 
 ```
-mykukbuk-extension/
+sar-ext/
 ├── background/         # Background service worker scripts
 ├── common/             # Shared assets: theme.css design tokens
 ├── content/            # Content scripts for webpage interaction
@@ -199,7 +203,7 @@ Shared visual tokens live in `common/theme.css` (warm-neutral palette, 8px radiu
 
 ## Authentication
 
-MyKukBuk uses **Firebase Authentication** with Google Sign-In:
+Save-A-Recipe uses **Firebase Authentication** with Google Sign-In:
 - Users sign in via Firebase popup
 - Firebase ID tokens authenticate with backend
 - OAuth tokens stored encrypted in Firestore (backend)

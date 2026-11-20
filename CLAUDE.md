@@ -101,8 +101,7 @@ Required environment variables:
 ## Documentation Index
 
 Start with **[STATUS.md](STATUS.md)** for current state, milestones, and backlog.
-The extension is named **"Save-A-Recipe"** in `manifest.json` (product brand
-"MyKukBuk" — both names appear across older docs).
+Use **Save-A-Recipe** for the extension and service in all product copy.
 
 ### Project status & overview
 - [STATUS.md](STATUS.md) — Current status, implemented features, backlog, known issues, milestones.
@@ -131,4 +130,4 @@ The extension is named **"Save-A-Recipe"** in `manifest.json` (product brand
 This extension is one of four SAR repos: `sar-ext` (this), `sar-kmp` (client app),
 `sar-srv` (backend), `sar-infra` (infrastructure).
 - **Backend API contract (`sar-srv`):** `POST /v1/recipes?compression=gzip` (save from page) and `POST /v1/recipes/custom?compression=gzip` (create from description). Both take GZIP+Base64 content and return the final result synchronously (`title`, `driveFileUrl`/`driveUrl`, `isRecipe`); HTTP 429 = quota exceeded; HTTP 403 `{"error": "email_not_verified"}` = email not verified (the `email_verified` claim is fixed at token issue, so `postToBackend()` in `api.js` retries once with `getIdToken(true)`, then shows a "verify in the Save-A-Recipe app" message). The single-bubble feedback model depends on this synchronous response.
-- **Auth / Firebase:** Shared Firebase project `kukbuk-tf`. The extension authenticates with Firebase ID tokens; the backend stores Google OAuth tokens encrypted in Firestore and owns Drive folder assignment. `sar-kmp` shares the same Firebase auth backend.
+- **Auth / Firebase:** Shared Firebase project configured at build time. The extension authenticates with Firebase ID tokens; the backend stores Google OAuth tokens encrypted in Firestore and owns Drive folder assignment. `sar-kmp` shares the same Firebase auth backend.

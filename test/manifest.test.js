@@ -27,14 +27,14 @@ describe("manifest.json", () => {
 
 describe("Firefox manifest", () => {
   it("uses a background script and supports OAuth without Chrome-only manifest fields", () => {
-    const manifest = createFirefoxManifest(manifestTemplate);
+    const manifest = createFirefoxManifest(manifestTemplate, "save-a-recipe@example.com");
 
     expect(manifest.background).toEqual({ scripts: [manifestTemplate.background.service_worker] });
     expect(manifest.permissions).toContain("identity");
     expect(manifest.permissions).not.toContain("offscreen");
     expect(manifest.oauth2).toBeUndefined();
     expect(manifest.browser_specific_settings.gecko).toMatchObject({
-      id: "save-a-recipe@mykukbuk.com",
+      id: "save-a-recipe@example.com",
       strict_min_version: "140.0",
       data_collection_permissions: {
         required: expect.arrayContaining([
@@ -48,9 +48,8 @@ describe("Firefox manifest", () => {
     expect(manifestTemplate.oauth2).toBeDefined();
   });
 
-  it("allows an explicit Firefox extension ID", () => {
-    const manifest = createFirefoxManifest(manifestTemplate, "test@example.com");
-    expect(manifest.browser_specific_settings.gecko.id).toBe("test@example.com");
+  it("requires an explicit Firefox extension ID", () => {
+    expect(() => createFirefoxManifest(manifestTemplate)).toThrow("FIREFOX_EXTENSION_ID");
   });
 });
 

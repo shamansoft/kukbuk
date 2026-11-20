@@ -9,7 +9,8 @@ const { createHash } = require("node:crypto");
 const { root, readBuildConfig, buildVersion } = require("./build-config");
 const { sharedFiles } = require("./runtime-files");
 
-function createFirefoxManifest(manifest, id = "save-a-recipe@mykukbuk.com") {
+function createFirefoxManifest(manifest, id) {
+  if (!id) throw new Error("Set FIREFOX_EXTENSION_ID to the registered Firefox add-on ID.");
   const firefoxManifest = {
     ...manifest,
     permissions: manifest.permissions.filter((permission) => permission !== "offscreen"),

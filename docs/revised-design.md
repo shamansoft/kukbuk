@@ -1,4 +1,4 @@
-# MyKukBuk — Revised Visual Design
+# Save-A-Recipe — Revised Visual Design
 
 > A critical review of every visual surface in the extension, with proposed
 > fixes. The guiding principle is **quiet, professional minimalism**: the tool
@@ -128,7 +128,7 @@ Two webfonts also mean two network fetches before first paint.
 **Proposal:** **One** sans family across the whole extension. Recommended:
 **Hanken Grotesk** or **Geist** — both are professional, modern, and have more
 character than Inter/Roboto without calling attention to themselves. Keep the
-serif *only* if branding insists, and then strictly for the wordmark "MyKukBuk"
+serif *only* if branding insists, and then strictly for the wordmark "Save-A-Recipe"
 in the header — nowhere else.
 
 ```css
@@ -366,7 +366,7 @@ Problems: focus `translateY` makes inputs jump; the glow ring + gradient divider
 
 ```
 ┌────────────────────────────────────┐
-│  ◼ MyKukBuk                         │   ← small mark + wordmark, sans
+│  ◼ Save-A-Recipe                         │   ← small mark + wordmark, sans
 │                                     │
 │  Save recipes to your Drive         │   ← --t-body, ink-soft, left-aligned
 │                                     │
@@ -468,7 +468,7 @@ popup's issues at larger scale.
 
 ```
 ┌─────────────────────────────────────────────┐
-│  ◼ MyKukBuk · Settings                        │   ← flat, hairline rule under
+│  ◼ Save-A-Recipe · Settings                        │   ← flat, hairline rule under
 │                                               │
 │  Account                                      │   ← --t-title
 │  alex@example.com                  [Log out]  │   ← row, 1px border card

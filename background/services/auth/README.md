@@ -1,7 +1,7 @@
 # Authentication Provider Architecture
 
 This directory contains the authentication provider abstraction for the
-Save-A-Recipe (MyKukBuk) extension.
+Save-A-Recipe extension.
 
 Related: [Firebase setup](../../../docs/firebase-setup.md) · [auth-logout-fix post-mortem](../../../docs/auth-logout-fix.md)
 

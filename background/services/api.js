@@ -1,4 +1,4 @@
-// API service for MyKukbuk
+// API service for Save-A-Recipe
 
 import { logError } from "../../common/error-handler.js";
 import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from "../../common/constants.js";

@@ -2,7 +2,7 @@
  * Firebase configuration and initialization
  *
  * Configuration values come from environment variables via env-config.js
- * Get your Firebase configuration from: https://console.firebase.google.com/project/kukbuk-tf/settings/general
+ * Get your Firebase configuration from: your Firebase project settings
  */
 
 import { initializeApp } from "firebase/app";
