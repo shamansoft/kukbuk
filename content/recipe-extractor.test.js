@@ -373,7 +373,8 @@ describe("URLs", () => {
   });
 
   test("prefers a same-site canonical URL and keeps only numeric recipe IDs", () => {
-    const href = "https://example.com/recipes/pasta?id=7&session=secret&utm_medium=email&fbclid=1#x";
+    const href =
+      "https://example.com/recipes/pasta?id=7&session=secret&utm_medium=email&fbclid=1#x";
     document.head.innerHTML = `<link rel="canonical" href="${href}">`;
     expect(pagePermalink(document, PAGE)).toBe("https://example.com/recipes/pasta?id=7");
   });

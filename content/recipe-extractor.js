@@ -94,7 +94,15 @@
     "(^|[-_])(" +
       ["comments?", "ratings?", "reviews?", "share", "sharing", "social", "newsletter"]
         .concat(["subscribe", "signup", "advert", "ads?", "sponsored", "promo", "print", "jump"])
-        .concat(["video", "screen-reader-text", "sr-only", "visually-hidden", "private", "user-notes", "notes-user"])
+        .concat([
+          "video",
+          "screen-reader-text",
+          "sr-only",
+          "visually-hidden",
+          "private",
+          "user-notes",
+          "notes-user",
+        ])
         .join("|") +
       ")([-_]|$)",
     "i",
@@ -146,7 +154,8 @@
       container: ".tasty-recipes",
       ingredients: ".tasty-recipes-ingredients, .tasty-recipes-ingredients-body",
       title: ".tasty-recipes-title",
-      sections: ".tasty-recipes-instructions, .tasty-recipes-instructions-body, .tasty-recipes-description, .tasty-recipes-nutrition",
+      sections:
+        ".tasty-recipes-instructions, .tasty-recipes-instructions-body, .tasty-recipes-description, .tasty-recipes-nutrition",
     },
     {
       source: "mv-create",
@@ -190,7 +199,9 @@
       if (out.length >= limit) break;
       const text =
         item && typeof item === "object"
-          ? toArray(item.name ?? item.text).map(cleanText).find(Boolean)
+          ? toArray(item.name ?? item.text)
+              .map(cleanText)
+              .find(Boolean)
           : cleanText(item);
       if (text) out.push(text);
     }
