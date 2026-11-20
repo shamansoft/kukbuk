@@ -14,16 +14,16 @@ The extension now uses Firebase Authentication for user authentication instead o
 
 ## Prerequisites
 
-- Access to the Firebase Console: https://console.firebase.google.com/project/kukbuk-tf
-- Firebase project `kukbuk-tf` already created
+- Access to the Firebase Console: https://console.firebase.google.com/
+- Access to the Firebase project used by your Save-A-Recipe backend
 - Firebase Authentication enabled with Google Sign-In provider
 
 ## Getting Firebase Configuration
 
 ### Step 1: Access Firebase Console
 
-1. Go to [Firebase Console](https://console.firebase.google.com/project/kukbuk-tf)
-2. Select the `kukbuk-tf` project
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Select the Firebase project used by your Save-A-Recipe backend
 3. Click on the **Settings** gear icon (top left)
 4. Select **Project settings**
 
@@ -39,9 +39,9 @@ The extension now uses Firebase Authentication for user authentication instead o
 ```javascript
 const firebaseConfig = {
   apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  authDomain: "kukbuk-tf.firebaseapp.com",
-  projectId: "kukbuk-tf",
-  storageBucket: "kukbuk-tf.firebasestorage.app",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project",
+  storageBucket: "your-project.firebasestorage.app",
   messagingSenderId: "123456789012",
   appId: "1:123456789012:web:abcdef123456"
 };
@@ -58,9 +58,9 @@ Edit `/Users/alexey/dev/sar/sar-ext/.env.local`:
 ```bash
 # Firebase Configuration
 FIREBASE_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-FIREBASE_AUTH_DOMAIN=kukbuk-tf.firebaseapp.com
-FIREBASE_PROJECT_ID=kukbuk-tf
-FIREBASE_STORAGE_BUCKET=kukbuk-tf.firebasestorage.app
+FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+FIREBASE_PROJECT_ID=your-project
+FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
 FIREBASE_MESSAGING_SENDER_ID=123456789012
 FIREBASE_APP_ID=1:123456789012:web:abcdef123456
 ```
@@ -72,9 +72,9 @@ Edit `/Users/alexey/dev/sar/sar-ext/.env`:
 ```bash
 # Firebase Configuration
 FIREBASE_API_KEY=AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-FIREBASE_AUTH_DOMAIN=kukbuk-tf.firebaseapp.com
-FIREBASE_PROJECT_ID=kukbuk-tf
-FIREBASE_STORAGE_BUCKET=kukbuk-tf.firebasestorage.app
+FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+FIREBASE_PROJECT_ID=your-project
+FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
 FIREBASE_MESSAGING_SENDER_ID=123456789012
 FIREBASE_APP_ID=1:123456789012:web:abcdef123456
 ```
@@ -190,14 +190,14 @@ Should show a bundle around 310KB in size.
 2. Click on **Sign-in method** tab
 3. Enable **Google** provider
 4. Add authorized domains if needed:
-   - `kukbuk-tf.firebaseapp.com`
+   - The authentication domain listed in your Firebase web app configuration
    - `localhost` (for testing)
 5. Save changes
 
 ### Configure OAuth Consent Screen (if not done)
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Select project `kukbuk-tf`
+2. Select the Google Cloud project used by Firebase
 3. Navigate to **APIs & Services** → **OAuth consent screen**
 4. Configure with:
    - App name: Save-A-Recipe
@@ -232,7 +232,7 @@ Once Firebase is configured and the extension builds successfully:
 
 - [Firebase Authentication Docs](https://firebase.google.com/docs/auth/web/start)
 - [Chrome Extensions MV3 Guide](https://developer.chrome.com/docs/extensions/mv3/)
-- [Firebase Console](https://console.firebase.google.com/project/kukbuk-tf)
+- [Firebase Console](https://console.firebase.google.com/)
 - [Webpack Configuration](../webpack.config.js)
 
 ## Security Notes

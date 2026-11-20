@@ -46,7 +46,7 @@ function resolveNetworkPolicy(env) {
     !authDomain ||
     !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(authDomain)
   ) {
-    throw new Error("FIREBASE_AUTH_DOMAIN must be a host name such as kukbuk-tf.firebaseapp.com.");
+    throw new Error("FIREBASE_AUTH_DOMAIN must be a host name such as your-project.firebaseapp.com.");
   }
 
   return {
@@ -89,7 +89,8 @@ function applyNetworkPolicy(manifest, policy) {
   };
 }
 
-function createFirefoxManifest(manifest, id = "save-a-recipe@mykukbuk.com") {
+function createFirefoxManifest(manifest, id) {
+  if (!id) throw new Error("Set FIREFOX_EXTENSION_ID to the registered Firefox add-on ID.");
   const firefoxManifest = {
     ...manifest,
     permissions: manifest.permissions.filter((permission) => permission !== "offscreen"),

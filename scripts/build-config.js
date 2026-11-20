@@ -109,9 +109,11 @@ function readBuildConfig(args, firefox) {
     }
   }
   config[clientField] = client;
-  const geckoId = trimValue(values.FIREFOX_EXTENSION_ID) ?? "";
-  if (firefox && geckoId !== "") {
-    config.FIREFOX_EXTENSION_ID = requirePublicValue("FIREFOX_EXTENSION_ID", geckoId);
+  if (firefox) {
+    config.FIREFOX_EXTENSION_ID = requirePublicValue(
+      "FIREFOX_EXTENSION_ID",
+      trimValue(values.FIREFOX_EXTENSION_ID),
+    );
   }
   return config;
 }
