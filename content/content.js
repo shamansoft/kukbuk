@@ -27,7 +27,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({
             success: false,
             error: error.message || "Failed to extract recipe data",
-            code: error.code,
           });
         });
 
@@ -59,24 +58,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
-/**
- * Extracts the recipe on the current page with SarRecipeExtractor (content/recipe-extractor.js,
- * injected just before this file). Only recipe data is returned, never the page's HTML.
- * @returns {Promise<{pageContent: string, pageUrl: string, title: string}>}
- * @throws {Error} With code NO_RECIPE_FOUND when the page has no recognizable recipe
- */
+/** Prepares the selected page for backend recipe detection and extraction. */
 async function extractRecipeData() {
-  const extractor = globalThis.SarRecipeExtractor;
-  if (!extractor) {
-    throw new Error("Couldn't read page");
-  }
-  const recipe = extractor.extractRecipe(document, window.location);
-  if (!recipe) {
-    const error = new Error("No recipe found on this page");
-    error.code = "NO_RECIPE_FOUND";
-    throw error;
-  }
-  return { pageContent: recipe.pageContent, pageUrl: recipe.pageUrl, title: recipe.title };
+  const pageContent = globalThis.SarPageContent;
+  if (!pageContent) throw new Error("Couldn't read page");
+  return pageContent.preparePage(document, window.location);
 }
 
 // Light bubble UI - small status card near the top-right (under extensions bar)

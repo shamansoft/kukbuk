@@ -4,7 +4,7 @@ const sharedFiles = [
   "common/error-handler.js",
   "common/theme.css",
   "content/content.js",
-  "content/recipe-extractor.js",
+  "content/page-content.js",
   "icons/icon16.png",
   "icons/icon48.png",
   "icons/icon128.png",

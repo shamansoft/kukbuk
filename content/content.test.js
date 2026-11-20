@@ -33,7 +33,7 @@ describe("content script bubble", () => {
     document.body.innerHTML = "";
     // Load content script fresh each test
     jest.isolateModules(() => {
-      require("./recipe-extractor.js");
+      require("./page-content.js");
       require("./content.js");
     });
   });
@@ -49,7 +49,9 @@ describe("content script bubble", () => {
     const bubble = document.querySelector(".save-a-recipe-light-bubble");
     expect(bubble).not.toBeNull();
     expect(bubble.querySelector(".save-a-recipe-bubble-text").textContent).toBe("Saving recipe…");
-    expect(bubble.querySelector(".save-a-recipe-bubble-dot").classList.contains("loading")).toBe(true);
+    expect(bubble.querySelector(".save-a-recipe-bubble-dot").classList.contains("loading")).toBe(
+      true,
+    );
   });
 
   test("sendResponse is called with success:true on SHOW_BUBBLE", () => {
@@ -66,7 +68,9 @@ describe("content script bubble", () => {
     expect(bubbles.length).toBe(1);
     const textEl = bubbles[0].querySelector(".save-a-recipe-bubble-text");
     expect(textEl.textContent).toBe("Saved");
-    expect(bubbles[0].querySelector(".save-a-recipe-bubble-dot").classList.contains("success")).toBe(true);
+    expect(
+      bubbles[0].querySelector(".save-a-recipe-bubble-dot").classList.contains("success"),
+    ).toBe(true);
   });
 
   test("loading→success state transition updates dot and text", () => {
@@ -75,7 +79,9 @@ describe("content script bubble", () => {
     sendBubble({ text: "Saved!", variant: "success", duration: 4000 });
     flushAnimationFrame();
     const bubble = document.querySelector(".save-a-recipe-light-bubble");
-    expect(bubble.querySelector(".save-a-recipe-bubble-dot").classList.contains("success")).toBe(true);
+    expect(bubble.querySelector(".save-a-recipe-bubble-dot").classList.contains("success")).toBe(
+      true,
+    );
     expect(bubble.querySelector(".save-a-recipe-bubble-text").textContent).toBe("Saved!");
   });
 
@@ -85,7 +91,9 @@ describe("content script bubble", () => {
     sendBubble({ text: "Couldn't save", variant: "error", duration: 0 });
     flushAnimationFrame();
     const bubble = document.querySelector(".save-a-recipe-light-bubble");
-    expect(bubble.querySelector(".save-a-recipe-bubble-dot").classList.contains("error")).toBe(true);
+    expect(bubble.querySelector(".save-a-recipe-bubble-dot").classList.contains("error")).toBe(
+      true,
+    );
     expect(bubble.querySelector(".save-a-recipe-bubble-text").textContent).toBe("Couldn't save");
   });
 
@@ -193,7 +201,7 @@ describe("content script bubble", () => {
     return sendResponse.mock.calls[0][0];
   }
 
-  test("EXTRACT_RECIPE responds with recipe-only content, clean url and title", async () => {
+  test("EXTRACT_RECIPE sends page content, clean URL and page title", async () => {
     document.title = "Test Recipe Page";
     document.body.innerHTML = `
       <p>Personal blog story</p>
@@ -204,24 +212,28 @@ describe("content script bubble", () => {
       })}</script>`;
     const response = await extract();
     expect(response.success).toBe(true);
-    expect(response.data.title).toBe("Pasta");
+    expect(response.data.title).toBe("Test Recipe Page");
     const expectedUrl = new URL(window.location.href);
     expectedUrl.search = "";
     expectedUrl.hash = "";
     expect(response.data.pageUrl).toBe(expectedUrl.href);
     expect(response.data.pageContent).toContain('"recipeIngredient":["pasta"]');
-    expect(response.data.pageContent).not.toContain("Personal blog story");
+    expect(response.data.pageContent).toContain("Personal blog story");
   });
 
-  test("EXTRACT_RECIPE reports NO_RECIPE_FOUND instead of sending the page", async () => {
-    document.title = "Not a recipe";
-    document.body.innerHTML = "<h1>Pasta</h1><p>Some article</p>";
+  test("EXTRACT_RECIPE sends pages without recipe markup for backend detection", async () => {
+    document.title = "Family cookbook";
+    document.body.innerHTML = "<h1>Pasta</h1><p>Boil for 10 minutes.</p>";
     const response = await extract();
-    expect(response).toEqual({
-      success: false,
-      error: "No recipe found on this page",
-      code: "NO_RECIPE_FOUND",
+    expect(response).toMatchObject({ success: true, data: { title: "Family cookbook" } });
+    expect(response.data.pageContent).toContain("<h1>Pasta</h1><p>Boil for 10 minutes.</p>");
+  });
+
+  test("EXTRACT_RECIPE sends no HTML when cleanup fails", async () => {
+    jest.spyOn(document, "cloneNode").mockImplementation(() => {
+      throw new Error("Couldn't read page");
     });
+    expect(await extract()).toEqual({ success: false, error: "Couldn't read page" });
   });
 
   test("unknown message type responds with success:false", () => {

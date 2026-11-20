@@ -79,7 +79,7 @@ async function sendBubbleToTab(tabId, data) {
 
 // Injected on demand. The toolbar click grants activeTab for this tab only; the extension has
 // no static content scripts and no host access to ordinary websites.
-const CONTENT_SCRIPT_FILES = ["content/recipe-extractor.js", "content/content.js"];
+const CONTENT_SCRIPT_FILES = ["content/page-content.js", "content/content.js"];
 
 /**
  * Ensure the content scripts are loaded in the given tab.

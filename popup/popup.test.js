@@ -59,7 +59,9 @@ describe("popup.js - login-only popup", () => {
   it("uses storage-provider-neutral copy for both sign-in options", () => {
     const welcomeText = document.querySelector(".welcome-text + .welcome-text").textContent;
     expect(welcomeText).toContain("your connected storage");
-    expect(welcomeText).toMatch(/URL, title, and recipe content go to the Save-A-Recipe service/);
+    expect(welcomeText).toMatch(
+      /page URL, title, and cleaned page content to the Save-A-Recipe service/,
+    );
     expect(welcomeText).not.toMatch(/google drive|dropbox/i);
   });
 
