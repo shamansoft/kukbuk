@@ -11,7 +11,8 @@ const { version } = require("../package.json");
 
 const root = path.resolve(__dirname, "..");
 
-function createFirefoxManifest(manifest, id = "save-a-recipe@mykukbuk.com") {
+function createFirefoxManifest(manifest, id) {
+  if (!id) throw new Error("Set FIREFOX_EXTENSION_ID to the registered Firefox add-on ID.");
   const firefoxManifest = {
     ...manifest,
     permissions: manifest.permissions.filter((permission) => permission !== "offscreen"),
@@ -69,7 +70,7 @@ function generateConfig(args) {
   let manifest = JSON.parse(readTemplate("manifest.template.json"));
 
   if (firefox) {
-    manifest = createFirefoxManifest(manifest, process.env.FIREFOX_EXTENSION_ID || undefined);
+    manifest = createFirefoxManifest(manifest, process.env.FIREFOX_EXTENSION_ID?.trim());
     if (!process.env.FIREFOX_GOOGLE_CLIENT_ID?.trim()) {
       const { id } = manifest.browser_specific_settings.gecko;
       // Firefox derives the identity redirect subdomain from the SHA-1 of the add-on ID.

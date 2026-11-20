@@ -205,35 +205,35 @@ async function handleActionClick(tab) {
 async function setupContextMenu() {
   await extension.contextMenus.removeAll();
   extension.contextMenus.create({
-    id: "kukbuk-settings",
+    id: "save-a-recipe-settings",
     title: "Settings",
     contexts: ["action"],
   });
 
   extension.contextMenus.create({
-    id: "kukbuk-logout",
+    id: "save-a-recipe-logout",
     title: "Log Out",
     contexts: ["action"],
   });
 
   extension.contextMenus.create({
-    id: "kukbuk-create-from-description",
+    id: "save-a-recipe-create-from-description",
     title: "Create Recipe from Description",
     contexts: ["action"],
   });
 }
 
 async function handleContextMenuClick(info) {
-  if (info.menuItemId === "kukbuk-settings") {
+  if (info.menuItemId === "save-a-recipe-settings") {
     extension.runtime.openOptionsPage();
-  } else if (info.menuItemId === "kukbuk-create-from-description") {
+  } else if (info.menuItemId === "save-a-recipe-create-from-description") {
     extension.windows.create({
       url: extension.runtime.getURL("recipe-creator/recipe-creator.html"),
       type: "popup",
       width: 440,
       height: 340,
     });
-  } else if (info.menuItemId === "kukbuk-logout") {
+  } else if (info.menuItemId === "save-a-recipe-logout") {
     try {
       await authManager.signOut();
       console.log("Logout successful");

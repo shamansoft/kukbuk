@@ -1,4 +1,4 @@
-// Content script for MyKukbuk
+// Content script for Save-A-Recipe
 
 // Message type constants (duplicated from constants.js since content scripts can't import modules)
 const MESSAGE_TYPES = {
@@ -119,18 +119,18 @@ function performBasicCleanup() {
 
 // Light bubble UI - small status card near the top-right (under extensions bar)
 function ensureLightBubbleStyles() {
-  if (document.getElementById("kukbuk-light-bubble-styles")) return;
+  if (document.getElementById("save-a-recipe-light-bubble-styles")) return;
   const style = document.createElement("style");
-  style.id = "kukbuk-light-bubble-styles";
+  style.id = "save-a-recipe-light-bubble-styles";
   style.textContent = `
-    #kukbuk-light-bubble-container {
+    #save-a-recipe-light-bubble-container {
       position: fixed;
       top: 12px;
       right: 12px;
       z-index: 2147483647;
       pointer-events: none;
     }
-    .kukbuk-light-bubble {
+    .save-a-recipe-light-bubble {
       pointer-events: auto;
       background: #fafaf9;
       border: 1px solid #d4d0ca;
@@ -151,56 +151,56 @@ function ensureLightBubbleStyles() {
       transition: opacity 0.12s ease, transform 0.12s ease;
     }
     @media (prefers-reduced-motion: reduce) {
-      .kukbuk-light-bubble {
+      .save-a-recipe-light-bubble {
         transition: none;
       }
     }
-    .kukbuk-light-bubble.show {
+    .save-a-recipe-light-bubble.show {
       opacity: 1;
       transform: translateY(0);
     }
-    .kukbuk-light-bubble.hide {
+    .save-a-recipe-light-bubble.hide {
       opacity: 0;
       transform: translateY(-4px);
     }
-    .kukbuk-bubble-dot {
+    .save-a-recipe-bubble-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
       flex-shrink: 0;
     }
-    .kukbuk-bubble-dot.loading {
+    .save-a-recipe-bubble-dot.loading {
       background: #3b82f6;
-      animation: kukbuk-pulse 1s ease-in-out infinite;
+      animation: save-a-recipe-pulse 1s ease-in-out infinite;
     }
     @media (prefers-reduced-motion: reduce) {
-      .kukbuk-bubble-dot.loading {
+      .save-a-recipe-bubble-dot.loading {
         animation: none;
       }
     }
-    @keyframes kukbuk-pulse {
+    @keyframes save-a-recipe-pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.4; }
     }
-    .kukbuk-bubble-dot.success {
+    .save-a-recipe-bubble-dot.success {
       background: #16a34a;
     }
-    .kukbuk-bubble-dot.error {
+    .save-a-recipe-bubble-dot.error {
       background: #dc2626;
     }
-    .kukbuk-bubble-dot.info {
+    .save-a-recipe-bubble-dot.info {
       background: #3b82f6;
     }
-    .kukbuk-bubble-body {
+    .save-a-recipe-bubble-body {
       flex: 1;
       min-width: 0;
     }
-    .kukbuk-bubble-text {
+    .save-a-recipe-bubble-text {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .kukbuk-bubble-link {
+    .save-a-recipe-bubble-link {
       display: block;
       color: #2563eb;
       text-decoration: none;
@@ -210,10 +210,10 @@ function ensureLightBubbleStyles() {
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .kukbuk-bubble-link:hover {
+    .save-a-recipe-bubble-link:hover {
       text-decoration: underline;
     }
-    .kukbuk-bubble-dismiss {
+    .save-a-recipe-bubble-dismiss {
       background: none;
       border: none;
       cursor: pointer;
@@ -224,7 +224,7 @@ function ensureLightBubbleStyles() {
       flex-shrink: 0;
       opacity: 0.7;
     }
-    .kukbuk-bubble-dismiss:hover {
+    .save-a-recipe-bubble-dismiss:hover {
       opacity: 1;
     }
   `;
@@ -232,10 +232,10 @@ function ensureLightBubbleStyles() {
 }
 
 function ensureLightBubbleContainer() {
-  let container = document.getElementById("kukbuk-light-bubble-container");
+  let container = document.getElementById("save-a-recipe-light-bubble-container");
   if (container) return container;
   container = document.createElement("div");
-  container.id = "kukbuk-light-bubble-container";
+  container.id = "save-a-recipe-light-bubble-container";
   document.body.appendChild(container);
   return container;
 }
@@ -308,23 +308,23 @@ function showLightBubble({
 
 function _createBubble({ text, variant, link, showDismiss }) {
   const bubble = document.createElement("div");
-  bubble.className = "kukbuk-light-bubble";
+  bubble.className = "save-a-recipe-light-bubble";
 
   const dot = document.createElement("span");
-  dot.className = `kukbuk-bubble-dot ${variant}`;
+  dot.className = `save-a-recipe-bubble-dot ${variant}`;
   bubble.appendChild(dot);
 
   const body = document.createElement("span");
-  body.className = "kukbuk-bubble-body";
+  body.className = "save-a-recipe-bubble-body";
 
   const textEl = document.createElement("span");
-  textEl.className = "kukbuk-bubble-text";
+  textEl.className = "save-a-recipe-bubble-text";
   textEl.textContent = text || "";
   body.appendChild(textEl);
 
   if (link && link.url && link.label) {
     const linkEl = document.createElement("a");
-    linkEl.className = "kukbuk-bubble-link";
+    linkEl.className = "save-a-recipe-bubble-link";
     linkEl.href = link.url;
     linkEl.target = "_blank";
     linkEl.rel = "noopener noreferrer";
@@ -336,7 +336,7 @@ function _createBubble({ text, variant, link, showDismiss }) {
 
   if (showDismiss) {
     const btn = document.createElement("button");
-    btn.className = "kukbuk-bubble-dismiss";
+    btn.className = "save-a-recipe-bubble-dismiss";
     btn.setAttribute("aria-label", "Dismiss");
     btn.textContent = "×";
     btn.addEventListener("click", () => dismissBubble());
@@ -348,21 +348,21 @@ function _createBubble({ text, variant, link, showDismiss }) {
 
 function _updateBubbleContent(bubble, { text, variant, link, showDismiss }) {
   // Swap dot class
-  const dot = bubble.querySelector(".kukbuk-bubble-dot");
-  if (dot) dot.className = `kukbuk-bubble-dot ${variant}`;
+  const dot = bubble.querySelector(".save-a-recipe-bubble-dot");
+  if (dot) dot.className = `save-a-recipe-bubble-dot ${variant}`;
 
   // Swap text
-  const textEl = bubble.querySelector(".kukbuk-bubble-text");
+  const textEl = bubble.querySelector(".save-a-recipe-bubble-text");
   if (textEl) textEl.textContent = text || "";
 
   // Swap link
-  const existingLink = bubble.querySelector(".kukbuk-bubble-link");
+  const existingLink = bubble.querySelector(".save-a-recipe-bubble-link");
   if (existingLink) existingLink.remove();
   if (link && link.url && link.label) {
-    const body = bubble.querySelector(".kukbuk-bubble-body");
+    const body = bubble.querySelector(".save-a-recipe-bubble-body");
     if (body) {
       const linkEl = document.createElement("a");
-      linkEl.className = "kukbuk-bubble-link";
+      linkEl.className = "save-a-recipe-bubble-link";
       linkEl.href = link.url;
       linkEl.target = "_blank";
       linkEl.rel = "noopener noreferrer";
@@ -372,10 +372,10 @@ function _updateBubbleContent(bubble, { text, variant, link, showDismiss }) {
   }
 
   // Swap dismiss button
-  const existingDismiss = bubble.querySelector(".kukbuk-bubble-dismiss");
+  const existingDismiss = bubble.querySelector(".save-a-recipe-bubble-dismiss");
   if (showDismiss && !existingDismiss) {
     const btn = document.createElement("button");
-    btn.className = "kukbuk-bubble-dismiss";
+    btn.className = "save-a-recipe-bubble-dismiss";
     btn.setAttribute("aria-label", "Dismiss");
     btn.textContent = "×";
     btn.addEventListener("click", () => dismissBubble());
@@ -391,7 +391,7 @@ function _removeBubble(bubble) {
   window.setTimeout(() => {
     bubble.remove();
     if (currentBubble === bubble) currentBubble = null;
-    const container = document.getElementById("kukbuk-light-bubble-container");
+    const container = document.getElementById("save-a-recipe-light-bubble-container");
     if (container && container.childElementCount === 0) container.remove();
   }, 150);
 }
