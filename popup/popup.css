@@ -159,6 +159,11 @@ section {
   gap: var(--space-sm);
 }
 
+.oauth-providers[hidden],
+.divider[hidden] {
+  display: none;
+}
+
 .oauth-btn {
   width: 100%;
   display: flex;

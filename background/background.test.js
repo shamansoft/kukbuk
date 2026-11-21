@@ -27,7 +27,7 @@ jest.mock("../common/constants.js", () => ({
     EXTRACT_RECIPE: "EXTRACT_RECIPE",
     NOTIFY_BACKGROUND_OPERATION: "NOTIFY_BACKGROUND_OPERATION",
   },
-  STORAGE_KEYS: { FIREBASE_TOKEN: "firebaseToken" },
+  STORAGE_KEYS: { FIREBASE_TOKEN: "firebaseToken", PAGE_UPLOAD_CONSENT: "pageUploadConsentV1" },
 }));
 
 // Mock the chrome API
@@ -46,6 +46,9 @@ const mockChrome = {
     onInstalled: {
       addListener: jest.fn(),
     },
+    onStartup: {
+      addListener: jest.fn(),
+    },
     openOptionsPage: jest.fn(),
     getURL: jest.fn((path) => `chrome-extension://mock-id/${path}`),
     sendMessage: jest.fn((msg, callback) => {
@@ -62,6 +65,7 @@ const mockChrome = {
     },
   },
   storage: {
+    local: { get: jest.fn() },
     onChanged: {
       addListener: jest.fn(),
     },
@@ -85,6 +89,7 @@ describe("Background Script", () => {
     // Reset mocks
     jest.resetModules();
     jest.resetAllMocks();
+    chrome.storage.local.get.mockResolvedValue({ pageUploadConsentV1: true });
 
     // Spy on console
     jest.spyOn(console, "log").mockImplementation(() => {});
@@ -95,6 +100,7 @@ describe("Background Script", () => {
     // Clean up
     jest.restoreAllMocks();
     delete global.chrome;
+    delete global.__FIREFOX__;
   });
 
   test("should initialize background script on load", () => {
@@ -106,13 +112,24 @@ describe("Background Script", () => {
     // Check that the initialization log was printed
     expect(console.log).toHaveBeenCalledWith("Initializing Save-A-Recipe background script");
 
-    // Verify that context menu was set up properly
-    expect(chrome.contextMenus.removeAll).toHaveBeenCalled();
-    expect(chrome.contextMenus.create).toHaveBeenCalledTimes(3);
+    // Wake-ups register the handler without recreating menu items.
+    expect(chrome.contextMenus.create).not.toHaveBeenCalled();
     expect(chrome.contextMenus.onClicked.addListener).toHaveBeenCalled();
 
     // Verify that runtime.onInstalled listener was added
     expect(chrome.runtime.onInstalled.addListener).toHaveBeenCalled();
+  });
+
+  test("creates context menu items on install", async () => {
+    jest.isolateModules(() => {
+      require("./background.js");
+    });
+
+    const onInstalled = chrome.runtime.onInstalled.addListener.mock.calls[0][0];
+    await onInstalled();
+
+    expect(chrome.contextMenus.removeAll).toHaveBeenCalled();
+    expect(chrome.contextMenus.create).toHaveBeenCalledTimes(3);
   });
 
   // Skip this test for now - it's difficult to test the "already initialized" behavior
@@ -131,8 +148,8 @@ describe("Background Script", () => {
     // Grab the onClicked callback from the chrome.contextMenus mock
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
 
-    // Simulate a click event for "kukbuk-settings"
-    onClickedCallback({ menuItemId: "kukbuk-settings" }, {});
+    // Simulate a click event for "save-a-recipe-settings"
+    onClickedCallback({ menuItemId: "save-a-recipe-settings" }, {});
     expect(chrome.runtime.openOptionsPage).toHaveBeenCalled();
   });
 
@@ -147,7 +164,7 @@ describe("Background Script", () => {
 
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
     chrome.action.setPopup.mockClear();
-    await onClickedCallback({ menuItemId: "kukbuk-logout" }, {});
+    await onClickedCallback({ menuItemId: "save-a-recipe-logout" }, {});
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
@@ -165,8 +182,8 @@ describe("Background Script", () => {
     // Grab the onClicked callback from the chrome.contextMenus mock
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
 
-    // Simulate a click event for "kukbuk-create-from-description"
-    onClickedCallback({ menuItemId: "kukbuk-create-from-description" }, {});
+    // Simulate a click event for "save-a-recipe-create-from-description"
+    onClickedCallback({ menuItemId: "save-a-recipe-create-from-description" }, {});
 
     expect(chrome.runtime.getURL).toHaveBeenCalledWith("recipe-creator/recipe-creator.html");
     expect(chrome.windows.create).toHaveBeenCalledWith(
@@ -185,7 +202,7 @@ describe("Background Script", () => {
     });
 
     const onClickedCallback = chrome.contextMenus.onClicked.addListener.mock.calls[0][0];
-    await onClickedCallback({ menuItemId: "kukbuk-logout" }, {});
+    await onClickedCallback({ menuItemId: "save-a-recipe-logout" }, {});
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -207,6 +224,43 @@ describe("Background Script", () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "" });
+  });
+
+  test("shows the consent popup and does not read the page until Chrome consent is given", async () => {
+    const { authManager } = require("./services/auth/auth-manager.js");
+    authManager.checkAuthStatus.mockResolvedValue({ authenticated: true });
+    chrome.storage.local.get.mockResolvedValue({});
+
+    const handler = await loadAndGetActionHandler();
+    await handler({ id: 42 });
+
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({
+      popup: "popup/page-upload-consent.html",
+    });
+    expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
+    expect(chrome.tabs.sendMessage).not.toHaveBeenCalled();
+    expect(require("./services/api.js").saveRecipe).not.toHaveBeenCalled();
+
+    const onStorageChanged = chrome.storage.onChanged.addListener.mock.calls[0][0];
+    chrome.storage.local.get.mockResolvedValue({ pageUploadConsentV1: true });
+    onStorageChanged({ pageUploadConsentV1: { newValue: true } }, "local");
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "" });
+  });
+
+  test("uses Firefox install-time consent for authenticated toolbar actions", async () => {
+    global.__FIREFOX__ = true;
+    const { authManager } = require("./services/auth/auth-manager.js");
+    authManager.checkAuthStatus.mockResolvedValue({ authenticated: true });
+    chrome.storage.local.get.mockResolvedValue({});
+
+    await loadAndGetActionHandler();
+    await Promise.resolve();
+
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "" });
+    expect(chrome.storage.local.get).not.toHaveBeenCalled();
   });
 
   test("setPopup set to popup.html when not authenticated", async () => {
@@ -483,5 +537,50 @@ describe("Background Script", () => {
     const handler = await loadAndGetActionHandler();
     // Should not throw
     await expect(handler({ id: 42 })).resolves.not.toThrow();
+  });
+  test("injects the page cleanup scripts on demand and saves the result", async () => {
+    const { saveRecipe } = require("./services/api.js");
+    saveRecipe.mockResolvedValueOnce({ success: true, recipeName: "Pasta", isRecipe: true });
+    chrome.scripting.executeScript.mockResolvedValueOnce([]);
+    const extracted = {
+      pageContent: "<html><body><section>Boil the pasta for ten minutes.</section></body></html>",
+      pageUrl: "https://example.com/pasta",
+      title: "Pasta",
+    };
+    chrome.tabs.sendMessage
+      .mockRejectedValueOnce(new Error("Could not establish connection")) // PING
+      .mockResolvedValueOnce({ success: true }) // SHOW_BUBBLE loading
+      .mockResolvedValueOnce({ success: true, data: extracted }) // EXTRACT_RECIPE
+      .mockResolvedValueOnce({ success: true }); // SHOW_BUBBLE success
+
+    const handler = await loadAndGetActionHandler();
+    await handler({ id: 42 });
+
+    expect(chrome.scripting.executeScript).toHaveBeenCalledWith({
+      target: { tabId: 42 },
+      files: ["content/page-content.js", "content/content.js"],
+    });
+    expect(saveRecipe).toHaveBeenCalledWith(extracted);
+  });
+
+  test("uploads nothing when the selected page could not be cleaned", async () => {
+    const { saveRecipe } = require("./services/api.js");
+    chrome.tabs.sendMessage
+      .mockResolvedValueOnce({ success: true }) // PING
+      .mockResolvedValueOnce({ success: true }) // SHOW_BUBBLE loading
+      .mockResolvedValueOnce({
+        success: false,
+        error: "Couldn't read page",
+      }) // EXTRACT_RECIPE
+      .mockResolvedValueOnce({ success: true }); // SHOW_BUBBLE error
+
+    const handler = await loadAndGetActionHandler();
+    await handler({ id: 42 });
+
+    expect(saveRecipe).not.toHaveBeenCalled();
+    expect(chrome.tabs.sendMessage.mock.calls[3][1]).toMatchObject({
+      type: "SHOW_BUBBLE",
+      data: { variant: "error", text: "Couldn't read page", dismissible: true },
+    });
   });
 });

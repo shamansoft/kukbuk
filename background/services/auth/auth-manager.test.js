@@ -550,3 +550,78 @@ describe("AuthManager", () => {
     });
   });
 });
+
+describe("AuthManager in Firefox", () => {
+  let storage;
+  let session;
+  let authManager;
+  let setupAuth;
+
+  beforeEach(async () => {
+    jest.resetModules();
+    global.__FIREFOX__ = true;
+    storage = setupMockStorage();
+    session = setupMockStorage();
+    global.browser = {
+      storage: { local: storage, session },
+      runtime: { onMessage: { addListener: jest.fn() } },
+    };
+    jest.doMock("./firefox-provider.js", () => ({
+      createFirefoxProviders: () => [
+        {
+          name: "email",
+          displayName: "Email/Password",
+          getCurrentUser: jest.fn().mockResolvedValue({ uid: "restored-user" }),
+          onAuthStateChanged: jest.fn(),
+        },
+      ],
+    }));
+    ({ authManager, setupAuth } = require("./auth-manager.js"));
+    await storage.set({
+      firebaseToken: "firebase-token",
+      userId: "restored-user",
+      userEmail: "user@example.com",
+      currentAuthProvider: "google",
+    });
+  });
+
+  afterEach(() => {
+    delete global.__FIREFOX__;
+    delete global.browser;
+  });
+
+  it("recognizes a restored session when Google sign-in is no longer configured", async () => {
+    await expect(authManager.checkAuthStatus()).resolves.toMatchObject({
+      authenticated: true,
+      provider: "email",
+    });
+  });
+
+  it("does not trust stored account data for a different Firebase user", async () => {
+    await storage.set({ userId: "different-user" });
+    await expect(authManager.checkAuthStatus()).resolves.toEqual({
+      success: true,
+      authenticated: false,
+    });
+  });
+
+  it("reports a failed Google sign-in after the initiating popup closes", async () => {
+    await storage.clear();
+    authManager.registerProvider({
+      name: "google",
+      displayName: "Google",
+      signIn: jest.fn().mockRejectedValue(new Error("OAuth window closed")),
+    });
+    await expect(authManager.signIn("google")).rejects.toThrow("OAuth window closed");
+    setupAuth();
+    const onMessage = browser.runtime.onMessage.addListener.mock.calls[0][0];
+    const response = await new Promise((resolve) => {
+      expect(onMessage({ type: "AUTH_CHECK" }, {}, resolve)).toBe(true);
+    });
+    expect(response).toMatchObject({
+      authenticated: false,
+      googleSignInAvailable: true,
+      googleSignInFailed: true,
+    });
+  });
+});

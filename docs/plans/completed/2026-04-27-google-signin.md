@@ -1,4 +1,4 @@
-# Google Sign-In for MyKukBuk Extension
+# Google Sign-In for Save-A-Recipe Extension
 
 ## Overview
 

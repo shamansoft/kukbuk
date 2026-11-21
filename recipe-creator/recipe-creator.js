@@ -20,7 +20,8 @@ form.addEventListener("submit", async (e) => {
   submitButton.textContent = "Creating…";
 
   try {
-    const response = await chrome.runtime.sendMessage({
+    const runtime = (globalThis.browser ?? globalThis.chrome).runtime;
+    const response = await runtime.sendMessage({
       type: MESSAGE_TYPES.CREATE_RECIPE_FROM_DESCRIPTION,
       description,
     });
@@ -31,8 +32,8 @@ form.addEventListener("submit", async (e) => {
     if (response && response.success) {
       resultDot.className = "result-dot success";
       resultText.textContent = response.recipeName
-        ? `"${response.recipeName}" saved to Drive`
-        : "Recipe saved to Drive";
+        ? `"${response.recipeName}" saved`
+        : "Recipe saved";
 
       if (response.driveUrl) {
         driveLink.href = response.driveUrl;

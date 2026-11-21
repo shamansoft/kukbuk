@@ -4,6 +4,9 @@ export const STORAGE_KEYS = {
   FIREBASE_TOKEN: "firebaseToken",
   FIREBASE_REFRESH_TIME: "firebaseRefreshTime",
 
+  // Consent to send the page content described in the upload prompt
+  PAGE_UPLOAD_CONSENT: "pageUploadConsentV1",
+
   // User info
   USER_ID: "userId",
   USER_EMAIL: "userEmail",
@@ -45,4 +48,5 @@ export const ERROR_CODES = {
   NOT_FOUND: "not_found", // 404 specifically
   VALIDATION_ERROR: "validation_error", // 400/422
   QUOTA_EXCEEDED: "quota_exceeded", // 429 daily limit reached
+  EMAIL_NOT_VERIFIED: "email_not_verified", // 403: signed in, email not verified yet
 };

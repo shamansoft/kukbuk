@@ -1,131 +1,46 @@
-/**
- * Script to package the extension into a ZIP file for distribution
- * Usage: node scripts/zip-extension.js
- */
-
-const fs = require("fs");
-const path = require("path");
+/** Package a freshly built extension. Run npm run zip or npm run zip:firefox. */
+const fs = require("node:fs");
+const path = require("node:path");
 const AdmZip = require("adm-zip");
-const dotenv = require("dotenv");
+const { root, validateVersion } = require("./build-config");
+const { sharedFiles, chromeOnlyFiles, bundles } = require("./runtime-files");
 
-// Load environment variables
-dotenv.config();
-
-// Get version from environment or manifest
-const version = process.env.EXTENSION_VERSION || "1.0.0";
-const zipFilename = `save-a-recipe-extension-v${version}.zip`;
-
-// Files and directories to include in the distributable zip.
-// background/** is intentionally omitted — Chrome loads the compiled bundle
-// from dist/background.bundle.js, not the raw source files.
-const INCLUDE_FILES = [
-  "manifest.json",
-  "dist/**",
-  "popup/**",
-  "content/**",
-  "options/**",
-  "common/**",
-  "icons/**",
-  "offscreen/**",
-  "recipe-creator/**",
-];
-
-// Files and directories to exclude
-const EXCLUDE_PATTERNS = [
-  "**/*.map",
-  "**/*.ts",
-  "**/*.template.*",
-  "**/node_modules/**",
-  "**/.git/**",
-];
-
-/**
- * Check if a file should be excluded
- * @param {string} filePath - Path to check
- * @returns {boolean} Whether the file should be excluded
- */
-function shouldExclude(filePath) {
-  return EXCLUDE_PATTERNS.some((pattern) => {
-    if (pattern.includes("*")) {
-      const regexPattern = pattern
-        .replace(/\./g, "\\.")
-        .replace(/\*\*/g, ".*")
-        .replace(/\*/g, "[^/]*");
-      const regex = new RegExp(`^${regexPattern}$`, "i");
-      return regex.test(filePath);
-    }
-    return filePath === pattern;
-  });
-}
-
-/**
- * Add directory to zip recursively
- * @param {AdmZip} zip - AdmZip instance
- * @param {string} dir - Directory to add
- * @param {string} [zipRoot=''] - Root path in ZIP
- */
-function addDirectoryToZip(zip, dir, zipRoot = "") {
-  const files = fs.readdirSync(dir);
-
-  for (const file of files) {
-    const filePath = path.join(dir, file);
-    const relativePath = zipRoot ? path.join(zipRoot, file) : file;
-
-    if (shouldExclude(relativePath)) {
-      console.log(`Excluding: ${relativePath}`);
-      continue;
-    }
-
-    const stat = fs.statSync(filePath);
-
-    if (stat.isDirectory()) {
-      addDirectoryToZip(zip, filePath, relativePath);
-    } else {
-      console.log(`Adding: ${relativePath}`);
-      zip.addLocalFile(filePath, path.dirname(relativePath));
-    }
+function packageExtension(buildDir, firefox) {
+  const manifest = JSON.parse(fs.readFileSync(path.join(buildDir, "manifest.json"), "utf8"));
+  const version = validateVersion(manifest.version);
+  const files = [
+    "manifest.json",
+    ...sharedFiles,
+    ...(!firefox ? chromeOnlyFiles : []),
+    ...bundles(firefox),
+  ];
+  for (const bundle of bundles(firefox)) {
+    const license = `${bundle}.LICENSE.txt`;
+    if (fs.existsSync(path.join(buildDir, license))) files.push(license);
   }
-}
-
-/**
- * Add a glob pattern to the zip
- * @param {AdmZip} zip - AdmZip instance
- * @param {string} pattern - Glob pattern
- */
-function addGlobToZip(zip, pattern) {
-  if (pattern.endsWith("/**")) {
-    // Directory with all contents
-    const dir = pattern.slice(0, -3);
-    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
-      addDirectoryToZip(zip, dir, dir);
-    }
-  } else if (pattern.includes("*")) {
-    console.warn(`Skipping unsupported glob pattern: ${pattern}`);
-  } else {
-    // Single file
-    if (fs.existsSync(pattern) && fs.statSync(pattern).isFile()) {
-      console.log(`Adding: ${pattern}`);
-      zip.addLocalFile(pattern);
-    }
-  }
-}
-
-// Create ZIP file
-try {
-  console.log(`Creating extension package: ${zipFilename}`);
 
   const zip = new AdmZip();
-
-  // Add files to zip
-  for (const pattern of INCLUDE_FILES) {
-    addGlobToZip(zip, pattern);
+  for (const file of files) {
+    zip.addFile(file, fs.readFileSync(path.join(buildDir, file)));
+    // Stable metadata so a rebuild can reproduce the archive as well as its contents.
+    zip.getEntry(file).header.time = new Date(2000, 0, 1);
   }
-
-  // Write zip file
-  zip.writeZip(zipFilename);
-
-  console.log(`Successfully created: ${zipFilename}`);
-} catch (error) {
-  console.error(`Error creating extension package: ${error.message}`);
-  process.exit(1);
+  const suffix = firefox ? "-firefox" : "";
+  const filename = `save-a-recipe-extension${suffix}-v${version}.zip`;
+  return { zip, filename };
 }
+
+if (require.main === module) {
+  try {
+    const firefox = process.argv.includes("--firefox");
+    const buildDir = firefox ? path.join(root, "build/firefox") : root;
+    const { zip, filename } = packageExtension(buildDir, firefox);
+    zip.writeZip(path.join(root, filename));
+    console.log(`Created ${filename}`);
+  } catch (error) {
+    console.error(`Packaging failed: ${error.message}`);
+    process.exitCode = 1;
+  }
+}
+
+module.exports = { packageExtension };

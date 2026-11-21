@@ -1,9 +1,12 @@
 // Import services
 import { setupAuth, authManager } from "./services/auth/auth-manager.js";
+import { hasPageUploadConsent } from "./services/page-upload-consent.js";
 import { setupTransformation } from "./services/transformation.js";
 import { setupApi, saveRecipe } from "./services/api.js";
 import { logError } from "../common/error-handler.js";
 import { MESSAGE_TYPES, STORAGE_KEYS } from "../common/constants.js";
+
+const extension = globalThis.browser ?? globalThis.chrome;
 
 let isInitialized = false;
 
@@ -21,8 +24,8 @@ function initBackground() {
   try {
     console.log("Initializing Save-A-Recipe background script");
 
-    // Setup context menu
-    setupContextMenu();
+    // Register the handler synchronously when a background page wakes up.
+    extension.contextMenus.onClicked.addListener(handleContextMenuClick);
 
     // Initialize services
     setupAuth();
@@ -35,31 +38,34 @@ function initBackground() {
     // Set popup state based on current auth (fire-and-forget)
     applyPopupState();
 
-    // Keep popup state in sync when auth token changes (e.g. sign-in from popup)
-    chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === "local" && STORAGE_KEYS.FIREBASE_TOKEN in changes) {
+    // Refresh the toolbar after sign-in, sign-out, or consent.
+    extension.storage.onChanged.addListener((changes, area) => {
+      if (
+        area === "local" &&
+        (STORAGE_KEYS.FIREBASE_TOKEN in changes || STORAGE_KEYS.PAGE_UPLOAD_CONSENT in changes)
+      ) {
         applyPopupState();
       }
     });
 
     // Windowless save: toolbar icon click when logged in
-    chrome.action.onClicked.addListener(handleActionClick);
+    extension.action.onClicked.addListener(handleActionClick);
   } catch (error) {
     logError("Error initializing background script", error);
   }
 }
 
-/**
- * Set chrome.action popup to "" (windowless) when authenticated,
- * or "popup/popup.html" when logged out.
- */
+/** Use the login or consent popup until the toolbar can save directly. */
 async function applyPopupState() {
   try {
     const status = await authManager.checkAuthStatus();
-    const popup = status.authenticated ? "" : "popup/popup.html";
-    chrome.action.setPopup({ popup });
+    let popup = "popup/popup.html";
+    if (status.authenticated) {
+      popup = (await hasPageUploadConsent()) ? "" : "popup/page-upload-consent.html";
+    }
+    await extension.action.setPopup({ popup });
   } catch (_e) {
-    chrome.action.setPopup({ popup: "popup/popup.html" });
+    await extension.action.setPopup({ popup: "popup/popup.html" });
   }
 }
 
@@ -68,26 +74,30 @@ async function applyPopupState() {
  */
 async function sendBubbleToTab(tabId, data) {
   try {
-    await chrome.tabs.sendMessage(tabId, { type: MESSAGE_TYPES.SHOW_BUBBLE, data });
+    await extension.tabs.sendMessage(tabId, { type: MESSAGE_TYPES.SHOW_BUBBLE, data });
   } catch (e) {
     // Tab gone or content script unavailable — log so it's diagnosable
     console.warn("sendBubbleToTab failed (tab", tabId, "variant:", data?.variant, "):", e?.message);
   }
 }
 
+// Injected on demand. The toolbar click grants activeTab for this tab only; the extension has
+// no static content scripts and no host access to ordinary websites.
+const CONTENT_SCRIPT_FILES = ["content/page-content.js", "content/content.js"];
+
 /**
- * Ensure the content script is loaded in the given tab.
+ * Ensure the content scripts are loaded in the given tab.
  * Returns false for restricted pages (chrome://, PDFs, etc.).
  */
 async function ensureContentScript(tabId) {
   try {
-    const pong = await chrome.tabs.sendMessage(tabId, { type: "PING" });
+    const pong = await extension.tabs.sendMessage(tabId, { type: "PING" });
     if (pong && pong.success) return true;
   } catch (_e) {
     // Content script not loaded — try injecting
   }
   try {
-    await chrome.scripting.executeScript({ target: { tabId }, files: ["content/content.js"] });
+    await extension.scripting.executeScript({ target: { tabId }, files: CONTENT_SCRIPT_FILES });
     return true;
   } catch (_e) {
     return false;
@@ -113,6 +123,10 @@ async function handleActionClick(tab) {
     });
 
     const saveWork = async () => {
+      if (!(await hasPageUploadConsent())) {
+        await applyPopupState();
+        return { skipped: true };
+      }
       const ready = await ensureContentScript(tabId);
       if (!ready) return { skipped: true };
 
@@ -125,7 +139,7 @@ async function handleActionClick(tab) {
 
       let extractResult;
       try {
-        extractResult = await chrome.tabs.sendMessage(tabId, {
+        extractResult = await extension.tabs.sendMessage(tabId, {
           type: MESSAGE_TYPES.EXTRACT_RECIPE,
         });
       } catch (_e) {
@@ -200,54 +214,51 @@ async function handleActionClick(tab) {
 }
 
 // Set up context menu for extension
-function setupContextMenu() {
-  chrome.contextMenus.removeAll();
-
-  chrome.contextMenus.create({
-    id: "kukbuk-settings",
+async function setupContextMenu() {
+  await extension.contextMenus.removeAll();
+  extension.contextMenus.create({
+    id: "save-a-recipe-settings",
     title: "Settings",
     contexts: ["action"],
   });
 
-  chrome.contextMenus.create({
-    id: "kukbuk-logout",
+  extension.contextMenus.create({
+    id: "save-a-recipe-logout",
     title: "Log Out",
     contexts: ["action"],
   });
 
-  chrome.contextMenus.create({
-    id: "kukbuk-create-from-description",
+  extension.contextMenus.create({
+    id: "save-a-recipe-create-from-description",
     title: "Create Recipe from Description",
     contexts: ["action"],
   });
+}
 
-  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-    if (info.menuItemId === "kukbuk-settings") {
-      chrome.runtime.openOptionsPage();
-    } else if (info.menuItemId === "kukbuk-create-from-description") {
-      chrome.windows.create({
-        url: chrome.runtime.getURL("recipe-creator/recipe-creator.html"),
-        type: "popup",
-        width: 440,
-        height: 340,
-      });
-    } else if (info.menuItemId === "kukbuk-logout") {
-      // Call logout directly instead of sending message to self
-      try {
-        await authManager.signOut();
-        console.log("Logout successful");
-        applyPopupState();
-      } catch (error) {
-        console.error("Logout failed:", error.message);
-        logError("Context menu logout error", error);
-      }
+async function handleContextMenuClick(info) {
+  if (info.menuItemId === "save-a-recipe-settings") {
+    extension.runtime.openOptionsPage();
+  } else if (info.menuItemId === "save-a-recipe-create-from-description") {
+    extension.windows.create({
+      url: extension.runtime.getURL("recipe-creator/recipe-creator.html"),
+      type: "popup",
+      width: 440,
+      height: 340,
+    });
+  } else if (info.menuItemId === "save-a-recipe-logout") {
+    try {
+      await authManager.signOut();
+      console.log("Logout successful");
+      await applyPopupState();
+    } catch (error) {
+      logError("Context menu logout error", error);
     }
-  });
+  }
 }
 
 // Set up message listeners
 function setupMessageListeners() {
-  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  extension.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("Background script received message:", message.type);
 
     // Handle only messages not handled by specific services
@@ -263,9 +274,12 @@ function setupMessageListeners() {
 }
 
 // Initialize on install/update
-chrome.runtime.onInstalled.addListener(() => {
-  initBackground();
+extension.runtime.onInstalled.addListener(() => {
+  return setupContextMenu().catch((error) => logError("Context menu setup failed", error));
 });
+
+// Restore the toolbar action when the browser starts a new session.
+extension.runtime.onStartup.addListener(applyPopupState);
 
 // Initialize on startup
 initBackground();

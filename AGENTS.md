@@ -9,6 +9,8 @@ This file provides guidance to coding agents when working with code in this repo
 - `npm run dev` - Development build with watch mode
 - `npm run dev:local` - Development build with local env and watch mode
 - `npm run zip` - Create distribution zip file
+- `npm run build:firefox` - Build the unpacked desktop Firefox extension in `build/firefox/`
+- `npm run zip:firefox` - Create the Firefox distribution ZIP
 - `npm run deploy` - Launch Chrome with extension loaded for testing
 - `npm run lint` - Run ESLint
 - `npm run lint:fix` - Run ESLint with auto-fix
@@ -26,7 +28,7 @@ This is a Chrome Extension (Manifest V3) that saves recipes from websites to Goo
 
 **Background Service Worker** (`background/background.js`)
 - Main extension logic and event handling
-- Chrome APIs integration (tabs, contextMenus, storage)
+- Chrome APIs integration (contextMenus, storage, scripting with activeTab)
 - Coordinates between content scripts and popup
 
 **Services Architecture** (`background/services/`)
@@ -35,12 +37,14 @@ This is a Chrome Extension (Manifest V3) that saves recipes from websites to Goo
 - `transformation.js` - Recipe content GZIP compression (Base64 output)
 
 **Content Scripts** (`content/`)
-- Injected into web pages to extract recipe data
-- Handles DOM interaction and data collection
+- On toolbar click, `background.js` injects `content/page-content.js` and `content/content.js` into the active tab using `activeTab` and `scripting`.
+- `page-content.js` returns cleaned page HTML, title, and URL. The backend detects and extracts the recipe. If cleanup fails, the extension uploads nothing.
+- `content.js` handles PING / EXTRACT_RECIPE / SHOW_BUBBLE
 
 **Popup UI** (`popup/`)
-- Login-only interface (email/password and Google Sign-In)
-- When authenticated, toolbar icon click triggers windowless save directly via `chrome.action.onClicked`; the popup only appears when logged out (`chrome.action.setPopup`)
+- Sign-in popup supports email/password and Google Sign-In.
+- Chrome opens the page upload consent popup for signed-in users who have yet to accept. After consent, the toolbar click saves directly via `chrome.action.onClicked`.
+- Firefox uses install-time data consent. The manifest disables the extension in private windows.
 
 **Recipe Creator** (`recipe-creator/`)
 - Standalone page opened as a small popup window (440×340px)
@@ -63,7 +67,9 @@ The extension uses environment variable substitution during build:
 - `scripts/substitute-env.js` - Handles template variable replacement
 
 Required environment variables:
-- `EXTENSION_VERSION` - Extension version number (supports `VERSION_SUFFIX` env var appended at build time)
+- Extension version comes from `package.json`. Set `VERSION_SUFFIX` for an optional fourth numeric component.
+- `API_BASE_URL` - Backend URL; its host is the manifest's only `host_permissions` entry and CSP `connect-src` API origin. Must be https, except `http://localhost`/`127.0.0.1`, which also adds local dev hosts. The build fails if missing/invalid.
+- `FIREBASE_AUTH_DOMAIN` - Becomes the CSP `frame-src` (no `*.firebaseapp.com` wildcard). The build fails if missing/invalid.
 - `FIREBASE_API_KEY` - Firebase API key for authentication
 - `CHROME_EXTENSION_CLIENT_ID` - OAuth 2.0 client ID of type "Chrome Extension" (not web/server type). Create at Google Cloud Console → APIs & Services → Credentials → Create OAuth Client ID → Chrome Extension. Required for `chrome.identity.getAuthToken()` / Google Sign-In.
 
@@ -80,11 +86,12 @@ Required environment variables:
 - `POST /v1/recipes?compression=gzip` — save recipe from a web page (HTML + URL)
 - `POST /v1/recipes/custom?compression=gzip` — create recipe from plain-text description
 - Both endpoints accept GZIP-compressed + Base64-encoded content via `transformContent()`
+- Both go through `postToBackend()` in `background/services/api.js` (token, request, error mapping, `email_not_verified` retry); add new backend calls there
 
 ### Known Issues / Gotchas
 
 - `node_modules/.bin/cross-env` may become a plain file instead of a symlink after some npm operations, breaking `build:local`. Fix: `rm node_modules/.bin/cross-env && ln -s ../cross-env/src/bin/cross-env.js node_modules/.bin/cross-env`
-- `checkAuthStatus()` trusts Chrome storage as source of truth; token validity is checked lazily on first use via `getIdToken()`
+- `checkAuthStatus()` reads stored account data. Firefox also checks that the restored Firebase session matches the stored user ID.
 - New extension pages (e.g. `recipe-creator/`) do not need webpack entries — load JS as `type="module"` directly and Chrome resolves ES imports natively
 - Google Sign-In (`GoogleProvider`) requires a **Chrome Extension** type OAuth 2.0 client ID in `manifest.json` → `oauth2.client_id`. Create it in Google Cloud Console → APIs & Services → Credentials → Create OAuth Client ID → Chrome Extension. Do not reuse the web/server client ID — it will not work with `chrome.identity.getAuthToken()`.
 
@@ -98,8 +105,7 @@ Required environment variables:
 ## Documentation Index
 
 Start with **[STATUS.md](STATUS.md)** for current state, milestones, and backlog.
-The extension is named **"Save-A-Recipe"** in `manifest.json` (product brand
-"MyKukBuk" — both names appear across older docs).
+Use **Save-A-Recipe** for the extension and service in all product copy.
 
 ### Project status & overview
 - [STATUS.md](STATUS.md) — Current status, implemented features, backlog, known issues, milestones.
@@ -127,8 +133,9 @@ The extension is named **"Save-A-Recipe"** in `manifest.json` (product brand
 ## Cross-repo (SAR) notes
 This extension is one of four SAR repos: `sar-ext` (this), `sar-kmp` (client app),
 `sar-srv` (backend), `sar-infra` (infrastructure).
-- **Backend API contract (`sar-srv`):** `POST /v1/recipes?compression=gzip` (save from page) and `POST /v1/recipes/custom?compression=gzip` (create from description). Both take GZIP+Base64 content and return the final result synchronously (`title`, `driveFileUrl`/`driveUrl`, `isRecipe`); HTTP 429 = quota exceeded. The single-bubble feedback model depends on this synchronous response.
-- **Auth / Firebase:** Shared Firebase project `kukbuk-tf`. The extension authenticates with Firebase ID tokens; the backend stores Google OAuth tokens encrypted in Firestore and owns Drive folder assignment. `sar-kmp` shares the same Firebase auth backend.
+- **Backend API contract (`sar-srv`):** `POST /v1/recipes?compression=gzip` (save from page) and `POST /v1/recipes/custom?compression=gzip` (create from description). Both take GZIP+Base64 content and return the final result synchronously (`title`, `driveFileUrl`/`driveUrl`, `isRecipe`); HTTP 429 = quota exceeded; HTTP 403 `{"error": "email_not_verified"}` = email not verified (the `email_verified` claim is fixed at token issue, so `postToBackend()` in `api.js` retries once with `getIdToken(true)`, then shows a "verify in the Save-A-Recipe app" message). The single-bubble feedback model depends on this synchronous response.
+- **Auth / Firebase:** Shared Firebase project configured at build time. The extension authenticates with Firebase ID tokens; the backend stores Google OAuth tokens encrypted in Firestore and owns Drive folder assignment. `sar-kmp` shares the same Firebase auth backend.
+
 ## Product context
 
 Read `../AGENTS.md` when the sibling SAR umbrella exists. It describes the product,
