@@ -19,6 +19,12 @@ const sharedFiles = [
   "recipe-creator/recipe-creator.js",
 ];
 
+const chromeOnlyFiles = [
+  "offscreen/auth-offscreen.html",
+  "popup/page-upload-consent.html",
+  "popup/page-upload-consent.js",
+];
+
 function bundles(firefox) {
   return [
     "dist/background.bundle.js",
@@ -26,4 +32,4 @@ function bundles(firefox) {
   ];
 }
 
-module.exports = { sharedFiles, bundles };
+module.exports = { sharedFiles, chromeOnlyFiles, bundles };

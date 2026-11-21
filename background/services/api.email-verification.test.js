@@ -88,7 +88,10 @@ describe.each(endpoints)("email_not_verified handling: $name", ({ url, message }
       forceRefresh ? "fresh-token" : "cached-token",
     );
     global.fetch = jest.fn();
-    global.chrome = { runtime: { onMessage: { addListener: jest.fn() } } };
+    global.chrome = {
+      storage: { local: { get: jest.fn().mockResolvedValue({ pageUploadConsentV1: true }) } },
+      runtime: { onMessage: { addListener: jest.fn() } },
+    };
 
     setupApi();
     listener = chrome.runtime.onMessage.addListener.mock.calls[0][0];

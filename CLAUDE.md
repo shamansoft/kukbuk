@@ -42,8 +42,9 @@ This is a Chrome Extension (Manifest V3) that saves recipes from websites to Goo
 - `content.js` handles PING / EXTRACT_RECIPE / SHOW_BUBBLE
 
 **Popup UI** (`popup/`)
-- Login-only interface (email/password and Google Sign-In)
-- When authenticated, toolbar icon click triggers windowless save directly via `chrome.action.onClicked`; the popup only appears when logged out (`chrome.action.setPopup`)
+- Sign-in popup supports email/password and Google Sign-In.
+- Chrome opens the page upload consent popup for signed-in users who have yet to accept. After consent, the toolbar click saves directly via `chrome.action.onClicked`.
+- Firefox uses install-time data consent. The manifest disables the extension in private windows.
 
 **Recipe Creator** (`recipe-creator/`)
 - Standalone page opened as a small popup window (440×340px)

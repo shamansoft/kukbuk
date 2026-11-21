@@ -3,7 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const AdmZip = require("adm-zip");
 const { root, validateVersion } = require("./build-config");
-const { sharedFiles, bundles } = require("./runtime-files");
+const { sharedFiles, chromeOnlyFiles, bundles } = require("./runtime-files");
 
 function packageExtension(buildDir, firefox) {
   const manifest = JSON.parse(fs.readFileSync(path.join(buildDir, "manifest.json"), "utf8"));
@@ -11,7 +11,7 @@ function packageExtension(buildDir, firefox) {
   const files = [
     "manifest.json",
     ...sharedFiles,
-    ...(!firefox ? ["offscreen/auth-offscreen.html"] : []),
+    ...(!firefox ? chromeOnlyFiles : []),
     ...bundles(firefox),
   ];
   for (const bundle of bundles(firefox)) {

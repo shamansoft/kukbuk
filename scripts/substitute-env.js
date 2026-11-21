@@ -93,6 +93,7 @@ function createFirefoxManifest(manifest, id) {
   if (!id) throw new Error("Set FIREFOX_EXTENSION_ID to the registered Firefox add-on ID.");
   const firefoxManifest = {
     ...manifest,
+    incognito: "not_allowed",
     permissions: manifest.permissions.filter((permission) => permission !== "offscreen"),
     background: { scripts: [manifest.background.service_worker] },
     browser_specific_settings: {

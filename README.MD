@@ -217,7 +217,10 @@ numeric recipe IDs.
 
 ## Save Behavior
 
-When signed in, clicking the toolbar icon saves the current page directly — no popup window appears. Visual feedback is shown via an in-page bubble (loading → saved/error). The popup only appears when signed out (for login).
+Chrome asks you to allow page uploads before your first save. After accepting, click the toolbar
+icon again to save. Subsequent clicks save directly while you're signed in. Firefox uses its
+install-time data consent and disables the extension in private windows. A page bubble shows
+save progress and the result.
 
 ## Design System
 
