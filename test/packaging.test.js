@@ -7,7 +7,12 @@ const { sharedFiles } = require("../scripts/runtime-files");
 const { packageExtension } = require("../scripts/zip-extension");
 
 const background = "dist/background.bundle.js";
-const offscreenFiles = ["offscreen/auth-offscreen.html", "dist/offscreen/auth-offscreen.bundle.js"];
+const chromeFiles = [
+  "offscreen/auth-offscreen.html",
+  "dist/offscreen/auth-offscreen.bundle.js",
+  "popup/page-upload-consent.html",
+  "popup/page-upload-consent.js",
+];
 let buildDir;
 
 function writeFile(file, content = "fixture") {
@@ -22,7 +27,7 @@ beforeEach(() => {
     ...sharedFiles,
     background,
     `${background}.LICENSE.txt`,
-    ...offscreenFiles,
+    ...chromeFiles,
     "offscreen/auth-offscreen.js",
     "common/env-config.js",
     "popup/popup.test.js",
@@ -38,7 +43,7 @@ beforeEach(() => {
 afterEach(() => fs.rmSync(buildDir, { recursive: true, force: true }));
 
 it.each([
-  [false, "save-a-recipe-extension-v1.2.3.4.zip", offscreenFiles],
+  [false, "save-a-recipe-extension-v1.2.3.4.zip", chromeFiles],
   [true, "save-a-recipe-extension-firefox-v1.2.3.4.zip", []],
 ])("packages the intended browser assets (firefox=%s)", (firefox, expectedFilename, extra) => {
   const { zip, filename } = packageExtension(buildDir, firefox);

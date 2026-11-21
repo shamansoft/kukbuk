@@ -97,6 +97,7 @@ describe("Firefox manifest", () => {
     const manifest = createFirefoxManifest(manifestTemplate, "save-a-recipe@example.com");
 
     expect(manifest.background).toEqual({ scripts: [manifestTemplate.background.service_worker] });
+    expect(manifest.incognito).toBe("not_allowed");
     expect(manifest.permissions).toContain("identity");
     expect(manifest.permissions).not.toContain("offscreen");
     expect(manifest.oauth2).toBeUndefined();

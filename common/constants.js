@@ -4,6 +4,9 @@ export const STORAGE_KEYS = {
   FIREBASE_TOKEN: "firebaseToken",
   FIREBASE_REFRESH_TIME: "firebaseRefreshTime",
 
+  // Consent to send the page content described in the upload prompt
+  PAGE_UPLOAD_CONSENT: "pageUploadConsentV1",
+
   // User info
   USER_ID: "userId",
   USER_EMAIL: "userEmail",

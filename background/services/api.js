@@ -2,6 +2,7 @@
 
 import { logError } from "../../common/error-handler.js";
 import { MESSAGE_TYPES, STORAGE_KEYS, ERROR_CODES } from "../../common/constants.js";
+import { hasPageUploadConsent } from "./page-upload-consent.js";
 import { transformContent } from "./transformation.js";
 import { authManager } from "./auth/auth-manager.js";
 import { ENV } from "../../common/env-config.js";
@@ -244,13 +245,18 @@ async function saveCustomRecipe({ description, title }) {
 }
 
 /**
- * Saves a recipe to Google Drive
+ * Saves a recipe from the selected page
  * @param {Object} recipeData - Recipe data from content script
  * @returns {Promise<Object>} Save result
  */
 export async function saveRecipe(recipeData) {
   if (!recipeData || !recipeData.pageContent) {
     throw new Error("Invalid recipe data");
+  }
+  if (!(await hasPageUploadConsent())) {
+    const error = new Error("Use the toolbar to allow page uploads before saving a page.");
+    error.code = ERROR_CODES.PERMISSION_DENIED;
+    throw error;
   }
 
   try {

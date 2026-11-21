@@ -16,6 +16,7 @@ jest.mock("../../common/constants.js", () => ({
   },
   STORAGE_KEYS: {
     FIREBASE_TOKEN: "firebaseToken",
+    PAGE_UPLOAD_CONSENT: "pageUploadConsentV1",
     USER_EMAIL: "userEmail",
     USER_ID: "userId",
   },
@@ -24,6 +25,7 @@ jest.mock("../../common/constants.js", () => ({
     NETWORK_ERROR: "network_error",
     AUTH_REQUIRED: "auth_required",
     FOLDER_REQUIRED: "folder_required",
+    PERMISSION_DENIED: "permission_denied",
   },
 }));
 
@@ -66,7 +68,7 @@ jest.mock("../../common/error-utils.js", () => ({
 }));
 
 // Import the module under test
-import { setupApi } from "./api";
+import { saveRecipe, setupApi } from "./api";
 
 describe("API Service", () => {
   let originalChrome;
@@ -77,6 +79,7 @@ describe("API Service", () => {
   beforeEach(() => {
     // Mock chrome API
     mockChrome = {
+      storage: { local: { get: jest.fn().mockResolvedValue({ pageUploadConsentV1: true }) } },
       runtime: {
         onMessage: {
           addListener: jest.fn(),
@@ -101,6 +104,17 @@ describe("API Service", () => {
     global.chrome = originalChrome;
     global.fetch = undefined;
     jest.restoreAllMocks();
+  });
+
+  it("blocks page uploads when consent is absent or unreadable", async () => {
+    mockChrome.storage.local.get
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error("Cannot read storage"));
+    const page = { pageContent: "<p>Recipe content</p>", pageUrl: "https://example.com/recipe" };
+
+    await expect(saveRecipe(page)).rejects.toMatchObject({ code: "permission_denied" });
+    await expect(saveRecipe(page)).rejects.toMatchObject({ code: "permission_denied" });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   describe("setupApi", () => {

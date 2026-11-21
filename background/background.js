@@ -1,5 +1,6 @@
 // Import services
 import { setupAuth, authManager } from "./services/auth/auth-manager.js";
+import { hasPageUploadConsent } from "./services/page-upload-consent.js";
 import { setupTransformation } from "./services/transformation.js";
 import { setupApi, saveRecipe } from "./services/api.js";
 import { logError } from "../common/error-handler.js";
@@ -37,9 +38,12 @@ function initBackground() {
     // Set popup state based on current auth (fire-and-forget)
     applyPopupState();
 
-    // Keep popup state in sync when auth token changes (e.g. sign-in from popup)
+    // Refresh the toolbar after sign-in, sign-out, or consent.
     extension.storage.onChanged.addListener((changes, area) => {
-      if (area === "local" && STORAGE_KEYS.FIREBASE_TOKEN in changes) {
+      if (
+        area === "local" &&
+        (STORAGE_KEYS.FIREBASE_TOKEN in changes || STORAGE_KEYS.PAGE_UPLOAD_CONSENT in changes)
+      ) {
         applyPopupState();
       }
     });
@@ -51,14 +55,14 @@ function initBackground() {
   }
 }
 
-/**
- * Set extension.action popup to "" (windowless) when authenticated,
- * or "popup/popup.html" when logged out.
- */
+/** Use the login or consent popup until the toolbar can save directly. */
 async function applyPopupState() {
   try {
     const status = await authManager.checkAuthStatus();
-    const popup = status.authenticated ? "" : "popup/popup.html";
+    let popup = "popup/popup.html";
+    if (status.authenticated) {
+      popup = (await hasPageUploadConsent()) ? "" : "popup/page-upload-consent.html";
+    }
     await extension.action.setPopup({ popup });
   } catch (_e) {
     await extension.action.setPopup({ popup: "popup/popup.html" });
@@ -119,6 +123,10 @@ async function handleActionClick(tab) {
     });
 
     const saveWork = async () => {
+      if (!(await hasPageUploadConsent())) {
+        await applyPopupState();
+        return { skipped: true };
+      }
       const ready = await ensureContentScript(tabId);
       if (!ready) return { skipped: true };
 

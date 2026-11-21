@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Allow page uploads · Save-A-Recipe</title>
+    <link rel="stylesheet" href="../common/theme.css" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <img src="../icons/icon48.png" alt="" class="logo" />
+        <h1>Save-A-Recipe</h1>
+      </header>
+      <section aria-label="Page upload consent">
+        <p class="welcome-text">
+          When you click Save-A-Recipe, it sends the selected page’s URL, title, and cleaned page
+          content to the Save-A-Recipe service to find the recipe and save it in your connected
+          storage. The content can include text outside the recipe.
+        </p>
+        <p class="welcome-text">
+          After allowing page uploads, click the toolbar button again to save.
+        </p>
+        <p id="consent-error" class="login-error" role="alert" hidden></p>
+        <button id="allow-uploads" class="btn primary" type="button">Allow page uploads</button>
+        <button id="decline-uploads" class="btn secondary" type="button">Not now</button>
+      </section>
+    </main>
+    <script src="page-upload-consent.js" type="module"></script>
+  </body>
+</html>

@@ -27,7 +27,7 @@ jest.mock("../common/constants.js", () => ({
     EXTRACT_RECIPE: "EXTRACT_RECIPE",
     NOTIFY_BACKGROUND_OPERATION: "NOTIFY_BACKGROUND_OPERATION",
   },
-  STORAGE_KEYS: { FIREBASE_TOKEN: "firebaseToken" },
+  STORAGE_KEYS: { FIREBASE_TOKEN: "firebaseToken", PAGE_UPLOAD_CONSENT: "pageUploadConsentV1" },
 }));
 
 // Mock the chrome API
@@ -65,6 +65,7 @@ const mockChrome = {
     },
   },
   storage: {
+    local: { get: jest.fn() },
     onChanged: {
       addListener: jest.fn(),
     },
@@ -88,6 +89,7 @@ describe("Background Script", () => {
     // Reset mocks
     jest.resetModules();
     jest.resetAllMocks();
+    chrome.storage.local.get.mockResolvedValue({ pageUploadConsentV1: true });
 
     // Spy on console
     jest.spyOn(console, "log").mockImplementation(() => {});
@@ -98,6 +100,7 @@ describe("Background Script", () => {
     // Clean up
     jest.restoreAllMocks();
     delete global.chrome;
+    delete global.__FIREFOX__;
   });
 
   test("should initialize background script on load", () => {
@@ -221,6 +224,43 @@ describe("Background Script", () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "" });
+  });
+
+  test("shows the consent popup and does not read the page until Chrome consent is given", async () => {
+    const { authManager } = require("./services/auth/auth-manager.js");
+    authManager.checkAuthStatus.mockResolvedValue({ authenticated: true });
+    chrome.storage.local.get.mockResolvedValue({});
+
+    const handler = await loadAndGetActionHandler();
+    await handler({ id: 42 });
+
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({
+      popup: "popup/page-upload-consent.html",
+    });
+    expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
+    expect(chrome.tabs.sendMessage).not.toHaveBeenCalled();
+    expect(require("./services/api.js").saveRecipe).not.toHaveBeenCalled();
+
+    const onStorageChanged = chrome.storage.onChanged.addListener.mock.calls[0][0];
+    chrome.storage.local.get.mockResolvedValue({ pageUploadConsentV1: true });
+    onStorageChanged({ pageUploadConsentV1: { newValue: true } }, "local");
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "" });
+  });
+
+  test("uses Firefox install-time consent for authenticated toolbar actions", async () => {
+    global.__FIREFOX__ = true;
+    const { authManager } = require("./services/auth/auth-manager.js");
+    authManager.checkAuthStatus.mockResolvedValue({ authenticated: true });
+    chrome.storage.local.get.mockResolvedValue({});
+
+    await loadAndGetActionHandler();
+    await Promise.resolve();
+
+    expect(chrome.action.setPopup).toHaveBeenCalledWith({ popup: "" });
+    expect(chrome.storage.local.get).not.toHaveBeenCalled();
   });
 
   test("setPopup set to popup.html when not authenticated", async () => {
