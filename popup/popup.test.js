@@ -65,13 +65,13 @@ describe("popup.js - login-only popup", () => {
     expect(welcomeText).not.toMatch(/google drive|dropbox/i);
   });
 
-  it("links to Save-A-Recipe account registration from the sign-in popup", () => {
+  it("directs users to the homepage for registration instructions", () => {
     const registrationLink = document.querySelector(".welcome-text a");
-    expect(registrationLink.textContent).toBe("Create your account");
-    expect(registrationLink.href).toBe("https://savearecipe.com/register");
+    expect(registrationLink.textContent).toBe("savearecipe.com");
+    expect(registrationLink.href).toBe("https://savearecipe.com/");
     expect(registrationLink.target).toBe("_blank");
     expect(registrationLink.parentElement.textContent).toContain(
-      "Sign in with your Save-A-Recipe account.",
+      "To register an account, see the instructions on savearecipe.com.",
     );
   });
 
