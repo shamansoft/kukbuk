@@ -17,8 +17,8 @@ A Chrome extension that allows users to save recipes from websites to their Goog
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/shamansoft/kukbuk.git
-cd kukbuk
+git clone https://github.com/shamansoft/sar-ext.git
+cd sar-ext
 ```
 
 2. Install dependencies:
